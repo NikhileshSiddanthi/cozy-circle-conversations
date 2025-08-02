@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { SuggestGroupModal } from '@/components/SuggestGroupModal';
+import { NotificationBell } from '@/components/NotificationBell';
 import { 
   LogOut, 
   Search, 
@@ -66,20 +68,30 @@ const Dashboard = () => {
 
   const fetchCategories = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
         .select('*');
 
-      if (error) {
-        console.error('Error fetching categories:', error);
+      if (categoriesError) {
+        console.error('Error fetching categories:', categoriesError);
         return;
       }
 
-      // For now, set group count to 0 since we don't have groups yet
-      const categoriesWithCounts = data?.map(category => ({
-        ...category,
-        group_count: 0
-      })) || [];
+      // Fetch group counts for each category
+      const categoriesWithCounts = await Promise.all(
+        (categoriesData || []).map(async (category) => {
+          const { count } = await supabase
+            .from('groups')
+            .select('*', { count: 'exact', head: true })
+            .eq('category_id', category.id)
+            .eq('is_approved', true);
+
+          return {
+            ...category,
+            group_count: count || 0
+          };
+        })
+      );
 
       setCategories(categoriesWithCounts);
     } catch (error) {
@@ -137,6 +149,7 @@ const Dashboard = () => {
                 className="pl-10 w-80"
               />
             </div>
+            <NotificationBell />
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground">
@@ -232,7 +245,10 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button variant="secondary" className="w-full">Suggest Group</Button>
+                  <SuggestGroupModal 
+                    categories={categories} 
+                    onSuccess={fetchCategories}
+                  />
                 </CardContent>
               </Card>
             </div>
