@@ -118,7 +118,7 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    setIsMember(data?.status === "active");
+    setIsMember(data?.status === "approved");
   };
 
   const handleJoinGroup = async () => {
@@ -131,7 +131,7 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
           group_id: groupId,
           user_id: user.id,
           role: "member",
-          status: "active"
+          status: "approved"
         });
 
       if (error) throw error;
