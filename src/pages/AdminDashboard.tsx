@@ -29,7 +29,10 @@ import {
   Briefcase,
   Vote,
   Gavel,
-  MapPin
+  MapPin,
+  Newspaper,
+  Link,
+  Calendar
 } from 'lucide-react';
 
 // Icon mapping for categories
@@ -79,6 +82,36 @@ interface Group {
   created_at: string;
 }
 
+interface NewsCategory {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color_class: string;
+}
+
+interface NewsSource {
+  id: string;
+  name: string;
+  domain: string;
+  description: string;
+  is_verified: boolean;
+  is_active: boolean;
+}
+
+interface NewsArticle {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  image_url?: string;
+  published_at: string;
+  author?: string;
+  source_id: string;
+  category_id: string;
+  is_featured: boolean;
+}
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
@@ -92,11 +125,15 @@ const AdminDashboard = () => {
   // State
   const [categories, setCategories] = useState<Category[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([]);
+  const [newsSources, setNewsSources] = useState<NewsSource[]>([]);
+  const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Form states
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showGroupForm, setShowGroupForm] = useState(false);
+  const [showNewsForm, setShowNewsForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   
   const [categoryForm, setCategoryForm] = useState({
@@ -114,22 +151,47 @@ const AdminDashboard = () => {
     is_public: true
   });
 
+  const [newsForm, setNewsForm] = useState({
+    title: '',
+    description: '',
+    url: '',
+    image_url: '',
+    author: '',
+    source_id: '',
+    category_id: '',
+    is_featured: false,
+    published_at: new Date().toISOString().split('T')[0]
+  });
+
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
     try {
-      const [categoriesResult, groupsResult] = await Promise.all([
+      const [categoriesResult, groupsResult, newsCategoriesResult, newsSourcesResult, newsArticlesResult] = await Promise.all([
         supabase.from('categories').select('*').order('created_at', { ascending: false }),
-        supabase.from('groups').select('*').order('created_at', { ascending: false })
+        supabase.from('groups').select('*').order('created_at', { ascending: false }),
+        supabase.from('news_categories').select('*').order('name'),
+        supabase.from('news_sources').select('*').order('name'),
+        supabase.from('news_articles').select(`
+          *,
+          source:news_sources(name),
+          category:news_categories(name)
+        `).order('created_at', { ascending: false })
       ]);
 
       if (categoriesResult.error) throw categoriesResult.error;
       if (groupsResult.error) throw groupsResult.error;
+      if (newsCategoriesResult.error) throw newsCategoriesResult.error;
+      if (newsSourcesResult.error) throw newsSourcesResult.error;
+      if (newsArticlesResult.error) throw newsArticlesResult.error;
 
       setCategories(categoriesResult.data || []);
       setGroups(groupsResult.data || []);
+      setNewsCategories(newsCategoriesResult.data || []);
+      setNewsSources(newsSourcesResult.data || []);
+      setNewsArticles(newsArticlesResult.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -301,6 +363,75 @@ const AdminDashboard = () => {
       toast({
         title: "Error",
         description: "Failed to reject group",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // News Management Functions
+  const handleCreateNewsArticle = async () => {
+    try {
+      const { error } = await supabase
+        .from('news_articles')
+        .insert([{
+          ...newsForm,
+          published_at: new Date(newsForm.published_at).toISOString()
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "News article created successfully",
+      });
+      
+      setNewsForm({
+        title: '',
+        description: '',
+        url: '',
+        image_url: '',
+        author: '',
+        source_id: '',
+        category_id: '',
+        is_featured: false,
+        published_at: new Date().toISOString().split('T')[0]
+      });
+      setShowNewsForm(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error creating news article:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create news article",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteNewsArticle = async (articleId: string) => {
+    if (!confirm('Are you sure you want to delete this news article?')) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('news_articles')
+        .delete()
+        .eq('id', articleId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "News article deleted successfully",
+      });
+      
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting news article:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete news article",
         variant: "destructive",
       });
     }
@@ -637,6 +768,183 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* News Management Section */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Newspaper className="h-5 w-5" />
+                  News Management
+                </CardTitle>
+                <Button onClick={() => setShowNewsForm(!showNewsForm)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add News Article
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {showNewsForm && (
+                <div className="border rounded-lg p-4 space-y-4">
+                  <h4 className="font-medium">Add News Article</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="news-title">Title</Label>
+                        <Input
+                          id="news-title"
+                          value={newsForm.title}
+                          onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
+                          placeholder="Article title"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="news-description">Description</Label>
+                        <Textarea
+                          id="news-description"
+                          value={newsForm.description}
+                          onChange={(e) => setNewsForm({ ...newsForm, description: e.target.value })}
+                          placeholder="Article description"
+                          rows={3}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="news-url">URL</Label>
+                        <Input
+                          id="news-url"
+                          value={newsForm.url}
+                          onChange={(e) => setNewsForm({ ...newsForm, url: e.target.value })}
+                          placeholder="https://example.com/article"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="news-image">Image URL</Label>
+                        <Input
+                          id="news-image"
+                          value={newsForm.image_url}
+                          onChange={(e) => setNewsForm({ ...newsForm, image_url: e.target.value })}
+                          placeholder="https://example.com/image.jpg"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="news-author">Author</Label>
+                        <Input
+                          id="news-author"
+                          value={newsForm.author}
+                          onChange={(e) => setNewsForm({ ...newsForm, author: e.target.value })}
+                          placeholder="Author name"
+                        />
+                      </div>
+                      <div>
+                        <Label>Source</Label>
+                        <Select value={newsForm.source_id} onValueChange={(value) => setNewsForm({ ...newsForm, source_id: value })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select news source" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {newsSources.filter(source => source.is_verified && source.is_active).map((source) => (
+                              <SelectItem key={source.id} value={source.id}>
+                                {source.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Category</Label>
+                        <Select value={newsForm.category_id} onValueChange={(value) => setNewsForm({ ...newsForm, category_id: value })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {newsCategories.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="news-date">Published Date</Label>
+                        <Input
+                          id="news-date"
+                          type="date"
+                          value={newsForm.published_at}
+                          onChange={(e) => setNewsForm({ ...newsForm, published_at: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="is-featured"
+                          checked={newsForm.is_featured}
+                          onChange={(e) => setNewsForm({ ...newsForm, is_featured: e.target.checked })}
+                        />
+                        <Label htmlFor="is-featured">Featured article</Label>
+                      </div>
+                    </div>
+                  </div>
+                  <Button onClick={handleCreateNewsArticle} className="w-full">
+                    Add News Article
+                  </Button>
+                </div>
+              )}
+
+              {/* News Articles List */}
+              <div className="space-y-3">
+                <h4 className="font-medium">Recent Articles ({newsArticles.length})</h4>
+                {newsArticles.length === 0 && (
+                  <div className="text-center py-8 border rounded-lg">
+                    <Newspaper className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No news articles yet. Add some articles to get started!</p>
+                  </div>
+                )}
+                {newsArticles.slice(0, 10).map((article: any) => (
+                  <div key={article.id} className="border rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h5 className="font-medium line-clamp-2">{article.title}</h5>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{article.description}</p>
+                        <div className="flex gap-2 mt-3">
+                          <Badge variant="secondary">{article.category?.name || 'Unknown'}</Badge>
+                          <Badge variant="outline">{article.source?.name || 'Unknown'}</Badge>
+                          {article.is_featured && (
+                            <Badge className="bg-yellow-100 text-yellow-800">Featured</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                          <span>By {article.author || 'Unknown'}</span>
+                          <span>{new Date(article.published_at).toLocaleDateString()}</span>
+                          <a href={article.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary">
+                            <Link className="h-3 w-3" />
+                            View Article
+                          </a>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteNewsArticle(article.id)}
+                        className="text-destructive hover:text-destructive ml-4"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {newsArticles.length > 10 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    And {newsArticles.length - 10} more articles...
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
