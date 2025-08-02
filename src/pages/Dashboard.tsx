@@ -125,9 +125,9 @@ const Dashboard = () => {
               <h1 className="text-2xl font-bold text-primary">COZI</h1>
             </div>
             <div className="hidden md:flex items-center gap-6 ml-8">
-              <Button variant="ghost" size="sm">Home</Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/')}>Home</Button>
               <Button variant="ghost" size="sm">Categories</Button>
-              <Button variant="ghost" size="sm">News</Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/news')}>News</Button>
               <Button variant="ghost" size="sm">AI Assistant</Button>
               {isAdmin && (
                 <Button 

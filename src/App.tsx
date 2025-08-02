@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import AdminDashboard from "./pages/AdminDashboard";
 import CategoryPage from "./pages/CategoryPage";
 import GroupPage from "./pages/GroupPage";
+import NewsPage from "./pages/NewsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <GroupPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/news" 
+              element={
+                <ProtectedRoute>
+                  <NewsPage />
                 </ProtectedRoute>
               } 
             />
