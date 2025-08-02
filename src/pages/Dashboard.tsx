@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   LogOut, 
   Search, 
@@ -17,59 +19,32 @@ import {
   TrendingUp,
   Vote,
   Gavel,
-  MapPin
+  MapPin,
+  Settings
 } from 'lucide-react';
 
-const politicalCategories = [
-  {
-    id: 'politics',
-    title: 'Politics',
-    icon: Flag,
-    description: 'Political discussions, parties, and governance',
-    color: 'bg-primary',
-    groupCount: 24
-  },
-  {
-    id: 'economy',
-    title: 'Economy & Business',
-    icon: TrendingUp,
-    description: 'Economic policies, business regulations, and financial matters',
-    color: 'bg-secondary',
-    groupCount: 18
-  },
-  {
-    id: 'international',
-    title: 'International Issues',
-    icon: Globe,
-    description: 'Global affairs, international relations, and world events',
-    color: 'bg-accent',
-    groupCount: 31
-  },
-  {
-    id: 'social',
-    title: 'Social Issues',
-    icon: Users,
-    description: 'Social policies, civil rights, and community matters',
-    color: 'bg-primary',
-    groupCount: 15
-  },
-  {
-    id: 'personalities',
-    title: 'Personalities',
-    icon: Crown,
-    description: 'Political leaders, public figures, and influencers',
-    color: 'bg-secondary',
-    groupCount: 42
-  },
-  {
-    id: 'organizations',
-    title: 'Organizations',
-    icon: Building2,
-    description: 'Political parties, institutions, and committees',
-    color: 'bg-accent',
-    groupCount: 27
-  }
-];
+// Icon mapping for dynamic categories
+const iconMap: { [key: string]: any } = {
+  Flag,
+  Building2,
+  Globe,
+  Users,
+  Crown,
+  TrendingUp,
+  Briefcase,
+  Vote,
+  Gavel,
+  MapPin
+};
+
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  color_class: string;
+  group_count?: number;
+}
 
 const trendingGroups = [
   { name: 'US Elections 2024', category: 'Politics', members: 12543 },
@@ -81,6 +56,49 @@ const trendingGroups = [
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+  const { isAdmin } = useUserRole();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching categories:', error);
+        return;
+      }
+
+      // For now, set group count to 0 since we don't have groups yet
+      const categoriesWithCounts = data?.map(category => ({
+        ...category,
+        group_count: 0
+      })) || [];
+
+      setCategories(categoriesWithCounts);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Vote className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
+          <p className="text-muted-foreground">Loading COZI...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -97,6 +115,17 @@ const Dashboard = () => {
               <Button variant="ghost" size="sm">Categories</Button>
               <Button variant="ghost" size="sm">News</Button>
               <Button variant="ghost" size="sm">AI Assistant</Button>
+              {isAdmin && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => window.location.href = '/admin'}
+                  className="text-accent hover:text-accent-foreground"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  Admin
+                </Button>
+              )}
             </div>
           </div>
           
@@ -147,19 +176,19 @@ const Dashboard = () => {
             <div className="mb-8">
               <h3 className="text-2xl font-semibold mb-4">Political Categories</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {politicalCategories.map((category) => {
-                  const Icon = category.icon;
+                {categories.map((category) => {
+                  const Icon = iconMap[category.icon] || Flag;
                   return (
                     <Card key={category.id} className="hover:shadow-lg transition-shadow cursor-pointer">
                       <CardHeader>
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${category.color}`}>
+                          <div className={`p-2 rounded-lg ${category.color_class}`}>
                             <Icon className="h-6 w-6 text-white" />
                           </div>
                           <div className="flex-1">
-                            <CardTitle className="text-lg">{category.title}</CardTitle>
+                            <CardTitle className="text-lg">{category.name}</CardTitle>
                             <Badge variant="secondary" className="mt-1">
-                              {category.groupCount} groups
+                              {category.group_count} groups
                             </Badge>
                           </div>
                         </div>

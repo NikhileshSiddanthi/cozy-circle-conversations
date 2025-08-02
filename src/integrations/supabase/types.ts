@@ -14,6 +14,121 @@ export type Database = {
   }
   public: {
     Tables: {
+      categories: {
+        Row: {
+          color_class: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color_class?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color_class?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string | null
+          role: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string | null
+          role?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string | null
+          role?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          category_id: string
+          created_at: string
+          creator_id: string
+          description: string | null
+          id: string
+          is_approved: boolean
+          is_public: boolean
+          member_count: number | null
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          id?: string
+          is_approved?: boolean
+          is_public?: boolean
+          member_count?: number | null
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          id?: string
+          is_approved?: boolean
+          is_public?: boolean
+          member_count?: number | null
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
