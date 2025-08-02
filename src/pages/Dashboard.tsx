@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { SuggestGroupModal } from '@/components/SuggestGroupModal';
 import { NotificationBell } from '@/components/NotificationBell';
+import { SearchBar } from '@/components/SearchBar';
 import { 
   LogOut, 
   Search, 
@@ -144,12 +145,8 @@ const Dashboard = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <div className="hidden md:block relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search groups, posts..." 
-                className="pl-10 w-80"
-              />
+            <div className="hidden md:block">
+              <SearchBar />
             </div>
             <NotificationBell />
             <div className="flex items-center gap-2">
