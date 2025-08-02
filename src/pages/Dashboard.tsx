@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,7 @@ const trendingGroups = [
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const { isAdmin } = useUserRole();
+  const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -131,7 +133,7 @@ const Dashboard = () => {
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => window.location.href = '/admin'}
+                  onClick={() => navigate('/admin')}
                   className="text-accent hover:text-accent-foreground"
                 >
                   <Settings className="h-4 w-4 mr-2" />
@@ -192,7 +194,11 @@ const Dashboard = () => {
                 {categories.map((category) => {
                   const Icon = iconMap[category.icon] || Flag;
                   return (
-                    <Card key={category.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <Card 
+                      key={category.id} 
+                      className="hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => navigate(`/category/${category.id}`)}
+                    >
                       <CardHeader>
                         <div className="flex items-center gap-3">
                           <div className={`p-2 rounded-lg ${category.color_class}`}>
