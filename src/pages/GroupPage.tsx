@@ -75,6 +75,17 @@ const GroupPage = () => {
               />
             </div>
             <NotificationBell />
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/admin')}
+                className="md:hidden"
+                aria-label="Admin dashboard"
+              >
+                <Settings className="h-5 w-5" />
+              </Button>
+            )}
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary text-primary-foreground">
