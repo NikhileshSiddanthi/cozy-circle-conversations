@@ -80,16 +80,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const redirectTo = `${window.location.origin}/`;
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`
-      }
+        redirectTo,
+        skipBrowserRedirect: true,
+      },
     });
-    
+
+    if (!error && data?.url) {
+      const win = window.open(data.url, '_blank', 'noopener,noreferrer');
+      if (!win) {
+        // Fallback if popup blocked
+        window.location.href = data.url;
+      }
+    }
+
     return { error };
   };
-
   const signInWithPhone = async (phone: string) => {
     const { error } = await supabase.auth.signInWithOtp({
       phone,
