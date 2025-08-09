@@ -158,15 +158,19 @@ const Auth = () => {
     setError(null);
     
     try {
+      console.log('Starting Google sign in...');
       const { error } = await signInWithGoogle();
+      console.log('Google sign in response:', { error });
       
       if (error) {
-        setError('Failed to sign in with Google. Please try again.');
+        const errorMessage = `Google sign-in failed: ${error.message || 'Unknown error'}`;
+        setError(errorMessage);
         console.error('Google sign in error:', error);
       }
       // Note: If successful, the user will be redirected by Google OAuth flow
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      const errorMessage = `Unexpected error: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      setError(errorMessage);
       console.error('Google sign in error:', err);
     } finally {
       setIsLoading(false);
