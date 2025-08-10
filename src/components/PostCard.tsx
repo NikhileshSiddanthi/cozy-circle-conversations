@@ -347,7 +347,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
         {renderPoll()}
 
         <div className="flex items-center justify-between pt-2 border-t">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="ghost"
               size="sm"
@@ -381,6 +381,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
               variant="ghost"
               size="sm"
               onClick={() => navigate(`/post/${post.id}`)}
+              className="text-primary hover:text-primary/80"
             >
               <Eye className="h-4 w-4 mr-1" />
               View Details
