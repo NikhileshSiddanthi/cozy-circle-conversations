@@ -47,8 +47,8 @@ serve(async (req) => {
     const category = searchParams.get('category') || 'general'
     const query = searchParams.get('query') || ''
 
-    // Build NewsAPI URL
-    let newsApiUrl = `https://newsapi.org/v2/top-headlines?apiKey=${newsApiKey}&pageSize=50&language=en`
+    // Build NewsAPI URL with India prioritization
+    let newsApiUrl = `https://newsapi.org/v2/top-headlines?apiKey=${newsApiKey}&pageSize=50&language=en&country=in`
     
     if (category && category !== 'all') {
       const categoryMap: Record<string, string> = {
@@ -63,7 +63,8 @@ serve(async (req) => {
     }
 
     if (query) {
-      newsApiUrl = `https://newsapi.org/v2/everything?apiKey=${newsApiKey}&q=${encodeURIComponent(query)}&pageSize=50&language=en&sortBy=publishedAt`
+      // For search queries, use everything endpoint but prioritize Indian sources
+      newsApiUrl = `https://newsapi.org/v2/everything?apiKey=${newsApiKey}&q=${encodeURIComponent(query)}&pageSize=50&language=en&sortBy=publishedAt&sources=the-times-of-india,the-hindu,indian-express,ndtv,zee-news,india-today,business-standard,economic-times`
     }
 
     console.log('Fetching from NewsAPI:', newsApiUrl.replace(newsApiKey, '[API_KEY]'))
@@ -161,12 +162,12 @@ async function processAndInsertArticles(supabaseClient: any, articles: NewsAPIAr
 
 async function ensureCategories(supabaseClient: any): Promise<Record<string, string>> {
   const categories = [
-    { name: 'Politics', icon: 'Vote', color_class: 'bg-blue-500' },
-    { name: 'Economy', icon: 'TrendingUp', color_class: 'bg-green-500' },
-    { name: 'Environment', icon: 'Leaf', color_class: 'bg-emerald-500' },
-    { name: 'Health', icon: 'Heart', color_class: 'bg-red-500' },
-    { name: 'Technology', icon: 'Cpu', color_class: 'bg-purple-500' },
-    { name: 'World', icon: 'Globe', color_class: 'bg-orange-500' }
+    { name: 'Politics', icon: 'Vote', color_class: 'bg-blue-500', description: 'Indian politics, elections, and governance' },
+    { name: 'Economy', icon: 'TrendingUp', color_class: 'bg-green-500', description: 'Business, markets, and economic news from India' },
+    { name: 'Environment', icon: 'Leaf', color_class: 'bg-emerald-500', description: 'Climate, pollution, and environmental issues' },
+    { name: 'Health', icon: 'Heart', color_class: 'bg-red-500', description: 'Healthcare, medical breakthroughs, and wellness' },
+    { name: 'Technology', icon: 'Cpu', color_class: 'bg-purple-500', description: 'Tech innovation, startups, and digital India' },
+    { name: 'World', icon: 'Globe', color_class: 'bg-orange-500', description: 'International news affecting India' }
   ]
 
   const categoryMap: Record<string, string> = {}
@@ -240,26 +241,27 @@ function getCategoryIdForArticle(article: NewsAPIArticle, requestedCategory: str
     return categoryMap[requestedCategory]
   }
 
-  // Try to determine category from content
+  // Try to determine category from content with Indian context
   const text = `${article.title} ${article.description || ''}`.toLowerCase()
   
-  if (text.includes('election') || text.includes('government') || text.includes('politics')) {
+  // Enhanced Indian context categorization
+  if (text.includes('election') || text.includes('modi') || text.includes('parliament') || text.includes('bjp') || text.includes('congress') || text.includes('politics') || text.includes('government') || text.includes('minister')) {
     return categoryMap['politics']
   }
-  if (text.includes('economy') || text.includes('market') || text.includes('business')) {
+  if (text.includes('economy') || text.includes('rupee') || text.includes('market') || text.includes('business') || text.includes('nse') || text.includes('sensex') || text.includes('rbi') || text.includes('inflation')) {
     return categoryMap['economy'] 
   }
-  if (text.includes('climate') || text.includes('environment') || text.includes('green')) {
+  if (text.includes('climate') || text.includes('environment') || text.includes('pollution') || text.includes('green') || text.includes('delhi air') || text.includes('monsoon')) {
     return categoryMap['environment']
   }
-  if (text.includes('health') || text.includes('medical') || text.includes('hospital')) {
+  if (text.includes('health') || text.includes('medical') || text.includes('hospital') || text.includes('covid') || text.includes('vaccine') || text.includes('ayush')) {
     return categoryMap['health']
   }
-  if (text.includes('technology') || text.includes('tech') || text.includes('ai')) {
+  if (text.includes('technology') || text.includes('tech') || text.includes('ai') || text.includes('startup') || text.includes('digital india') || text.includes('it sector')) {
     return categoryMap['technology']
   }
 
-  // Default to world
+  // Default to world for international or unclassified news
   return categoryMap['world'] || Object.values(categoryMap)[0]
 }
 
@@ -275,9 +277,13 @@ function extractTags(article: NewsAPIArticle): string[] {
   const text = `${article.title} ${article.description || ''}`.toLowerCase()
   const tags = []
   
+  // Indian context tags
   if (text.includes('breaking')) tags.push('breaking')
   if (text.includes('urgent')) tags.push('urgent')
   if (text.includes('exclusive')) tags.push('exclusive')
+  if (text.includes('india') || text.includes('indian')) tags.push('india')
+  if (text.includes('delhi') || text.includes('mumbai') || text.includes('bangalore') || text.includes('chennai') || text.includes('kolkata')) tags.push('metro')
+  if (text.includes('modi') || text.includes('pm ') || text.includes('prime minister')) tags.push('leadership')
   
   return tags
 }
@@ -304,25 +310,32 @@ async function insertMockNews(supabaseClient: any) {
 
   const mockArticles = [
     {
-      title: "Global Climate Summit Reaches Historic Agreement",
-      description: "World leaders unite on ambitious climate targets for 2030",
-      url: "https://example.com/climate-summit",
-      image_url: "https://images.unsplash.com/photo-1569163139394-de44cb5894ce?w=800",
-      category: 'environment'
+      title: "India's GDP Growth Accelerates to 8.2% in Q3, Exceeds Expectations",
+      description: "India's economy shows robust growth driven by manufacturing and services sectors",
+      url: "https://example.com/india-gdp-growth",
+      image_url: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800",
+      category: 'economy'
     },
     {
-      title: "New AI Breakthrough Revolutionizes Healthcare",
-      description: "Revolutionary AI system shows 95% accuracy in early disease detection",
-      url: "https://example.com/ai-healthcare",
+      title: "Digital India Initiative Reaches 1 Billion Citizens with UPI Transactions",
+      description: "Revolutionary digital payment system transforms India's financial landscape",
+      url: "https://example.com/digital-india-upi",
       image_url: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=800",
       category: 'technology'
     },
     {
-      title: "Global Markets React to Economic Policy Changes",
-      description: "Stock markets surge following announcement of new trade agreements",
-      url: "https://example.com/markets-react",
-      image_url: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800",
-      category: 'economy'
+      title: "Monsoon Forecast: India Expects Normal Rainfall This Season",
+      description: "IMD predicts favorable monsoon conditions for agricultural productivity",
+      url: "https://example.com/monsoon-forecast",
+      image_url: "https://images.unsplash.com/photo-1569163139394-de44cb5894ce?w=800",
+      category: 'environment'
+    },
+    {
+      title: "India Launches Mission to Mars: ISRO's Ambitious Space Program",
+      description: "Indian Space Research Organisation achieves new milestone in space exploration",
+      url: "https://example.com/india-mars-mission",
+      image_url: "https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=800",
+      category: 'technology'
     }
   ]
 
