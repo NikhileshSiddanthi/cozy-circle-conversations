@@ -12,6 +12,7 @@ import CategoryPage from "./pages/CategoryPage";
 import GroupPage from "./pages/GroupPage";
 import NewsPage from "./pages/NewsPage";
 import PostDetailPage from "./pages/PostDetailPage";
+import TrendingTopics from "./pages/TrendingTopics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <PostDetailPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/trending-topics" 
+              element={
+                <ProtectedRoute>
+                  <TrendingTopics />
                 </ProtectedRoute>
               } 
             />

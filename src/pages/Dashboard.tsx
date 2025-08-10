@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { SuggestGroupModal } from '@/components/SuggestGroupModal';
 import { FloatingNavbar } from '@/components/FloatingNavbar';
+import { useTrendingGroups } from '@/hooks/useTrendingGroups';
 import { 
   Flag, 
   Building2, 
@@ -17,7 +18,10 @@ import {
   TrendingUp,
   Vote,
   Gavel,
-  MapPin
+  MapPin,
+  Hash,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 
 // Icon mapping for dynamic categories
@@ -43,19 +47,12 @@ interface Category {
   group_count?: number;
 }
 
-const trendingGroups = [
-  { name: 'US Elections 2024', category: 'Politics', members: 12543 },
-  { name: 'Climate Policy Forum', category: 'International', members: 8901 },
-  { name: 'Economic Recovery Debate', category: 'Economy', members: 7632 },
-  { name: 'Biden Administration', category: 'Personalities', members: 15420 },
-  { name: 'Supreme Court Watch', category: 'Social Issues', members: 6234 }
-];
-
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const { trendingGroups, loading: trendingLoading } = useTrendingGroups(7);
 
   useEffect(() => {
     fetchCategories();
@@ -202,23 +199,67 @@ const Dashboard = () => {
               {/* Trending Groups */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    Trending Groups
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-primary" />
+                      Trending Groups
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => navigate('/trending-topics')}
+                      className="text-xs"
+                    >
+                      <Hash className="h-3 w-3 mr-1" />
+                      Topics
+                    </Button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {trendingGroups.map((group, index) => (
-                    <div key={index} className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm leading-tight">{group.name}</p>
-                        <p className="text-xs text-muted-foreground">{group.category}</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs">
-                        {group.members.toLocaleString()}
-                      </Badge>
+                  {trendingLoading ? (
+                    <div className="space-y-3">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="h-4 bg-muted rounded mb-1"></div>
+                          <div className="h-3 bg-muted rounded w-2/3"></div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : trendingGroups.length > 0 ? (
+                    trendingGroups.map((group, index) => (
+                      <div 
+                        key={group.id} 
+                        className="flex justify-between items-start cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2"
+                        onClick={() => navigate(`/group/${group.id}`)}
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-sm leading-tight">{group.name}</p>
+                          <p className="text-xs text-muted-foreground">{group.category_name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {group.member_count.toLocaleString()} members
+                            </Badge>
+                            {group.trend_change !== 0 && (
+                              <div className={`flex items-center gap-1 text-xs ${
+                                group.trend_change > 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {group.trend_change > 0 ? (
+                                  <ArrowUp className="h-3 w-3" />
+                                ) : (
+                                  <ArrowDown className="h-3 w-3" />
+                                )}
+                                {Math.abs(group.trend_change)}%
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      No trending groups found
+                    </p>
+                  )}
                 </CardContent>
               </Card>
 
