@@ -50,8 +50,82 @@ const NewsPage = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   useEffect(() => {
-    fetchNewsData();
+    fetchLatestNews();
   }, []);
+
+  useEffect(() => {
+    if (selectedCategory !== 'all') {
+      fetchNewsByCategory(selectedCategory);
+    }
+  }, [selectedCategory]);
+
+  const fetchLatestNews = async () => {
+    try {
+      setLoading(true);
+      
+      // First fetch fresh news from external API
+      const { error: fetchError } = await supabase.functions.invoke('fetch-news', {
+        body: { category: 'all' }
+      });
+      
+      if (fetchError) {
+        console.warn('Failed to fetch fresh news:', fetchError);
+      }
+      
+      // Then load from database
+      await fetchNewsData();
+    } catch (error) {
+      console.error('Error fetching latest news:', error);
+      // Fallback to database data
+      await fetchNewsData();
+    }
+  };
+
+  const fetchNewsByCategory = async (category: string) => {
+    try {
+      // Fetch fresh news for specific category
+      const { error: fetchError } = await supabase.functions.invoke('fetch-news', {
+        body: { category }
+      });
+      
+      if (fetchError) {
+        console.warn('Failed to fetch fresh news for category:', fetchError);
+      }
+      
+      // Reload data from database
+      await fetchNewsData();
+    } catch (error) {
+      console.error('Error fetching news by category:', error);
+    }
+  };
+
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchQuery('');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setSearchQuery(query);
+      
+      // Fetch news based on search query
+      const { error: fetchError } = await supabase.functions.invoke('fetch-news', {
+        body: { query }
+      });
+      
+      if (fetchError) {
+        console.warn('Failed to fetch search results:', fetchError);
+      }
+      
+      // Reload data from database
+      await fetchNewsData();
+    } catch (error) {
+      console.error('Error searching news:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchNewsData = async () => {
     try {
@@ -132,11 +206,29 @@ const NewsPage = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search news articles..."
+                placeholder="Search news articles... (Press Enter)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch(searchQuery);
+                  }
+                }}
                 className="pl-10"
               />
+              {searchQuery && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                  onClick={() => {
+                    setSearchQuery('');
+                    fetchLatestNews();
+                  }}
+                >
+                  ×
+                </Button>
+              )}
             </div>
           </div>
         </div>
