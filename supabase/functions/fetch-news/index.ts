@@ -47,8 +47,12 @@ serve(async (req) => {
     const category = searchParams.get('category') || 'general'
     const query = searchParams.get('query') || ''
 
-    // Build NewsAPI URL with India prioritization
-    let newsApiUrl = `https://newsapi.org/v2/top-headlines?apiKey=${newsApiKey}&pageSize=50&language=en&country=in`
+    // Build NewsAPI URL with India prioritization and recent date filtering
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const fromDate = yesterday.toISOString().split('T')[0] // YYYY-MM-DD format
+    
+    let newsApiUrl = `https://newsapi.org/v2/top-headlines?apiKey=${newsApiKey}&pageSize=50&language=en&country=in&from=${fromDate}`
     
     if (category && category !== 'all') {
       const categoryMap: Record<string, string> = {
@@ -63,8 +67,8 @@ serve(async (req) => {
     }
 
     if (query) {
-      // For search queries, use everything endpoint but prioritize Indian sources
-      newsApiUrl = `https://newsapi.org/v2/everything?apiKey=${newsApiKey}&q=${encodeURIComponent(query)}&pageSize=50&language=en&sortBy=publishedAt&sources=the-times-of-india,the-hindu,indian-express,ndtv,zee-news,india-today,business-standard,economic-times`
+      // For search queries, use everything endpoint but prioritize Indian sources and recent dates
+      newsApiUrl = `https://newsapi.org/v2/everything?apiKey=${newsApiKey}&q=${encodeURIComponent(query)}&pageSize=50&language=en&sortBy=publishedAt&from=${fromDate}&sources=the-times-of-india,the-hindu,indian-express,ndtv,zee-news,india-today,business-standard,economic-times`
     }
 
     console.log('Fetching from NewsAPI:', newsApiUrl.replace(newsApiKey, '[API_KEY]'))
@@ -110,12 +114,33 @@ serve(async (req) => {
 })
 
 async function processAndInsertArticles(supabaseClient: any, articles: NewsAPIArticle[], category: string) {
+  // First, clean up old articles (older than 2 days)
+  const twoDaysAgo = new Date()
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+  
+  await supabaseClient
+    .from('news_articles')
+    .delete()
+    .lt('published_at', twoDaysAgo.toISOString())
+
+  console.log(`Cleaned up articles older than ${twoDaysAgo.toISOString()}`)
+
   // Get or create categories and sources first
   const categoryMap = await ensureCategories(supabaseClient)
   const sourceMap = await ensureSources(supabaseClient, articles)
 
   for (const article of articles) {
     if (!article.title || !article.url) continue
+
+    // Only process articles published within the last 24 hours
+    const articleDate = new Date(article.publishedAt)
+    const oneDayAgo = new Date()
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1)
+    
+    if (articleDate < oneDayAgo) {
+      console.log(`Skipping old article: ${article.title} (${article.publishedAt})`)
+      continue
+    }
 
     // Determine category
     const categoryId = getCategoryIdForArticle(article, category, categoryMap)
@@ -312,30 +337,34 @@ async function insertMockNews(supabaseClient: any) {
     {
       title: "India's GDP Growth Accelerates to 8.2% in Q3, Exceeds Expectations",
       description: "India's economy shows robust growth driven by manufacturing and services sectors",
-      url: "https://example.com/india-gdp-growth",
+      url: "https://example.com/india-gdp-growth-" + Date.now(),
       image_url: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800",
-      category: 'economy'
+      category: 'economy',
+      published_at: new Date().toISOString() // Current time
     },
     {
       title: "Digital India Initiative Reaches 1 Billion Citizens with UPI Transactions",
       description: "Revolutionary digital payment system transforms India's financial landscape",
-      url: "https://example.com/digital-india-upi",
+      url: "https://example.com/digital-india-upi-" + Date.now(),
       image_url: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=800",
-      category: 'technology'
+      category: 'technology',
+      published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString() // 2 hours ago
     },
     {
       title: "Monsoon Forecast: India Expects Normal Rainfall This Season",
       description: "IMD predicts favorable monsoon conditions for agricultural productivity",
-      url: "https://example.com/monsoon-forecast",
+      url: "https://example.com/monsoon-forecast-" + Date.now(),
       image_url: "https://images.unsplash.com/photo-1569163139394-de44cb5894ce?w=800",
-      category: 'environment'
+      category: 'environment',
+      published_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString() // 4 hours ago
     },
     {
       title: "India Launches Mission to Mars: ISRO's Ambitious Space Program",
       description: "Indian Space Research Organisation achieves new milestone in space exploration",
-      url: "https://example.com/india-mars-mission",
+      url: "https://example.com/india-mars-mission-" + Date.now(),
       image_url: "https://images.unsplash.com/photo-1446776877081-d282a0f896e2?w=800",
-      category: 'technology'
+      category: 'technology',
+      published_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString() // 6 hours ago
     }
   ]
 
@@ -344,11 +373,10 @@ async function insertMockNews(supabaseClient: any) {
       .from('news_articles')
       .upsert({
         ...article,
-        published_at: new Date().toISOString(),
-        author: 'Mock Author',
+        author: 'COZI News Team',
         source_id: sourceId,
         category_id: categoryMap[article.category],
-        tags: ['mock', 'sample'],
+        tags: ['mock', 'india', 'latest'],
         is_featured: true
       }, { onConflict: 'url' })
   }
