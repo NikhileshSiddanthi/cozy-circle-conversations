@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -13,7 +14,8 @@ import {
   Calendar,
   ExternalLink,
   Play,
-  BarChart3
+  BarChart3,
+  Eye
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { CommentSection } from "./CommentSection";
@@ -44,6 +46,7 @@ interface PostCardProps {
 }
 
 export const PostCard = ({ post, onUpdate }: PostCardProps) => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [userReaction, setUserReaction] = useState<"like" | "dislike" | null>(null);
@@ -372,6 +375,15 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
             >
               <MessageCircle className="h-4 w-4 mr-1" />
               {post.comment_count}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/post/${post.id}`)}
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View Details
             </Button>
           </div>
 
