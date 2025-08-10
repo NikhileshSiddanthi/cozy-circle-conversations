@@ -11,6 +11,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import CategoryPage from "./pages/CategoryPage";
 import GroupPage from "./pages/GroupPage";
 import NewsPage from "./pages/NewsPage";
+import PostDetailPage from "./pages/PostDetailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -61,6 +62,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <NewsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/post/:postId" 
+              element={
+                <ProtectedRoute>
+                  <PostDetailPage />
                 </ProtectedRoute>
               } 
             />

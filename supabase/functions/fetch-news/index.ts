@@ -44,15 +44,17 @@ serve(async (req) => {
     }
 
     const { searchParams } = new URL(req.url)
-    const category = searchParams.get('category') || 'general'
-    const query = searchParams.get('query') || ''
+    const body = req.method === 'POST' ? await req.json() : {}
+    const category = body.category || searchParams.get('category') || 'general'
+    const query = body.query || searchParams.get('query') || ''
+    const limit = body.limit || searchParams.get('limit') || 50
 
     // Build NewsAPI URL with India prioritization and recent date filtering
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
     const fromDate = yesterday.toISOString().split('T')[0] // YYYY-MM-DD format
     
-    let newsApiUrl = `https://newsapi.org/v2/top-headlines?apiKey=${newsApiKey}&pageSize=50&language=en&country=in&from=${fromDate}`
+    let newsApiUrl = `https://newsapi.org/v2/top-headlines?apiKey=${newsApiKey}&pageSize=${limit}&language=en&country=in&from=${fromDate}`
     
     if (category && category !== 'all') {
       const categoryMap: Record<string, string> = {
@@ -68,7 +70,7 @@ serve(async (req) => {
 
     if (query) {
       // For search queries, use everything endpoint but prioritize Indian sources and recent dates
-      newsApiUrl = `https://newsapi.org/v2/everything?apiKey=${newsApiKey}&q=${encodeURIComponent(query)}&pageSize=50&language=en&sortBy=publishedAt&from=${fromDate}&sources=the-times-of-india,the-hindu,indian-express,ndtv,zee-news,india-today,business-standard,economic-times`
+      newsApiUrl = `https://newsapi.org/v2/everything?apiKey=${newsApiKey}&q=${encodeURIComponent(query)}&pageSize=${limit}&language=en&sortBy=publishedAt&from=${fromDate}&sources=the-times-of-india,the-hindu,indian-express,ndtv,zee-news,india-today,business-standard,economic-times`
     }
 
     console.log('Fetching from NewsAPI:', newsApiUrl.replace(newsApiKey, '[API_KEY]'))
