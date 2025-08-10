@@ -8,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { SuggestGroupModal } from '@/components/SuggestGroupModal';
 import { FloatingNavbar } from '@/components/FloatingNavbar';
 import { useTrendingGroups } from '@/hooks/useTrendingGroups';
+import { useTrendingTopics } from '@/hooks/useTrendingTopics';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Flag, 
   Building2, 
@@ -53,6 +55,7 @@ const Dashboard = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const { trendingGroups, loading: trendingLoading } = useTrendingGroups(7);
+  const { trendingTopics, loading: topicsLoading } = useTrendingTopics(7);
 
   useEffect(() => {
     fetchCategories();
@@ -196,70 +199,121 @@ const Dashboard = () => {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="space-y-6 sticky top-24">
-              {/* Trending Groups */}
+              {/* Trending Groups & Topics */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-primary" />
-                      Trending Groups
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate('/trending-topics')}
-                      className="text-xs"
-                    >
-                      <Hash className="h-3 w-3 mr-1" />
-                      Topics
-                    </Button>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Trending
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  {trendingLoading ? (
-                    <div className="space-y-3">
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i} className="animate-pulse">
-                          <div className="h-4 bg-muted rounded mb-1"></div>
-                          <div className="h-3 bg-muted rounded w-2/3"></div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : trendingGroups.length > 0 ? (
-                    trendingGroups.map((group, index) => (
-                      <div 
-                        key={group.id} 
-                        className="flex justify-between items-start cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2"
-                        onClick={() => navigate(`/group/${group.id}`)}
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium text-sm leading-tight">{group.name}</p>
-                          <p className="text-xs text-muted-foreground">{group.category_name}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {group.member_count.toLocaleString()} members
-                            </Badge>
-                            {group.trend_change !== 0 && (
-                              <div className={`flex items-center gap-1 text-xs ${
-                                group.trend_change > 0 ? 'text-green-600' : 'text-red-600'
-                              }`}>
-                                {group.trend_change > 0 ? (
-                                  <ArrowUp className="h-3 w-3" />
-                                ) : (
-                                  <ArrowDown className="h-3 w-3" />
-                                )}
-                                {Math.abs(group.trend_change)}%
+                <CardContent className="p-0">
+                  <Tabs defaultValue="groups" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mx-4 mb-4">
+                      <TabsTrigger value="groups">Groups</TabsTrigger>
+                      <TabsTrigger value="topics">Topics</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="groups" className="px-4 pb-4 mt-0">
+                      <div className="space-y-3">
+                        {trendingLoading ? (
+                          <div className="space-y-3">
+                            {[...Array(3)].map((_, i) => (
+                              <div key={i} className="animate-pulse">
+                                <div className="h-4 bg-muted rounded mb-1"></div>
+                                <div className="h-3 bg-muted rounded w-2/3"></div>
                               </div>
-                            )}
+                            ))}
                           </div>
-                        </div>
+                        ) : trendingGroups.length > 0 ? (
+                          trendingGroups.map((group) => (
+                            <div 
+                              key={group.id} 
+                              className="flex justify-between items-start cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2"
+                              onClick={() => navigate(`/group/${group.id}`)}
+                            >
+                              <div className="flex-1">
+                                <p className="font-medium text-sm leading-tight">{group.name}</p>
+                                <p className="text-xs text-muted-foreground">{group.category_name}</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {group.member_count.toLocaleString()} members
+                                  </Badge>
+                                  {group.trend_change !== 0 && (
+                                    <div className={`flex items-center gap-1 text-xs ${
+                                      group.trend_change > 0 ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                      {group.trend_change > 0 ? (
+                                        <ArrowUp className="h-3 w-3" />
+                                      ) : (
+                                        <ArrowDown className="h-3 w-3" />
+                                      )}
+                                      {Math.abs(group.trend_change)}%
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-muted-foreground text-center py-4">
+                            No trending groups found
+                          </p>
+                        )}
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-xs text-muted-foreground text-center py-4">
-                      No trending groups found
-                    </p>
-                  )}
+                    </TabsContent>
+                    
+                    <TabsContent value="topics" className="px-4 pb-4 mt-0">
+                      <div className="space-y-3">
+                        {topicsLoading ? (
+                          <div className="space-y-3">
+                            {[...Array(3)].map((_, i) => (
+                              <div key={i} className="animate-pulse">
+                                <div className="h-4 bg-muted rounded mb-1"></div>
+                                <div className="h-3 bg-muted rounded w-2/3"></div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : trendingTopics.length > 0 ? (
+                          trendingTopics.slice(0, 5).map((topic) => (
+                            <div 
+                              key={topic.topic} 
+                              className="flex justify-between items-start cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2"
+                              onClick={() => navigate(`/category?search=${encodeURIComponent(topic.topic)}`)}
+                            >
+                              <div className="flex-1">
+                                <p className="font-medium text-sm leading-tight">#{topic.topic}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {topic.mentions} mentions · {topic.unique_users} users
+                                </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    Score: {topic.score.toFixed(1)}
+                                  </Badge>
+                                  {topic.trend_change !== 0 && (
+                                    <div className={`flex items-center gap-1 text-xs ${
+                                      topic.trend_change > 0 ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                      {topic.trend_change > 0 ? (
+                                        <ArrowUp className="h-3 w-3" />
+                                      ) : (
+                                        <ArrowDown className="h-3 w-3" />
+                                      )}
+                                      {Math.abs(topic.trend_change)}%
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-xs text-muted-foreground text-center py-4">
+                            No trending topics found
+                          </p>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
 
