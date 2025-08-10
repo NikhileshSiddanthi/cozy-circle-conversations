@@ -27,6 +27,8 @@ export const useTrendingGroups = (daysRange: number = 7) => {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log('Fetching trending groups...');
 
       // Get date range for calculations
       const endDate = new Date();
@@ -50,10 +52,17 @@ export const useTrendingGroups = (daysRange: number = 7) => {
         `)
         .eq('is_approved', true);
 
-      if (groupsError) throw groupsError;
+      if (groupsError) {
+        console.error('Groups fetch error:', groupsError);
+        throw groupsError;
+      }
+
+      console.log('Fetched groups:', groups?.length || 0);
 
       if (!groups || groups.length === 0) {
+        console.log('No groups found, setting empty array');
         setTrendingGroups([]);
+        setLoading(false);
         return;
       }
 

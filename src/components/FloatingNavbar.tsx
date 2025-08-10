@@ -58,9 +58,9 @@ export const FloatingNavbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-2">
-            {navItems.map((item) => (
+            {navItems.map((item, index) => (
               <Button
-                key={item.path}
+                key={`${item.path}-${index}`}
                 variant={isActive(item.path) ? "default" : "ghost"}
                 size="sm"
                 onClick={() => navigate(item.path)}
@@ -127,9 +127,9 @@ export const FloatingNavbar = () => {
               <div className="mb-2">
                 <SearchBar />
               </div>
-              {navItems.map((item) => (
+              {navItems.map((item, index) => (
                 <Button
-                  key={item.path}
+                  key={`mobile-${item.path}-${index}`}
                   variant={isActive(item.path) ? "default" : "ghost"}
                   size="sm"
                   onClick={() => {
