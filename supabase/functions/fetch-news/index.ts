@@ -119,8 +119,13 @@ async function processAndInsertArticles(supabaseClient: any, articles: NewsAPIAr
     // Determine category
     const categoryId = getCategoryIdForArticle(article, category, categoryMap)
     
-    // Get source ID
-    const sourceId = sourceMap[article.source.name] || sourceMap['Unknown']
+    // Get source ID - ensure we have a fallback
+    let sourceId = sourceMap[article.source?.name || ''] || sourceMap['Unknown']
+    
+    if (!sourceId) {
+      console.warn('No source found for article, skipping:', article.title)
+      continue
+    }
 
     // Check if article already exists
     const { data: existingArticle } = await supabaseClient
@@ -183,12 +188,30 @@ async function ensureCategories(supabaseClient: any): Promise<Record<string, str
 
 async function ensureSources(supabaseClient: any, articles: NewsAPIArticle[]): Promise<Record<string, string>> {
   const sourceMap: Record<string, string> = {}
-  const uniqueSources = [...new Set(articles.map(a => a.source.name))]
+  const uniqueSources = [...new Set(articles.map(a => a.source.name).filter(Boolean))]
+
+  // Add Unknown source as fallback first
+  const { data: unknownSource } = await supabaseClient
+    .from('news_sources')
+    .upsert({
+      name: 'Unknown',
+      domain: 'unknown.com',
+      is_verified: false,
+      is_active: true
+    }, { onConflict: 'name' })
+    .select('id')
+    .single()
+
+  if (unknownSource) {
+    sourceMap['Unknown'] = unknownSource.id
+  }
 
   for (const sourceName of uniqueSources) {
     if (!sourceName) continue
 
-    const domain = extractDomain(articles.find(a => a.source.name === sourceName)?.url || '')
+    // Extract domain from first article with this source
+    const sampleArticle = articles.find(a => a.source.name === sourceName)
+    const domain = extractDomain(sampleArticle?.url || '')
     
     const { data, error } = await supabaseClient
       .from('news_sources')
@@ -203,23 +226,9 @@ async function ensureSources(supabaseClient: any, articles: NewsAPIArticle[]): P
 
     if (!error && data) {
       sourceMap[data.name] = data.id
+    } else {
+      console.error('Error upserting source:', sourceName, error)
     }
-  }
-
-  // Add Unknown source as fallback
-  const { data: unknownSource } = await supabaseClient
-    .from('news_sources')
-    .upsert({
-      name: 'Unknown',
-      domain: 'unknown.com',
-      is_verified: false,
-      is_active: true
-    }, { onConflict: 'name' })
-    .select('id')
-    .single()
-
-  if (unknownSource) {
-    sourceMap['Unknown'] = unknownSource.id
   }
 
   return sourceMap
