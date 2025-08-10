@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FloatingNavbar } from '@/components/FloatingNavbar';
 import { Clock, ExternalLink, Search, TrendingUp, Calendar } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -112,9 +113,11 @@ const NewsPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <FloatingNavbar />
+      
       {/* Header */}
       <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 pt-24">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-foreground mb-4">
               COZI News

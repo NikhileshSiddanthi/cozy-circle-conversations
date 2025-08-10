@@ -1,19 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { SuggestGroupModal } from '@/components/SuggestGroupModal';
-import { NotificationBell } from '@/components/NotificationBell';
-import { SearchBar } from '@/components/SearchBar';
+import { FloatingNavbar } from '@/components/FloatingNavbar';
 import { 
-  LogOut, 
-  Search, 
   Flag, 
   Building2, 
   Globe, 
@@ -23,8 +17,7 @@ import {
   TrendingUp,
   Vote,
   Gavel,
-  MapPin,
-  Settings
+  MapPin
 } from 'lucide-react';
 
 // Icon mapping for dynamic categories
@@ -59,8 +52,7 @@ const trendingGroups = [
 ];
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
-  const { isAdmin } = useUserRole();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,73 +109,9 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Vote className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold text-primary">COZI</h1>
-            </div>
-            <div className="hidden md:flex items-center gap-6 ml-8">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/')}>Home</Button>
-              <Button variant="ghost" size="sm">Categories</Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/news')}>News</Button>
-              <Button variant="ghost" size="sm">AI Assistant</Button>
-              {isAdmin && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate('/admin')}
-                  className="text-accent hover:text-accent-foreground"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Admin
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="hidden md:block">
-              <SearchBar />
-            </div>
-            <NotificationBell />
-            {isAdmin && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/admin')}
-                className="md:hidden"
-                aria-label="Admin dashboard"
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
-            )}
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {user?.email?.charAt(0).toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-sm text-muted-foreground hidden sm:block">
-                {user?.email}
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={signOut}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-8">
+      <FloatingNavbar />
+      
+      <div className="container mx-auto px-4 py-20">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-3">
