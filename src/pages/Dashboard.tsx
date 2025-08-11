@@ -68,6 +68,7 @@ const Dashboard = () => {
 
   const fetchCategories = async () => {
     try {
+      console.log('Fetching categories...');
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
         .select('*');
@@ -76,6 +77,8 @@ const Dashboard = () => {
         console.error('Error fetching categories:', categoriesError);
         return;
       }
+
+      console.log('Categories fetched:', categoriesData?.length || 0);
 
       // Fetch group counts for each category
       const categoriesWithCounts = await Promise.all(
@@ -93,6 +96,7 @@ const Dashboard = () => {
         })
       );
 
+      console.log('Categories with counts:', categoriesWithCounts);
       setCategories(categoriesWithCounts);
     } catch (error) {
       console.error('Error:', error);
@@ -102,9 +106,13 @@ const Dashboard = () => {
   };
 
   const fetchUserGroups = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found, skipping user groups fetch');
+      return;
+    }
 
     try {
+      console.log('Fetching user groups for user:', user.id);
       const { data, error } = await supabase
         .from('group_members')
         .select(`
@@ -122,6 +130,7 @@ const Dashboard = () => {
         name: item.groups.name
       })) || [];
 
+      console.log('User groups fetched:', groups.length, 'groups');
       setUserGroups(groups);
     } catch (error: any) {
       console.error('Error fetching user groups:', error);

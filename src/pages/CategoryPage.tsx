@@ -72,6 +72,7 @@ const CategoryPage = () => {
 
   const fetchGroups = async () => {
     try {
+      console.log('Fetching groups for category:', categoryId);
       const { data, error } = await supabase
         .from('groups')
         .select('*')
@@ -84,6 +85,7 @@ const CategoryPage = () => {
         return;
       }
 
+      console.log('Groups fetched:', data?.length || 0, 'groups');
       setGroups(data || []);
     } catch (error) {
       console.error('Error:', error);
