@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { SuggestGroupModal } from '@/components/SuggestGroupModal';
-import { CreatePostButton } from '@/components/CreatePostButton';
+import { CreatePostWithValidation } from '@/components/CreatePostWithValidation';
 import { FloatingNavbar } from '@/components/FloatingNavbar';
 import { useTrendingGroups } from '@/hooks/useTrendingGroups';
 import { useTrendingTopics } from '@/hooks/useTrendingTopics';
@@ -55,12 +55,16 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userGroups, setUserGroups] = useState<{id: string; name: string}[]>([]);
   const { trendingGroups, loading: trendingLoading } = useTrendingGroups(7);
   const { trendingTopics, loading: topicsLoading } = useTrendingTopics(7);
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+    if (user) {
+      fetchUserGroups();
+    }
+  }, [user]);
 
   const fetchCategories = async () => {
     try {
@@ -94,6 +98,33 @@ const Dashboard = () => {
       console.error('Error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserGroups = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('group_members')
+        .select(`
+          group_id,
+          groups!inner(id, name, is_approved)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'approved')
+        .eq('groups.is_approved', true);
+
+      if (error) throw error;
+
+      const groups = data?.map(item => ({
+        id: item.groups.id,
+        name: item.groups.name
+      })) || [];
+
+      setUserGroups(groups);
+    } catch (error: any) {
+      console.error('Error fetching user groups:', error);
     }
   };
 
@@ -173,7 +204,7 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <CreatePostButton />
+                  <CreatePostWithValidation userGroups={userGroups} />
                 </CardContent>
               </Card>
 

@@ -55,21 +55,23 @@ export const CreatePostButton = () => {
   const handleCreatePostClick = () => {
     if (!user) {
       toast({
-        title: "Authentication Required",
+        title: "Authentication Required", 
         description: "Please log in to create a post.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
 
     if (userGroups.length === 0) {
       toast({
         title: "Join a Group First",
         description: "You need to join and be approved in at least one group to create posts.",
-        variant: "destructive",
+        variant: "destructive", 
       });
-      return;
+      return false;
     }
+    
+    return true;
   };
 
   if (loading) {
