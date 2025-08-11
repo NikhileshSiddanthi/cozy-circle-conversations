@@ -117,7 +117,11 @@ export const FileUpload = ({
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: acceptedTypes.reduce((acc, type) => ({ ...acc, [type]: [] }), {}),
+    accept: {
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif'],
+      'video/*': ['.mp4', '.mov', '.avi'],
+      'application/pdf': ['.pdf']
+    },
     multiple: false,
     disabled: uploading
   });
