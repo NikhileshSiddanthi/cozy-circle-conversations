@@ -112,6 +112,17 @@ interface NewsArticle {
   is_featured: boolean;
 }
 
+interface PendingMember {
+  id: string;
+  user_id: string;
+  group_id: string;
+  status: string;
+  joined_at: string;
+  groups: {
+    name: string;
+  };
+}
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
@@ -128,6 +139,7 @@ const AdminDashboard = () => {
   const [newsCategories, setNewsCategories] = useState<NewsCategory[]>([]);
   const [newsSources, setNewsSources] = useState<NewsSource[]>([]);
   const [newsArticles, setNewsArticles] = useState<NewsArticle[]>([]);
+  const [pendingMembers, setPendingMembers] = useState<PendingMember[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Form states
@@ -169,7 +181,7 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [categoriesResult, groupsResult, newsCategoriesResult, newsSourcesResult, newsArticlesResult] = await Promise.all([
+      const [categoriesResult, groupsResult, newsCategoriesResult, newsSourcesResult, newsArticlesResult, pendingMembersResult] = await Promise.all([
         supabase.from('categories').select('*').order('created_at', { ascending: false }),
         supabase.from('groups').select('*').order('created_at', { ascending: false }),
         supabase.from('news_categories').select('*').order('name'),
@@ -178,7 +190,11 @@ const AdminDashboard = () => {
           *,
           source:news_sources(name),
           category:news_categories(name)
-        `).order('created_at', { ascending: false })
+        `).order('created_at', { ascending: false }),
+        supabase.from('group_members').select(`
+          *,
+          groups(name)
+        `).eq('status', 'pending').order('joined_at', { ascending: false })
       ]);
 
       if (categoriesResult.error) throw categoriesResult.error;
@@ -186,12 +202,14 @@ const AdminDashboard = () => {
       if (newsCategoriesResult.error) throw newsCategoriesResult.error;
       if (newsSourcesResult.error) throw newsSourcesResult.error;
       if (newsArticlesResult.error) throw newsArticlesResult.error;
+      if (pendingMembersResult.error) throw pendingMembersResult.error;
 
       setCategories(categoriesResult.data || []);
       setGroups(groupsResult.data || []);
       setNewsCategories(newsCategoriesResult.data || []);
       setNewsSources(newsSourcesResult.data || []);
       setNewsArticles(newsArticlesResult.data || []);
+      setPendingMembers(pendingMembersResult.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -437,6 +455,56 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleApproveMember = async (memberId: string) => {
+    try {
+      const { error } = await supabase
+        .from('group_members')
+        .update({ status: 'approved' })
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Member approved successfully",
+      });
+      
+      fetchData();
+    } catch (error) {
+      console.error('Error approving member:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve member",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectMember = async (memberId: string) => {
+    try {
+      const { error } = await supabase
+        .from('group_members')
+        .delete()
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Member request rejected",
+      });
+      
+      fetchData();
+    } catch (error) {
+      console.error('Error rejecting member:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject member",
+        variant: "destructive",
+      });
+    }
+  };
+
   const startEditCategory = (category: Category) => {
     setEditingCategory(category);
     setCategoryForm({
@@ -471,7 +539,65 @@ const AdminDashboard = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Member Management */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Member Requests
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {pendingMembers.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No pending member requests</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Pending Requests ({pendingMembers.length})
+                    </h4>
+                    {pendingMembers.map((member) => (
+                      <div key={member.id} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium">User ID: {member.user_id.slice(0, 8)}...</p>
+                            <p className="text-sm text-muted-foreground">
+                              Group: {member.groups?.name || 'Unknown Group'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Requested: {new Date(member.joined_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveMember(member.id)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRejectMember(member.id)}
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
           {/* Categories Management */}
           <div className="space-y-6">
             <Card>
