@@ -6,6 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 
@@ -29,7 +31,8 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
     name: "",
     description: "",
     categoryId: "",
-    type: "topic-based" as "topic-based" | "personality-driven" | "institutional"
+    type: "topic-based" as "topic-based" | "personality-driven" | "institutional",
+    isPublic: true
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,7 +51,7 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
           type: formData.type,
           creator_id: user.id,
           is_approved: false,
-          is_public: true
+          is_public: formData.isPublic
         })
         .select()
         .single();
@@ -89,7 +92,7 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
         description: "Your group suggestion has been sent to administrators for approval.",
       });
 
-      setFormData({ name: "", description: "", categoryId: "", type: "topic-based" });
+      setFormData({ name: "", description: "", categoryId: "", type: "topic-based", isPublic: true });
       setOpen(false);
       onSuccess?.();
     } catch (error: any) {
@@ -174,6 +177,23 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="is-public" className="text-sm font-medium">
+              Public Group
+            </Label>
+            <Switch
+              id="is-public"
+              checked={formData.isPublic}
+              onCheckedChange={(checked) => setFormData({ ...formData, isPublic: checked })}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {formData.isPublic 
+              ? "Public groups are visible to everyone and anyone can request to join"
+              : "Private groups are only visible to members and require invitation to join"
+            }
+          </p>
 
           <div className="flex gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1">

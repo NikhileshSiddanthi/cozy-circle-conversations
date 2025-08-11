@@ -131,20 +131,19 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
           group_id: groupId,
           user_id: user.id,
           role: "member",
-          status: "approved"
+          status: "pending"  // Changed from "approved" to "pending"
         });
 
       if (error) throw error;
 
-      setIsMember(true);
       toast({
-        title: "Joined Group!",
-        description: `You are now a member of ${group.name}`,
+        title: "Join Request Sent",
+        description: "Your request to join the group has been sent to administrators for approval.",
       });
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to join group",
+        description: error.message || "Failed to send join request",
         variant: "destructive",
       });
     }
