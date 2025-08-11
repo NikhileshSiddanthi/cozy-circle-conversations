@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { SuggestGroupModal } from '@/components/SuggestGroupModal';
+import { CreatePostButton } from '@/components/CreatePostButton';
 import { FloatingNavbar } from '@/components/FloatingNavbar';
 import { useTrendingGroups } from '@/hooks/useTrendingGroups';
 import { useTrendingTopics } from '@/hooks/useTrendingTopics';
@@ -172,7 +173,7 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button className="w-full">Create Post</Button>
+                  <CreatePostButton />
                 </CardContent>
               </Card>
 

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Image, Video, Link2, BarChart3, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileUpload } from "./FileUpload";
 
 interface Group {
   id: string;
@@ -31,7 +32,7 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
     title: "",
     content: "",
     groupId: selectedGroupId || "",
-    mediaType: "" as "image" | "video" | "youtube" | "link" | "",
+    mediaType: "" as "image" | "video" | "youtube" | "link" | "file" | "",
     mediaUrl: "",
     pollQuestion: "",
     pollOptions: ["", ""]
@@ -170,10 +171,11 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
             />
           </div>
 
-          <Tabs defaultValue="text" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="text">Text Only</TabsTrigger>
-              <TabsTrigger value="media">Media</TabsTrigger>
+            <Tabs defaultValue="text" className="w-full">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="text">Text</TabsTrigger>
+              <TabsTrigger value="media">Media URL</TabsTrigger>
+              <TabsTrigger value="file">Upload File</TabsTrigger>
               <TabsTrigger value="link">Link</TabsTrigger>
               <TabsTrigger value="poll">Poll</TabsTrigger>
             </TabsList>
@@ -231,6 +233,21 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
                   />
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="file" className="mt-4 space-y-3">
+              <FileUpload
+                onFileUploaded={(url, type) => setFormData({ 
+                  ...formData, 
+                  mediaUrl: url,
+                  mediaType: "file"
+                })}
+                onFileRemoved={() => setFormData({ 
+                  ...formData, 
+                  mediaUrl: "",
+                  mediaType: ""
+                })}
+              />
             </TabsContent>
 
             <TabsContent value="link" className="mt-4 space-y-3">
