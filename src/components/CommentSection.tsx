@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { ThumbsUp, ThumbsDown, Reply, MessageCircle, Calendar } from "lucide-react";
+import { Heart, Reply, MessageCircle, Calendar } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface Comment {
@@ -34,7 +34,7 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [userReactions, setUserReactions] = useState<Record<string, "like" | "dislike">>({});
+  const [userReactions, setUserReactions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchComments();
@@ -71,7 +71,7 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
         .in("user_id", userIds);
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-      
+
       const commentsWithProfiles = data.map(comment => ({
         ...comment,
         profiles: profileMap.get(comment.user_id) || null
@@ -94,13 +94,14 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
       .from("reactions")
       .select("comment_id, reaction_type")
       .in("comment_id", commentIds)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("reaction_type", "like");
 
     if (data) {
-      const reactions: Record<string, "like" | "dislike"> = {};
+      const reactions: Record<string, boolean> = {};
       data.forEach(reaction => {
         if (reaction.comment_id) {
-          reactions[reaction.comment_id] = reaction.reaction_type as "like" | "dislike";
+          reactions[reaction.comment_id] = true;
         }
       });
       setUserReactions(reactions);
@@ -109,7 +110,7 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
 
   const handleAddComment = async (parentId: string | null = null) => {
     if (!user) return;
-    
+
     const content = parentId ? replyContent : newComment;
     if (!content.trim()) return;
 
@@ -151,28 +152,27 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
     }
   };
 
-  const handleReaction = async (commentId: string, type: "like" | "dislike") => {
+  const toggleReaction = async (commentId: string) => {
     if (!user) return;
 
     try {
-      const currentReaction = userReactions[commentId];
-      
-      // Remove existing reaction if same type
-      if (currentReaction === type) {
+      const isLiked = !!userReactions[commentId];
+
+      if (isLiked) {
         await supabase
           .from("reactions")
           .delete()
           .eq("comment_id", commentId)
           .eq("user_id", user.id)
-          .eq("reaction_type", type);
-        
+          .eq("reaction_type", "like");
+
         setUserReactions(prev => {
-          const newReactions = { ...prev };
-          delete newReactions[commentId];
-          return newReactions;
+          const next = { ...prev };
+          delete next[commentId];
+          return next;
         });
       } else {
-        // Delete existing reaction and insert new one
+        // Clean up any legacy reaction rows for this user/comment then insert like
         await supabase
           .from("reactions")
           .delete()
@@ -184,12 +184,12 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
           .insert({
             comment_id: commentId,
             user_id: user.id,
-            reaction_type: type
+            reaction_type: "like"
           });
 
         setUserReactions(prev => ({
           ...prev,
-          [commentId]: type
+          [commentId]: true
         }));
       }
 
@@ -211,7 +211,7 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
             {comment.profiles?.display_name?.[0] || "U"}
           </AvatarFallback>
         </Avatar>
-        
+
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm">
@@ -222,30 +222,20 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
               {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
             </div>
           </div>
-          
+
           <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.content}</p>
-          
+
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleReaction(comment.id, "like")}
-              className={`h-auto p-1 ${userReactions[comment.id] === "like" ? "text-primary" : ""}`}
+              onClick={() => toggleReaction(comment.id)}
+              className={`h-auto p-1 ${userReactions[comment.id] ? "text-primary" : ""}`}
             >
-              <ThumbsUp className="h-3 w-3 mr-1" />
+              <Heart className="h-3 w-3 mr-1" fill={userReactions[comment.id] ? "currentColor" : "none"} />
               <span className="text-xs">{comment.like_count}</span>
             </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleReaction(comment.id, "dislike")}
-              className={`h-auto p-1 ${userReactions[comment.id] === "dislike" ? "text-destructive" : ""}`}
-            >
-              <ThumbsDown className="h-3 w-3 mr-1" />
-              <span className="text-xs">{comment.dislike_count}</span>
-            </Button>
-            
+
             {!isReply && (
               <Button
                 variant="ghost"
@@ -289,66 +279,48 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
               </div>
             </div>
           )}
+
+          {/* Render replies */}
+          {comments
+            .filter(c => c.parent_comment_id === comment.id)
+            .map(reply => renderComment(reply, true))}
         </div>
       </div>
-
-      {/* Render replies */}
-      {comments
-        .filter(c => c.parent_comment_id === comment.id)
-        .map(reply => renderComment(reply, true))
-      }
     </div>
   );
 
-  const topLevelComments = comments.filter(c => !c.parent_comment_id);
-
   return (
-    <div className="space-y-4 pt-4 border-t">
-      <div className="flex items-center gap-2">
-        <MessageCircle className="h-4 w-4" />
-        <span className="font-medium">Comments ({comments.length})</span>
-      </div>
-
-      {/* Add new comment */}
-      <div className="space-y-3">
-        <div className="flex gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">
-              {user?.email?.[0]?.toUpperCase() || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <Textarea
-              placeholder="Write a comment..."
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              rows={2}
-              className="text-sm"
-            />
+    <div className="space-y-4">
+      <div className="flex items-start gap-3">
+        <Avatar className="h-9 w-9">
+          <AvatarFallback>
+            {user?.email?.[0]?.toUpperCase() || "U"}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 space-y-2">
+          <Textarea
+            placeholder="Write a comment..."
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            rows={3}
+          />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MessageCircle className="h-4 w-4" />
+              Be respectful and keep discussions constructive.
+            </div>
+            <Button onClick={() => handleAddComment()} disabled={isLoading || !newComment.trim()}>
+              Comment
+            </Button>
           </div>
         </div>
-        <div className="flex justify-end">
-          <Button
-            onClick={() => handleAddComment()}
-            disabled={isLoading || !newComment.trim()}
-            size="sm"
-          >
-            {isLoading ? "Posting..." : "Comment"}
-          </Button>
-        </div>
       </div>
 
-      {/* Display comments */}
       <div className="space-y-4">
-        {topLevelComments.map(comment => renderComment(comment))}
+        {comments
+          .filter(c => !c.parent_comment_id)
+          .map(comment => renderComment(comment))}
       </div>
-
-      {comments.length === 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p>No comments yet. Be the first to comment!</p>
-        </div>
-      )}
     </div>
   );
 };

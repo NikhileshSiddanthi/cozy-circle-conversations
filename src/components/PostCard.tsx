@@ -6,11 +6,10 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  ThumbsUp, 
-  ThumbsDown, 
-  MessageCircle, 
-  Share2, 
+import {
+  Heart,
+  MessageCircle,
+  Share2,
   Calendar,
   ExternalLink,
   Play,
@@ -49,7 +48,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [userReaction, setUserReaction] = useState<"like" | "dislike" | null>(null);
+  const [isLiked, setIsLiked] = useState<boolean>(false);
   const [pollVote, setPollVote] = useState<number | null>(null);
   const [pollResults, setPollResults] = useState<number[]>([]);
   const [showComments, setShowComments] = useState(false);
@@ -65,15 +64,16 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
 
   const fetchUserReaction = async () => {
     if (!user) return;
-    
+
     const { data } = await supabase
       .from("reactions")
       .select("reaction_type")
       .eq("post_id", post.id)
       .eq("user_id", user.id)
+      .eq("reaction_type", "like")
       .maybeSingle();
 
-    setUserReaction((data?.reaction_type as "like" | "dislike") || null);
+    setIsLiked(!!data);
   };
 
   const fetchPollData = async () => {
@@ -106,22 +106,20 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
     }
   };
 
-  const handleReaction = async (type: "like" | "dislike") => {
+  const toggleLike = async () => {
     if (!user) return;
 
     try {
-      // Remove existing reaction if same type
-      if (userReaction === type) {
+      if (isLiked) {
         await supabase
           .from("reactions")
           .delete()
           .eq("post_id", post.id)
           .eq("user_id", user.id)
-          .eq("reaction_type", type);
-        
-        setUserReaction(null);
+          .eq("reaction_type", "like");
+        setIsLiked(false);
       } else {
-        // Delete existing reaction and insert new one
+        // Clean up any legacy reactions for this user/post then insert like
         await supabase
           .from("reactions")
           .delete()
@@ -133,10 +131,9 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
           .insert({
             post_id: post.id,
             user_id: user.id,
-            reaction_type: type
+            reaction_type: "like",
           });
-
-        setUserReaction(type);
+        setIsLiked(true);
       }
 
       onUpdate?.();
@@ -174,7 +171,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
 
   const handleShare = async () => {
     const url = `${window.location.origin}/post/${post.id}`;
-    
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -201,22 +198,22 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
     switch (post.media_type) {
       case "image":
         return (
-          <img 
-            src={post.media_url} 
-            alt="Post media" 
+          <img
+            src={post.media_url}
+            alt="Post media"
             className="w-full max-h-96 object-cover rounded-lg"
           />
         );
-      
+
       case "video":
         return (
-          <video 
-            src={post.media_url} 
-            controls 
+          <video
+            src={post.media_url}
+            controls
             className="w-full max-h-96 rounded-lg"
           />
         );
-      
+
       case "youtube":
         const videoId = post.media_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/)?.[1];
         return videoId ? (
@@ -229,7 +226,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
             />
           </div>
         ) : null;
-      
+
       case "link":
         return (
           <a
@@ -242,7 +239,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
             <span className="text-sm font-medium truncate">{post.media_url}</span>
           </a>
         );
-      
+
       default:
         return null;
     }
@@ -259,7 +256,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
           <BarChart3 className="h-4 w-4" />
           <h4 className="font-medium">{post.poll_question}</h4>
         </div>
-        
+
         <div className="space-y-2">
           {post.poll_options.map((option, index) => {
             const votes = pollResults[index] || 0;
@@ -271,16 +268,16 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
               <div
                 key={index}
                 className={`relative p-3 rounded border cursor-pointer transition-colors ${
-                  hasVoted 
-                    ? isSelected 
-                      ? "bg-primary/20 border-primary" 
+                  hasVoted
+                    ? isSelected
+                      ? "bg-primary/20 border-primary"
                       : "bg-muted"
                     : "hover:bg-accent"
                 }`}
                 onClick={() => !hasVoted && handlePollVote(index)}
               >
                 {hasVoted && (
-                  <div 
+                  <div
                     className="absolute inset-0 bg-primary/10 rounded transition-all"
                     style={{ width: `${percentage}%` }}
                   />
@@ -297,7 +294,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
             );
           })}
         </div>
-        
+
         {totalVotes > 0 && (
           <p className="text-sm text-muted-foreground">
             {totalVotes} total vote{totalVotes !== 1 ? 's' : ''}
@@ -351,23 +348,13 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleReaction("like")}
-              className={userReaction === "like" ? "text-primary" : ""}
+              onClick={toggleLike}
+              className={isLiked ? "text-primary" : ""}
             >
-              <ThumbsUp className="h-4 w-4 mr-1" />
+              <Heart className="h-4 w-4 mr-1" fill={isLiked ? "currentColor" : "none"} />
               {post.like_count}
             </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleReaction("dislike")}
-              className={userReaction === "dislike" ? "text-destructive" : ""}
-            >
-              <ThumbsDown className="h-4 w-4 mr-1" />
-              {post.dislike_count}
-            </Button>
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -394,8 +381,8 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
         </div>
 
         {showComments && (
-          <CommentSection 
-            postId={post.id} 
+          <CommentSection
+            postId={post.id}
             onCommentAdded={onUpdate}
           />
         )}
