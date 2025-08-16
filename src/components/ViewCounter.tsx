@@ -16,10 +16,13 @@ export const ViewCounter = ({ postId, initialCount = 0 }: ViewCounterProps) => {
       if (hasViewed) return;
 
       try {
-        // Increment view count in database
-        const { error } = await supabase.rpc('increment_post_view', {
-          post_id: postId
-        });
+        // Increment view count in database using direct update
+        const { error } = await supabase
+          .from('posts')
+          .update({ 
+            view_count: viewCount + 1 
+          } as any)
+          .eq('id', postId);
 
         if (error) {
           console.error('Error incrementing view:', error);
