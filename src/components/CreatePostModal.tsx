@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Image, Video, Link2, BarChart3, Trash2 } from "lucide-react";
+import { Plus, Image, Video, Link2, BarChart3, Trash2, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileUpload } from "./FileUpload";
+import { URLValidator } from "./URLValidator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Group {
   id: string;
@@ -38,6 +40,9 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
     pollOptions: ["", ""]
   });
 
+  const [urlValidation, setUrlValidation] = useState({ isValid: true, error: "" });
+  const [persistedUploads, setPersisted] = useState<{[key: string]: string}>({});
+
   const addPollOption = () => {
     setFormData({
       ...formData,
@@ -63,6 +68,16 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+
+    // Validate media URL if provided
+    if (formData.mediaUrl && !urlValidation.isValid) {
+      toast({
+        title: "Invalid Media URL",
+        description: urlValidation.error || "Please provide a valid media URL",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -231,23 +246,47 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
                     value={formData.mediaUrl}
                     onChange={(e) => setFormData({ ...formData, mediaUrl: e.target.value })}
                   />
+                  <URLValidator 
+                    url={formData.mediaUrl} 
+                    onValidation={(isValid, error) => setUrlValidation({ isValid, error: error || "" })}
+                  />
+                  {!urlValidation.isValid && (
+                    <Alert variant="destructive" className="mt-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{urlValidation.error}</AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="file" className="mt-4 space-y-3">
               <FileUpload
-                onFileUploaded={(url, type) => setFormData({ 
-                  ...formData, 
-                  mediaUrl: url,
-                  mediaType: "file"
-                })}
-                onFileRemoved={() => setFormData({ 
-                  ...formData, 
-                  mediaUrl: "",
-                  mediaType: ""
-                })}
+                onFileUploaded={(url, type) => {
+                  setFormData({ 
+                    ...formData, 
+                    mediaUrl: url,
+                    mediaType: "file"
+                  });
+                  // Persist upload across tab changes
+                  setPersisted({ ...persistedUploads, file: url });
+                }}
+                onFileRemoved={() => {
+                  setFormData({ 
+                    ...formData, 
+                    mediaUrl: "",
+                    mediaType: ""
+                  });
+                  const newPersisted = { ...persistedUploads };
+                  delete newPersisted.file;
+                  setPersisted(newPersisted);
+                }}
               />
+              {persistedUploads.file && (
+                <div className="text-sm text-green-600">
+                  ✓ File uploaded and ready to publish
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="link" className="mt-4 space-y-3">

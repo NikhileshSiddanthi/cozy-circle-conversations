@@ -71,10 +71,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signIn = async (email: string, password: string) => {
+    // First check if email exists by attempting to get user
+    const { data: existingUser } = await supabase.auth.signUp({
+      email,
+      password: 'dummy_password_check',
+    });
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    
+    // Enhanced error handling for better user experience
+    if (error) {
+      if (error.message.includes('Invalid login credentials')) {
+        // Check if it's a password issue or email doesn't exist
+        const { data: resetData, error: resetError } = await supabase.auth.resetPasswordForEmail(
+          email,
+          { redirectTo: `${window.location.origin}/` }
+        );
+        
+        if (resetError && resetError.message.includes('User not found')) {
+          return { error: new Error('Account does not exist. Please sign up first.') };
+        } else {
+          return { error: new Error('Incorrect password. Please try again.') };
+        }
+      }
+    }
     
     return { error };
   };

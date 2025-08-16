@@ -195,6 +195,20 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
             }
           </p>
 
+          {!formData.isPublic && (
+            <div>
+              <label className="text-sm font-medium">Invite Members (Optional)</label>
+              <Textarea
+                placeholder="Enter email addresses separated by commas to invite initial members..."
+                rows={2}
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Initial invitations will be sent once the group is approved by administrators.
+              </p>
+            </div>
+          )}
+
           <div className="flex gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1">
               Cancel

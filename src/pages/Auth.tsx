@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Loader2, Vote, Phone, Mail } from 'lucide-react';
+import { AlertCircle, Loader2, Vote, Phone, Mail, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,6 +24,8 @@ const Auth = () => {
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showResendOTP, setShowResendOTP] = useState(false);
 
   // Redirect if already authenticated
   if (!loading && user) {
@@ -81,8 +83,10 @@ const Auth = () => {
       const { error } = await signIn(email, password);
       
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          setError('Invalid email or password. Please try again.');
+        if (error.message.includes('Account does not exist')) {
+          setError('Account does not exist. Please sign up first.');
+        } else if (error.message.includes('Incorrect password')) {
+          setError('Incorrect password. Please try again.');
         } else if (error.message.includes('Email not confirmed')) {
           setError('Please check your email and click the confirmation link before signing in.');
         } else {
@@ -115,6 +119,9 @@ const Auth = () => {
         setError(error.message);
       } else {
         setOtpSent(true);
+        setShowResendOTP(false);
+        // Start timer for resend button
+        setTimeout(() => setShowResendOTP(true), 30000); // 30 seconds
         toast({
           title: "OTP sent!",
           description: "Please check your phone for the verification code.",
@@ -260,15 +267,29 @@ const Auth = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signin-password">Password</Label>
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="signin-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        required
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
@@ -311,16 +332,30 @@ const Auth = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Create a password (min. 6 characters)"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
-                      required
-                      minLength={6}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="signup-password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Create a password (min. 6 characters)"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        required
+                        minLength={6}
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
@@ -393,15 +428,28 @@ const Auth = () => {
                       'Verify Code'
                     )}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setOtpSent(false)}
-                    disabled={isLoading}
-                  >
-                    Back to Phone Number
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setOtpSent(false)}
+                      disabled={isLoading}
+                    >
+                      Back to Phone Number
+                    </Button>
+                    {showResendOTP && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => handlePhoneSignIn({ preventDefault: () => {} } as React.FormEvent)}
+                        disabled={isLoading}
+                      >
+                        Resend OTP
+                      </Button>
+                    )}
+                  </div>
                 </form>
               )}
             </div>
