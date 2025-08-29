@@ -1,10 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
+// Shared utilities
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+const supabaseClient = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+)
 
 interface NewsAPIResponse {
   status: string;
@@ -32,11 +38,6 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
     const newsApiKey = Deno.env.get('NEWS_API_KEY')
     if (!newsApiKey) {
       console.log('No NEWS_API_KEY found, using mock data')
@@ -47,64 +48,82 @@ serve(async (req) => {
     const body = req.method === 'POST' ? await req.json() : {}
     const category = body.category || searchParams.get('category') || 'general'
     const query = body.query || searchParams.get('query') || ''
-    const limit = body.limit || searchParams.get('limit') || 50
+    const limit = Math.min(parseInt(body.limit || searchParams.get('limit') || '20'), 100)
+
+    console.log('Fetching news with params:', { category, query, limit })
 
     // Build NewsAPI URL with India prioritization and recent date filtering
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
-    const fromDate = yesterday.toISOString().split('T')[0] // YYYY-MM-DD format
+    const fromDate = yesterday.toISOString().split('T')[0]
     
-    let newsApiUrl = `https://newsapi.org/v2/top-headlines?apiKey=${newsApiKey}&pageSize=${limit}&language=en&country=in&from=${fromDate}`
+    let newsApiUrl: string;
     
-    if (category && category !== 'all') {
-      const categoryMap: Record<string, string> = {
-        'politics': 'general',
-        'economy': 'business', 
-        'environment': 'science',
-        'health': 'health',
-        'technology': 'technology',
-        'world': 'general'
-      }
-      newsApiUrl += `&category=${categoryMap[category] || 'general'}`
-    }
-
     if (query) {
-      // For search queries, use everything endpoint but prioritize Indian sources and recent dates
+      // For search queries, use everything endpoint
       newsApiUrl = `https://newsapi.org/v2/everything?apiKey=${newsApiKey}&q=${encodeURIComponent(query)}&pageSize=${limit}&language=en&sortBy=publishedAt&from=${fromDate}&sources=the-times-of-india,the-hindu,indian-express,ndtv,zee-news,india-today,business-standard,economic-times`
+    } else {
+      // For category browsing, use top-headlines
+      newsApiUrl = `https://newsapi.org/v2/top-headlines?apiKey=${newsApiKey}&pageSize=${limit}&language=en&country=in&from=${fromDate}`
+      
+      if (category && category !== 'all' && category !== 'general') {
+        const categoryMap: Record<string, string> = {
+          'politics': 'general',
+          'economy': 'business', 
+          'environment': 'science',
+          'health': 'health',
+          'technology': 'technology',
+          'world': 'general'
+        }
+        newsApiUrl += `&category=${categoryMap[category] || 'general'}`
+      }
     }
 
-    console.log('Fetching from NewsAPI:', newsApiUrl.replace(newsApiKey, '[API_KEY]'))
-
+    console.log('Fetching from NewsAPI...')
+    
     const response = await fetch(newsApiUrl)
     if (!response.ok) {
-      throw new Error(`NewsAPI error: ${response.status}`)
+      throw new Error(`NewsAPI error: ${response.status} - ${response.statusText}`)
     }
 
     const data: NewsAPIResponse = await response.json()
     
     if (data.status !== 'ok') {
-      throw new Error('NewsAPI returned error status')
+      throw new Error(`NewsAPI returned error status: ${data.status}`)
     }
 
+    if (!data.articles || data.articles.length === 0) {
+      console.log('No articles returned from NewsAPI')
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          articlesProcessed: 0,
+          message: 'No new articles found'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    console.log(`Processing ${data.articles.length} articles...`)
+    
     // Process and insert articles
-    await processAndInsertArticles(supabaseClient, data.articles, category)
+    const processedCount = await processAndInsertArticles(supabaseClient, data.articles, category)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        articlesProcessed: data.articles.length,
+        articlesProcessed: processedCount,
+        total: data.articles.length,
         category: category 
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
     console.error('Error in fetch-news function:', error)
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         success: false 
       }),
       { 
@@ -115,31 +134,45 @@ serve(async (req) => {
   }
 })
 
-async function processAndInsertArticles(supabaseClient: any, articles: NewsAPIArticle[], category: string) {
-  // First, clean up old articles (older than 2 days)
-  const twoDaysAgo = new Date()
-  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
+async function processAndInsertArticles(supabaseClient: any, articles: NewsAPIArticle[], category: string): Promise<number> {
+  if (!articles || articles.length === 0) {
+    console.log('No articles to process')
+    return 0
+  }
+
+  let processedCount = 0
+
+  // Clean up old articles (older than 7 days to keep more content)
+  const weekAgo = new Date()
+  weekAgo.setDate(weekAgo.getDate() - 7)
   
-  await supabaseClient
+  const { error: deleteError } = await supabaseClient
     .from('news_articles')
     .delete()
-    .lt('published_at', twoDaysAgo.toISOString())
+    .lt('published_at', weekAgo.toISOString())
 
-  console.log(`Cleaned up articles older than ${twoDaysAgo.toISOString()}`)
+  if (deleteError) {
+    console.error('Error cleaning old articles:', deleteError)
+  } else {
+    console.log(`Cleaned articles older than ${weekAgo.toISOString()}`)
+  }
 
   // Get or create categories and sources first
   const categoryMap = await ensureCategories(supabaseClient)
   const sourceMap = await ensureSources(supabaseClient, articles)
 
   for (const article of articles) {
-    if (!article.title || !article.url) continue
+    if (!article.title || !article.url) {
+      console.log('Skipping article without title or URL')
+      continue
+    }
 
-    // Only process articles published within the last 24 hours
+    // Only process articles published within the last 48 hours
     const articleDate = new Date(article.publishedAt)
-    const oneDayAgo = new Date()
-    oneDayAgo.setDate(oneDayAgo.getDate() - 1)
+    const twoDaysAgo = new Date()
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2)
     
-    if (articleDate < oneDayAgo) {
+    if (articleDate < twoDaysAgo) {
       console.log(`Skipping old article: ${article.title} (${article.publishedAt})`)
       continue
     }
@@ -147,7 +180,7 @@ async function processAndInsertArticles(supabaseClient: any, articles: NewsAPIAr
     // Determine category
     const categoryId = getCategoryIdForArticle(article, category, categoryMap)
     
-    // Get source ID - ensure we have a fallback
+    // Get source ID with fallback
     let sourceId = sourceMap[article.source?.name || ''] || sourceMap['Unknown']
     
     if (!sourceId) {
@@ -160,31 +193,42 @@ async function processAndInsertArticles(supabaseClient: any, articles: NewsAPIAr
       .from('news_articles')
       .select('id')
       .eq('url', article.url)
-      .single()
+      .maybeSingle()
 
-    if (existingArticle) continue // Skip if already exists
+    if (existingArticle) {
+      console.log('Article already exists, skipping:', article.title)
+      continue
+    }
 
     // Insert new article
-    const { error } = await supabaseClient
+    const { data, error } = await supabaseClient
       .from('news_articles')
       .insert({
-        title: article.title,
-        description: article.description,
+        title: article.title.slice(0, 255), // Ensure title fits in column
+        description: article.description?.slice(0, 500) || null, // Limit description
         url: article.url,
         image_url: article.urlToImage,
         published_at: article.publishedAt,
-        author: article.author,
-        content: article.content,
+        author: article.author?.slice(0, 100) || null, // Limit author name
+        content: article.content?.slice(0, 1000) || null, // Limit content preview
         source_id: sourceId,
         category_id: categoryId,
         tags: extractTags(article),
-        is_featured: Math.random() < 0.1 // 10% chance of being featured
+        is_featured: Math.random() < 0.15 // 15% chance of being featured
       })
+      .select('id')
+      .maybeSingle()
 
     if (error) {
-      console.error('Error inserting article:', error)
+      console.error('Error inserting article:', error, 'Article:', article.title)
+    } else if (data) {
+      processedCount++
+      console.log(`Successfully inserted article: ${article.title}`)
     }
   }
+
+  console.log(`Processed ${processedCount} out of ${articles.length} articles`)
+  return processedCount
 }
 
 async function ensureCategories(supabaseClient: any): Promise<Record<string, string>> {
@@ -204,7 +248,7 @@ async function ensureCategories(supabaseClient: any): Promise<Record<string, str
       .from('news_categories')
       .upsert(category, { onConflict: 'name' })
       .select('id, name')
-      .single()
+      .maybeSingle()
 
     if (!error && data) {
       categoryMap[data.name.toLowerCase()] = data.id
@@ -228,7 +272,7 @@ async function ensureSources(supabaseClient: any, articles: NewsAPIArticle[]): P
       is_active: true
     }, { onConflict: 'name' })
     .select('id')
-    .single()
+    .maybeSingle()
 
   if (unknownSource) {
     sourceMap['Unknown'] = unknownSource.id
@@ -250,7 +294,7 @@ async function ensureSources(supabaseClient: any, articles: NewsAPIArticle[]): P
         is_active: true
       }, { onConflict: 'name' })
       .select('id, name')
-      .single()
+      .maybeSingle()
 
     if (!error && data) {
       sourceMap[data.name] = data.id
@@ -331,7 +375,7 @@ async function insertMockNews(supabaseClient: any) {
       is_active: true
     }, { onConflict: 'name' })
     .select('id')
-    .single()
+    .maybeSingle()
 
   const sourceId = mockSource?.id
 
