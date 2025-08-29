@@ -52,13 +52,15 @@ export const CreatePostWithValidation = ({ userGroups }: CreatePostWithValidatio
 
   return (
     <>
-      <Button onClick={handleCreatePostClick} className="w-full">
-        <Plus className="h-4 w-4 mr-2" />
-        Create Post
-      </Button>
-      
-      {showModal && (
+      {!showModal ? (
+        <Button onClick={handleCreatePostClick} className="w-full">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Post
+        </Button>
+      ) : (
         <CreatePostModal 
+          open={showModal}
+          onOpenChange={setShowModal}
           groups={userGroups} 
           onSuccess={() => setShowModal(false)}
         />

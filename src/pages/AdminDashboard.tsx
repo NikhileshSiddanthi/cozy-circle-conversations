@@ -507,6 +507,7 @@ const AdminDashboard = () => {
 
   const startEditCategory = (category: Category) => {
     setEditingCategory(category);
+    setShowCategoryForm(true); // Show the form when editing
     setCategoryForm({
       name: category.name,
       description: category.description || '',

@@ -58,31 +58,41 @@ export const SearchBar = ({ className }: SearchBarProps) => {
     setLoading(true);
     try {
       // Search groups
-      const { data: groupsData } = await supabase
+      const { data: groupsData, error: groupsError } = await supabase
         .from('groups')
         .select(`
           id,
           name,
           description,
           member_count,
-          categories(name)
+          categories!inner(name)
         `)
         .eq('is_approved', true)
         .eq('is_public', true)
         .or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
         .limit(5);
 
-      // Search posts
-      const { data: postsData } = await supabase
+      if (groupsError) {
+        console.error('Groups search error:', groupsError);
+      }
+
+      // Search posts  
+      const { data: postsData, error: postsError } = await supabase
         .from('posts')
         .select(`
           id,
           title,
           content,
-          groups(name, is_approved)
+          groups!inner(name, is_approved, is_public)
         `)
+        .eq('groups.is_approved', true)
+        .eq('groups.is_public', true)
         .or(`title.ilike.%${searchQuery}%,content.ilike.%${searchQuery}%`)
         .limit(5);
+
+      if (postsError) {
+        console.error('Posts search error:', postsError);
+      }
 
       const searchResults: SearchResult[] = [];
 
@@ -94,31 +104,30 @@ export const SearchBar = ({ className }: SearchBarProps) => {
             title: group.name,
             type: 'group',
             category: group.categories?.name,
-            memberCount: group.member_count,
+            memberCount: group.member_count || 0,
             excerpt: group.description?.substring(0, 100) + '...'
           });
         });
       }
 
-      // Add posts to results (only from approved groups)
+      // Add posts to results
       if (postsData) {
-        postsData
-          .filter(post => post.groups?.is_approved)
-          .forEach(post => {
-            searchResults.push({
-              id: post.id,
-              title: post.title,
-              type: 'post',
-              category: post.groups?.name,
-              excerpt: post.content?.substring(0, 100) + '...'
-            });
+        postsData.forEach(post => {
+          searchResults.push({
+            id: post.id,
+            title: post.title,
+            type: 'post',
+            category: post.groups?.name,
+            excerpt: post.content?.substring(0, 100) + '...'
           });
+        });
       }
 
       setResults(searchResults);
       setIsOpen(searchResults.length > 0);
     } catch (error) {
       console.error('Search error:', error);
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -130,9 +139,8 @@ export const SearchBar = ({ className }: SearchBarProps) => {
     
     if (result.type === 'group') {
       navigate(`/group/${result.id}`);
-    } else {
-      // For posts, navigate to the group where the post exists
-      navigate(`/group/${result.id}`); // You might want to scroll to the specific post
+    } else if (result.type === 'post') {
+      navigate(`/post/${result.id}`);
     }
   };
 

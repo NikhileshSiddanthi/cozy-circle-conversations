@@ -32,7 +32,8 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
     description: "",
     categoryId: "",
     type: "topic-based" as "topic-based" | "personality-driven" | "institutional",
-    isPublic: true
+    isPublic: true,
+    inviteEmails: ""
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -92,7 +93,7 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
         description: "Your group suggestion has been sent to administrators for approval.",
       });
 
-      setFormData({ name: "", description: "", categoryId: "", type: "topic-based", isPublic: true });
+      setFormData({ name: "", description: "", categoryId: "", type: "topic-based", isPublic: true, inviteEmails: "" });
       setOpen(false);
       onSuccess?.();
     } catch (error: any) {
@@ -200,6 +201,8 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
               <label className="text-sm font-medium">Invite Members (Optional)</label>
               <Textarea
                 placeholder="Enter email addresses separated by commas to invite initial members..."
+                value={formData.inviteEmails}
+                onChange={(e) => setFormData({ ...formData, inviteEmails: e.target.value })}
                 rows={2}
                 className="mt-1"
               />

@@ -151,6 +151,10 @@ export const NotificationBell = () => {
                     if (!notification.is_read) {
                       markAsRead(notification.id);
                     }
+                    // Handle navigation based on notification type
+                    if (notification.type === 'group_suggestion' && notification.data?.group_id) {
+                      window.location.href = `/admin?tab=groups&highlight=${notification.data.group_id}`;
+                    }
                   }}
                 >
                   <div className="space-y-1">

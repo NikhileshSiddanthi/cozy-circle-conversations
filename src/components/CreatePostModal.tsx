@@ -22,12 +22,23 @@ interface CreatePostModalProps {
   groups: Group[];
   selectedGroupId?: string;
   onSuccess?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePostModalProps) => {
+export const CreatePostModal = ({ 
+  groups, 
+  selectedGroupId, 
+  onSuccess, 
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange 
+}: CreatePostModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const isControlled = externalOpen !== undefined;
+  const modalOpen = isControlled ? externalOpen : open;
+  const handleOpenChange = isControlled ? externalOnOpenChange : setOpen;
   const [isLoading, setIsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -41,7 +52,7 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
   });
 
   const [urlValidation, setUrlValidation] = useState({ isValid: true, error: "" });
-  const [persistedUploads, setPersisted] = useState<{[key: string]: string}>({});
+  const [persistedUploads, setPersistedUploads] = useState<{[key: string]: string}>({});
 
   const addPollOption = () => {
     setFormData({
@@ -70,10 +81,10 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
     if (!user) return;
 
     // Validate media URL if provided
-    if (formData.mediaUrl && !urlValidation.isValid) {
+    if (formData.mediaUrl && (!urlValidation.isValid || urlValidation.error)) {
       toast({
         title: "Invalid Media URL",
-        description: urlValidation.error || "Please provide a valid media URL",
+        description: urlValidation.error || "Please provide a valid media URL.",
         variant: "destructive",
       });
       return;
@@ -120,7 +131,7 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
         pollQuestion: "",
         pollOptions: ["", ""]
       });
-      setOpen(false);
+      handleOpenChange?.(false);
       onSuccess?.();
     } catch (error: any) {
       toast({
@@ -134,7 +145,7 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={modalOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button className="w-full">
           <Plus className="h-4 w-4 mr-2" />
@@ -200,6 +211,9 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
             </TabsContent>
 
             <TabsContent value="media" className="mt-4 space-y-3">
+              <div className="text-sm text-muted-foreground mb-4">
+                Add media via URL (images, videos, YouTube links) or use the Upload File tab for local files.
+              </div>
               <div>
                 <label className="text-sm font-medium">Media Type</label>
                 <Select
@@ -261,6 +275,9 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
             </TabsContent>
 
             <TabsContent value="file" className="mt-4 space-y-3">
+              <div className="text-sm text-muted-foreground mb-4">
+                Upload files directly from your computer. Supported formats: images, videos, documents.
+              </div>
               <FileUpload
                 onFileUploaded={(url, type) => {
                   setFormData({ 
@@ -269,7 +286,7 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
                     mediaType: "file"
                   });
                   // Persist upload across tab changes
-                  setPersisted({ ...persistedUploads, file: url });
+                  setPersistedUploads({ ...persistedUploads, file: url });
                 }}
                 onFileRemoved={() => {
                   setFormData({ 
@@ -279,12 +296,14 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
                   });
                   const newPersisted = { ...persistedUploads };
                   delete newPersisted.file;
-                  setPersisted(newPersisted);
+                  setPersistedUploads(newPersisted);
                 }}
               />
               {persistedUploads.file && (
-                <div className="text-sm text-green-600">
-                  ✓ File uploaded and ready to publish
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    ✓ File uploaded and ready to publish: {persistedUploads.file}
+                  </p>
                 </div>
               )}
             </TabsContent>
@@ -349,7 +368,7 @@ export const CreatePostModal = ({ groups, selectedGroupId, onSuccess }: CreatePo
           </Tabs>
 
           <div className="flex gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1">
+            <Button type="button" variant="outline" onClick={() => handleOpenChange?.(false)} className="flex-1">
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading} className="flex-1">

@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { CommentSection } from "./CommentSection";
+import { PostActionsMenu } from "./PostActionsMenu";
+import { ViewCounter } from "./ViewCounter";
 
 interface Post {
   id: string;
@@ -343,6 +345,9 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
         {renderMedia()}
         {renderPoll()}
 
+        {/* View Counter */}
+        <ViewCounter postId={post.id} />
+
         <div className="flex items-center justify-between pt-2 border-t">
           <div className="flex items-center gap-2 flex-wrap">
             <Button
@@ -375,9 +380,24 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
             </Button>
           </div>
 
-          <Button variant="ghost" size="sm" onClick={handleShare}>
-            <Share2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={handleShare}>
+              <Share2 className="h-4 w-4" />
+            </Button>
+            <PostActionsMenu
+              postId={post.id}
+              postTitle={post.title}
+              isAuthor={user?.id === post.user_id}
+              onEdit={() => {
+                // TODO: Implement edit functionality
+                toast({
+                  title: "Edit Coming Soon",
+                  description: "Post editing will be available in a future update.",
+                });
+              }}
+              onDelete={onUpdate}
+            />
+          </div>
         </div>
 
         {showComments && (
