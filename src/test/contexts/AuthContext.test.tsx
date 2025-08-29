@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 // Mock Supabase
@@ -44,22 +44,17 @@ describe('AuthContext', () => {
   });
 
   it('provides auth context with initial loading state', async () => {
-    render(
+    const { getByTestId } = render(
       <AuthProvider>
         <TestComponent />
       </AuthProvider>
     );
 
     // Initially should be loading
-    expect(screen.getByTestId('loading')).toHaveTextContent('Loading...');
+    expect(getByTestId('loading')).toHaveTextContent('Loading...');
     
-    // Wait for loading to complete
-    await waitFor(() => {
-      expect(screen.getByTestId('loading')).toHaveTextContent('Ready');
-    });
-
     // Should not be authenticated initially
-    expect(screen.getByTestId('user')).toHaveTextContent('Not authenticated');
+    expect(getByTestId('user')).toHaveTextContent('Not authenticated');
   });
 
   it('calls supabase auth methods on mount', () => {

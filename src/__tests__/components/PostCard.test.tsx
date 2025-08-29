@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PostCard } from '@/components/PostCard';
 
@@ -59,6 +59,8 @@ const mockPost = {
   view_count: 10,
   created_at: '2025-01-20T10:00:00Z',
   updated_at: '2025-01-20T10:00:00Z',
+  media_type: null,
+  media_url: null,
   media_thumbnail: null,
   is_pinned: false,
   poll_question: null,
@@ -71,34 +73,34 @@ const mockPost = {
 
 describe('PostCard', () => {
   it('renders post title and content', () => {
-    render(
+    const { getByText } = render(
       <TestWrapper>
         <PostCard post={mockPost} />
       </TestWrapper>
     );
 
-    expect(screen.getByText('Test Post Title')).toBeDefined();
-    expect(screen.getByText('This is test post content')).toBeDefined();
+    expect(getByText('Test Post Title')).toBeDefined();
+    expect(getByText('This is test post content')).toBeDefined();
   });
 
   it('displays post metrics', () => {
-    render(
+    const { getByText } = render(
       <TestWrapper>
         <PostCard post={mockPost} />
       </TestWrapper>
     );
 
-    expect(screen.getByText('5')).toBeDefined(); // like count
-    expect(screen.getByText('3')).toBeDefined(); // comment count
+    expect(getByText('5')).toBeDefined(); // like count
+    expect(getByText('3')).toBeDefined(); // comment count
   });
 
   it('shows user display name', () => {
-    render(
+    const { getByText } = render(
       <TestWrapper>
         <PostCard post={mockPost} />
       </TestWrapper>
     );
 
-    expect(screen.getByText('Test User')).toBeDefined();
+    expect(getByText('Test User')).toBeDefined();
   });
 });
