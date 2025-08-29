@@ -29,14 +29,17 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  console.log('=== AUTH PROVIDER STARTING ===');
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('=== AUTH PROVIDER EFFECT RUNNING ===');
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state change:', event, session ? 'session exists' : 'no session');
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
