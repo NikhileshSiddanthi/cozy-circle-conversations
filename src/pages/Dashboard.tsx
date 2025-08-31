@@ -1,45 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { SuggestGroupModal } from '@/components/SuggestGroupModal';
-import { CreatePostWithValidation } from '@/components/CreatePostWithValidation';
-import { FloatingNavbar } from '@/components/FloatingNavbar';
-import { useTrendingGroups } from '@/hooks/useTrendingGroups';
-import { useTrendingTopics } from '@/hooks/useTrendingTopics';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Flag, 
-  Building2, 
-  Globe, 
-  Users, 
-  Crown, 
-  Briefcase,
-  TrendingUp,
-  Vote,
-  Gavel,
-  MapPin,
-  Hash,
-  ArrowUp,
-  ArrowDown
-} from 'lucide-react';
-
-// Icon mapping for dynamic categories
-const iconMap: { [key: string]: any } = {
-  Flag,
-  Building2,
-  Globe,
-  Users,
-  Crown,
-  TrendingUp,
-  Briefcase,
-  Vote,
-  Gavel,
-  MapPin
-};
+import { MainLayout } from '@/components/layout/MainLayout';
+import { CategoryCard } from '@/components/CategoryCard';
+import { Vote } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -55,15 +20,9 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userGroups, setUserGroups] = useState<{id: string; name: string}[]>([]);
-  const { trendingGroups, loading: trendingLoading } = useTrendingGroups(7);
-  const { trendingTopics, loading: topicsLoading } = useTrendingTopics(7);
 
   useEffect(() => {
     fetchCategories();
-    if (user) {
-      fetchUserGroups();
-    }
   }, [user]);
 
   const fetchCategories = async () => {
@@ -107,279 +66,43 @@ const Dashboard = () => {
     }
   };
 
-  const fetchUserGroups = async () => {
-    if (!user) {
-      console.log('No user found, skipping user groups fetch');
-      return;
-    }
-
-    try {
-      console.log('Fetching user groups for user:', user.id);
-      const { data, error } = await supabase
-        .from('group_members')
-        .select(`
-          group_id,
-          groups!inner(id, name, is_approved)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'approved')
-        .eq('groups.is_approved', true);
-
-      if (error) throw error;
-
-      const groups = data?.map(item => ({
-        id: item.groups.id,
-        name: item.groups.name
-      })) || [];
-
-      console.log('User groups fetched:', groups.length, 'groups');
-      setUserGroups(groups);
-    } catch (error: any) {
-      console.error('Error fetching user groups:', error);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Vote className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Loading COZI...</p>
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <Vote className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
+            <p className="text-muted-foreground">Loading COZI...</p>
+          </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <FloatingNavbar />
-      
-      <div className="container mx-auto px-4 py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Welcome Section */}
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-2">Welcome to COZI Political Forum</h2>
-              <p className="text-xl text-muted-foreground">
-                Engage in moderated discussions on politics, elections, policies, and world leaders
-              </p>
-            </div>
+    <MainLayout>
+      {/* Welcome Section */}
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-3">Welcome to COZI Political Forum</h1>
+        <p className="text-xl text-muted-foreground">
+          Engage in moderated discussions on politics, elections, policies, and world leaders
+        </p>
+      </div>
 
-            {/* Categories Grid */}
-            <div className="mb-8">
-              <h3 className="text-2xl font-semibold mb-4">Political Categories</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {categories.map((category) => {
-                  const Icon = iconMap[category.icon] || Flag;
-                  return (
-                    <Card 
-                      key={category.id} 
-                      className="hover:shadow-lg transition-shadow cursor-pointer"
-                      onClick={() => navigate(`/category/${category.id}`)}
-                    >
-                      <CardHeader>
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${category.color_class}`}>
-                            <Icon className="h-6 w-6 text-white" />
-                          </div>
-                          <div className="flex-1">
-                            <CardTitle className="text-lg">{category.name}</CardTitle>
-                            <Badge variant="secondary" className="mt-1">
-                              {category.group_count} groups
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground">
-                          {category.description}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="border-primary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Gavel className="h-5 w-5 text-primary" />
-                    Start a Discussion
-                  </CardTitle>
-                  <CardDescription>
-                    Create a new political discussion or debate topic
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <CreatePostWithValidation userGroups={userGroups} />
-                </CardContent>
-              </Card>
-
-              <Card className="border-secondary/20">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-secondary" />
-                    Suggest a Group
-                  </CardTitle>
-                  <CardDescription>
-                    Propose a new community for political discussions
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SuggestGroupModal 
-                    categories={categories} 
-                    onSuccess={fetchCategories}
-                  />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="space-y-6 sticky top-24">
-              {/* Trending Groups & Topics */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-primary" />
-                    Trending
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Tabs defaultValue="groups" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mx-4 mb-4">
-                      <TabsTrigger value="groups">Groups</TabsTrigger>
-                      <TabsTrigger value="topics">Topics</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="groups" className="px-4 pb-4 mt-0">
-                      <div className="space-y-3">
-                        {trendingLoading ? (
-                          <div className="space-y-3">
-                            {[...Array(3)].map((_, i) => (
-                              <div key={i} className="animate-pulse">
-                                <div className="h-4 bg-muted rounded mb-1"></div>
-                                <div className="h-3 bg-muted rounded w-2/3"></div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : trendingGroups.length > 0 ? (
-                          trendingGroups.map((group) => (
-                            <div 
-                              key={group.id} 
-                              className="flex justify-between items-start cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2"
-                              onClick={() => navigate(`/group/${group.id}`)}
-                            >
-                              <div className="flex-1">
-                                <p className="font-medium text-sm leading-tight">{group.name}</p>
-                                <p className="text-xs text-muted-foreground">{group.category_name}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="outline" className="text-xs">
-                                    {group.member_count.toLocaleString()} members
-                                  </Badge>
-                                  {group.trend_change !== 0 && (
-                                    <div className={`flex items-center gap-1 text-xs ${
-                                      group.trend_change > 0 ? 'text-green-600' : 'text-red-600'
-                                    }`}>
-                                      {group.trend_change > 0 ? (
-                                        <ArrowUp className="h-3 w-3" />
-                                      ) : (
-                                        <ArrowDown className="h-3 w-3" />
-                                      )}
-                                      {Math.abs(group.trend_change)}%
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-xs text-muted-foreground text-center py-4">
-                            No trending groups found
-                          </p>
-                        )}
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="topics" className="px-4 pb-4 mt-0">
-                      <div className="space-y-3">
-                        {topicsLoading ? (
-                          <div className="space-y-3">
-                            {[...Array(3)].map((_, i) => (
-                              <div key={i} className="animate-pulse">
-                                <div className="h-4 bg-muted rounded mb-1"></div>
-                                <div className="h-3 bg-muted rounded w-2/3"></div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : trendingTopics.length > 0 ? (
-                          trendingTopics.slice(0, 5).map((topic) => (
-                            <div 
-                              key={topic.topic} 
-                              className="flex justify-between items-start cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2"
-                              onClick={() => navigate(`/category?search=${encodeURIComponent(topic.topic)}`)}
-                            >
-                              <div className="flex-1">
-                                <p className="font-medium text-sm leading-tight">#{topic.topic}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {topic.mentions} mentions · {topic.unique_users} users
-                                </p>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="outline" className="text-xs">
-                                    Score: {topic.score.toFixed(1)}
-                                  </Badge>
-                                  {topic.trend_change !== 0 && (
-                                    <div className={`flex items-center gap-1 text-xs ${
-                                      topic.trend_change > 0 ? 'text-green-600' : 'text-red-600'
-                                    }`}>
-                                      {topic.trend_change > 0 ? (
-                                        <ArrowUp className="h-3 w-3" />
-                                      ) : (
-                                        <ArrowDown className="h-3 w-3" />
-                                      )}
-                                      {Math.abs(topic.trend_change)}%
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-xs text-muted-foreground text-center py-4">
-                            No trending topics found
-                          </p>
-                        )}
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-
-              {/* About COZI */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>About COZI</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    COZI is a moderated discussion platform for intellectual political conversations 
-                    on topics like elections, policies, global issues, and world leaders.
-                  </p>
-                  <Button variant="outline" size="sm" className="w-full mt-3">
-                    Learn More
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+      {/* Categories Grid */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-6">Political Categories</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          {categories.map((category) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              onClick={() => navigate(`/category/${category.id}`)}
+            />
+          ))}
         </div>
       </div>
-    </div>
+    </MainLayout>
   );
 };
 
