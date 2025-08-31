@@ -75,10 +75,12 @@ const Dashboard = () => {
 
       if (categoriesError) {
         console.error('Error fetching categories:', categoriesError);
+        setLoading(false);
         return;
       }
 
       console.log('Categories fetched:', categoriesData?.length || 0);
+      console.log('Categories data:', categoriesData);
 
       // Fetch group counts for each category
       const categoriesWithCounts = await Promise.all(
