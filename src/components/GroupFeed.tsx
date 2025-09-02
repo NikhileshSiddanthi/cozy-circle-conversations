@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Users, MessageCircle, TrendingUp, Share2 } from "lucide-react";
 import { PostCard } from "./PostCard";
+import { PostComposer } from "./PostComposer";
+import { EmptyGroupState } from "./EmptyGroupState";
 import { CreatePostModal } from "./CreatePostModal";
 
 interface Group {
@@ -48,6 +50,7 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isMember, setIsMember] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetchGroupData();
@@ -235,32 +238,22 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
         </CardHeader>
       </Card>
 
-      {/* Create Post */}
+      {/* Post Composer */}
       {isMember && (
-        <div className="space-y-4">
-          <CreatePostModal 
-            groups={[{ id: group.id, name: group.name }]} 
-            selectedGroupId={groupId}
-            onSuccess={fetchPosts}
-          />
-        </div>
+        <PostComposer
+          groups={[{ id: group.id, name: group.name }]}
+          selectedGroupId={groupId}
+          onSuccess={fetchPosts}
+        />
       )}
 
       {/* Posts Feed */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {posts.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-8">
-              <MessageCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No posts yet</h3>
-              <p className="text-muted-foreground">
-                {isMember 
-                  ? "Be the first to start a discussion in this group!" 
-                  : "Join this group to see posts and start discussions."
-                }
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyGroupState 
+            isMember={isMember}
+            onCreatePost={() => setShowCreateModal(true)}
+          />
         ) : (
           posts.map((post) => (
             <PostCard 
@@ -271,6 +264,20 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
           ))
         )}
       </div>
+
+      {/* Modal for Empty State Create Post */}
+      {showCreateModal && group && (
+        <CreatePostModal
+          open={showCreateModal}
+          onOpenChange={setShowCreateModal}
+          groups={[{ id: group.id, name: group.name }]}
+          selectedGroupId={groupId}
+          onSuccess={() => {
+            setShowCreateModal(false);
+            fetchPosts();
+          }}
+        />
+      )}
     </div>
   );
 };
