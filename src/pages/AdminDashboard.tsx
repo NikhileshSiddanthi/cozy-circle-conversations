@@ -1,65 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Settings, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  CheckCircle, 
-  XCircle, 
-  Clock,
-  Flag,
-  Building2,
-  Globe,
-  Users,
-  Crown,
-  TrendingUp,
-  Briefcase,
-  Vote,
-  Gavel,
-  MapPin,
-  Newspaper,
-  Link,
-  Calendar
-} from 'lucide-react';
+import { ArrowLeft, Shield, Users, Settings, FolderOpen } from 'lucide-react';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { AdminBreadcrumbs } from '@/components/AdminBreadcrumbs';
+import { MemberRequestsTab } from '@/components/admin/MemberRequestsTab';
+import { CategoryManagementTab } from '@/components/admin/CategoryManagementTab';
 
-// Icon mapping for categories
-const iconMap: { [key: string]: any } = {
-  Flag, Building2, Globe, Users, Crown, TrendingUp, Briefcase, Vote, Gavel, MapPin
-};
+// Type definitions
 
-const iconOptions = [
-  { value: 'Flag', label: 'Flag', icon: Flag },
-  { value: 'Building2', label: 'Building', icon: Building2 },
-  { value: 'Globe', label: 'Globe', icon: Globe },
-  { value: 'Users', label: 'Users', icon: Users },
-  { value: 'Crown', label: 'Crown', icon: Crown },
-  { value: 'TrendingUp', label: 'Trending Up', icon: TrendingUp },
-  { value: 'Briefcase', label: 'Briefcase', icon: Briefcase },
-  { value: 'Vote', label: 'Vote', icon: Vote },
-  { value: 'Gavel', label: 'Gavel', icon: Gavel },
-  { value: 'MapPin', label: 'Map Pin', icon: MapPin }
-];
-
-const colorOptions = [
-  { value: 'bg-primary', label: 'Primary Blue' },
-  { value: 'bg-secondary', label: 'Secondary Red' },
-  { value: 'bg-accent', label: 'Accent Purple' },
-  { value: 'bg-destructive', label: 'Destructive Red' },
-  { value: 'bg-muted', label: 'Muted Gray' }
-];
 
 interface Category {
   id: string;
@@ -521,560 +476,94 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Settings className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
-          <p className="text-muted-foreground">Loading Admin Dashboard...</p>
+      <MainLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Shield className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
+            <p className="text-muted-foreground">Loading Admin Dashboard...</p>
+          </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-          <p className="text-xl text-muted-foreground">
+    <MainLayout>
+      <div className="space-y-6">
+        {/* Header with breadcrumbs and back button */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
+                <Link to="/" className="flex items-center gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to App
+                </Link>
+              </Button>
+            </div>
+            <AdminBreadcrumbs />
+          </div>
+        </div>
+
+        {/* Dashboard Header */}
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Shield className="h-8 w-8 text-primary" />
+            Admin Dashboard
+          </h1>
+          <p className="text-muted-foreground">
             Manage categories, groups, and content moderation
           </p>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          {/* Member Management */}
-          <div className="space-y-6">
+        {/* Admin Tabs */}
+        <Tabs defaultValue="members" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="members" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Member Requests
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Categories
+            </TabsTrigger>
+            <TabsTrigger value="groups" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Groups
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="members">
+            <MemberRequestsTab
+              pendingMembers={pendingMembers}
+              onApproveMember={handleApproveMember}
+              onRejectMember={handleRejectMember}
+            />
+          </TabsContent>
+
+          <TabsContent value="categories">
+            <CategoryManagementTab
+              categories={categories}
+              onCreateCategory={handleCreateCategory}
+              onUpdateCategory={handleUpdateCategory}
+              onDeleteCategory={handleDeleteCategory}
+            />
+          </TabsContent>
+
+          <TabsContent value="groups">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Member Requests
-                </CardTitle>
+                <CardTitle>Group Management</CardTitle>
+                <CardDescription>Manage group approvals and moderation</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {pendingMembers.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No pending member requests</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Pending Requests ({pendingMembers.length})
-                    </h4>
-                    {pendingMembers.map((member) => (
-                      <div key={member.id} className="border rounded-lg p-3 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium">User ID: {member.user_id.slice(0, 8)}...</p>
-                            <p className="text-sm text-muted-foreground">
-                              Group: {member.groups?.name || 'Unknown Group'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              Requested: {new Date(member.joined_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleApproveMember(member.id)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRejectMember(member.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <CardContent>
+                <p className="text-muted-foreground">Group management features coming soon...</p>
               </CardContent>
             </Card>
-          </div>
-          {/* Categories Management */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5" />
-                    Category Management
-                  </CardTitle>
-                  <Button onClick={() => setShowCategoryForm(!showCategoryForm)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Category
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {showCategoryForm && (
-                  <div className="border rounded-lg p-4 space-y-4">
-                    <h4 className="font-medium">
-                      {editingCategory ? 'Edit Category' : 'Create New Category'}
-                    </h4>
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="category-name">Name</Label>
-                        <Input
-                          id="category-name"
-                          value={categoryForm.name}
-                          onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
-                          placeholder="Category name"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="category-description">Description</Label>
-                        <Textarea
-                          id="category-description"
-                          value={categoryForm.description}
-                          onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
-                          placeholder="Category description"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Icon</Label>
-                          <Select value={categoryForm.icon} onValueChange={(value) => setCategoryForm({ ...categoryForm, icon: value })}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {iconOptions.map((option) => {
-                                const IconComponent = option.icon;
-                                return (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    <div className="flex items-center gap-2">
-                                      <IconComponent className="h-4 w-4" />
-                                      {option.label}
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>Color</Label>
-                          <Select value={categoryForm.color_class} onValueChange={(value) => setCategoryForm({ ...categoryForm, color_class: value })}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {colorOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={editingCategory ? handleUpdateCategory : handleCreateCategory}
-                          className="flex-1"
-                        >
-                          {editingCategory ? 'Update' : 'Create'} Category
-                        </Button>
-                        {editingCategory && (
-                          <Button 
-                            variant="outline"
-                            onClick={() => {
-                              setEditingCategory(null);
-                              setCategoryForm({ name: '', description: '', icon: 'Flag', color_class: 'bg-primary' });
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  {categories.map((category) => {
-                    const Icon = iconMap[category.icon] || Flag;
-                    return (
-                      <div key={category.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg ${category.color_class}`}>
-                            <Icon className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{category.name}</p>
-                            <p className="text-sm text-muted-foreground">{category.description}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => startEditCategory(category)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteCategory(category.id)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Groups Management */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Group Management
-                  </CardTitle>
-                  <Button onClick={() => setShowGroupForm(!showGroupForm)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Group
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {showGroupForm && (
-                  <div className="border rounded-lg p-4 space-y-4">
-                    <h4 className="font-medium">Create New Group</h4>
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="group-name">Name</Label>
-                        <Input
-                          id="group-name"
-                          value={groupForm.name}
-                          onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
-                          placeholder="Group name"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="group-description">Description</Label>
-                        <Textarea
-                          id="group-description"
-                          value={groupForm.description}
-                          onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
-                          placeholder="Group description"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Category</Label>
-                          <Select value={groupForm.category_id} onValueChange={(value) => setGroupForm({ ...groupForm, category_id: value })}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categories.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>Type</Label>
-                          <Select value={groupForm.type} onValueChange={(value) => setGroupForm({ ...groupForm, type: value })}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="topic">Topic-based</SelectItem>
-                              <SelectItem value="personality">Personality-driven</SelectItem>
-                              <SelectItem value="institutional">Institutional</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="is-public"
-                          checked={groupForm.is_public}
-                          onChange={(e) => setGroupForm({ ...groupForm, is_public: e.target.checked })}
-                        />
-                        <Label htmlFor="is-public">Public group</Label>
-                      </div>
-                      <Button onClick={handleCreateGroup} className="w-full">
-                        Create Group
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Pending Groups */}
-                {pendingGroups.length > 0 && (
-                  <div className="space-y-3">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Pending Approval ({pendingGroups.length})
-                    </h4>
-                    {pendingGroups.map((group) => (
-                      <div key={group.id} className="border rounded-lg p-3 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium">{group.name}</p>
-                            <p className="text-sm text-muted-foreground">{group.description}</p>
-                            <div className="flex gap-2 mt-2">
-                              <Badge variant="secondary">{group.type}</Badge>
-                              <Badge variant={group.is_public ? "default" : "outline"}>
-                                {group.is_public ? "Public" : "Private"}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => handleApproveGroup(group.id)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRejectGroup(group.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <Separator />
-
-                {/* Approved Groups */}
-                <div className="space-y-3">
-                  <h4 className="font-medium">Approved Groups ({approvedGroups.length})</h4>
-                  {approvedGroups.slice(0, 5).map((group) => (
-                    <div key={group.id} className="border rounded-lg p-3">
-                      <p className="font-medium">{group.name}</p>
-                      <p className="text-sm text-muted-foreground">{group.description}</p>
-                      <div className="flex gap-2 mt-2">
-                        <Badge variant="secondary">{group.type}</Badge>
-                        <Badge variant={group.is_public ? "default" : "outline"}>
-                          {group.is_public ? "Public" : "Private"}
-                        </Badge>
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          Approved
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                  {approvedGroups.length > 5 && (
-                    <p className="text-sm text-muted-foreground">
-                      And {approvedGroups.length - 5} more groups...
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* News Management Section */}
-        <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Newspaper className="h-5 w-5" />
-                  News Management
-                </CardTitle>
-                <Button onClick={() => setShowNewsForm(!showNewsForm)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add News Article
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {showNewsForm && (
-                <div className="border rounded-lg p-4 space-y-4">
-                  <h4 className="font-medium">Add News Article</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="news-title">Title</Label>
-                        <Input
-                          id="news-title"
-                          value={newsForm.title}
-                          onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
-                          placeholder="Article title"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="news-description">Description</Label>
-                        <Textarea
-                          id="news-description"
-                          value={newsForm.description}
-                          onChange={(e) => setNewsForm({ ...newsForm, description: e.target.value })}
-                          placeholder="Article description"
-                          rows={3}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="news-url">URL</Label>
-                        <Input
-                          id="news-url"
-                          value={newsForm.url}
-                          onChange={(e) => setNewsForm({ ...newsForm, url: e.target.value })}
-                          placeholder="https://example.com/article"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="news-image">Image URL</Label>
-                        <Input
-                          id="news-image"
-                          value={newsForm.image_url}
-                          onChange={(e) => setNewsForm({ ...newsForm, image_url: e.target.value })}
-                          placeholder="https://example.com/image.jpg"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-3">
-                      <div>
-                        <Label htmlFor="news-author">Author</Label>
-                        <Input
-                          id="news-author"
-                          value={newsForm.author}
-                          onChange={(e) => setNewsForm({ ...newsForm, author: e.target.value })}
-                          placeholder="Author name"
-                        />
-                      </div>
-                      <div>
-                        <Label>Source</Label>
-                        <Select value={newsForm.source_id} onValueChange={(value) => setNewsForm({ ...newsForm, source_id: value })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select news source" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {newsSources.filter(source => source.is_verified && source.is_active).map((source) => (
-                              <SelectItem key={source.id} value={source.id}>
-                                {source.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>Category</Label>
-                        <Select value={newsForm.category_id} onValueChange={(value) => setNewsForm({ ...newsForm, category_id: value })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {newsCategories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="news-date">Published Date</Label>
-                        <Input
-                          id="news-date"
-                          type="date"
-                          value={newsForm.published_at}
-                          onChange={(e) => setNewsForm({ ...newsForm, published_at: e.target.value })}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="is-featured"
-                          checked={newsForm.is_featured}
-                          onChange={(e) => setNewsForm({ ...newsForm, is_featured: e.target.checked })}
-                        />
-                        <Label htmlFor="is-featured">Featured article</Label>
-                      </div>
-                    </div>
-                  </div>
-                  <Button onClick={handleCreateNewsArticle} className="w-full">
-                    Add News Article
-                  </Button>
-                </div>
-              )}
-
-              {/* News Articles List */}
-              <div className="space-y-3">
-                <h4 className="font-medium">Recent Articles ({newsArticles.length})</h4>
-                {newsArticles.length === 0 && (
-                  <div className="text-center py-8 border rounded-lg">
-                    <Newspaper className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No news articles yet. Add some articles to get started!</p>
-                  </div>
-                )}
-                {newsArticles.slice(0, 10).map((article: any) => (
-                  <div key={article.id} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h5 className="font-medium line-clamp-2">{article.title}</h5>
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{article.description}</p>
-                        <div className="flex gap-2 mt-3">
-                          <Badge variant="secondary">{article.category?.name || 'Unknown'}</Badge>
-                          <Badge variant="outline">{article.source?.name || 'Unknown'}</Badge>
-                          {article.is_featured && (
-                            <Badge className="bg-yellow-100 text-yellow-800">Featured</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                          <span>By {article.author || 'Unknown'}</span>
-                          <span>{new Date(article.published_at).toLocaleDateString()}</span>
-                          <a href={article.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-primary">
-                            <Link className="h-3 w-3" />
-                            View Article
-                          </a>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteNewsArticle(article.id)}
-                        className="text-destructive hover:text-destructive ml-4"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {newsArticles.length > 10 && (
-                  <p className="text-sm text-muted-foreground text-center">
-                    And {newsArticles.length - 10} more articles...
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
-    </div>
+    </MainLayout>
   );
 };
 
