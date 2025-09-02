@@ -26,6 +26,18 @@ const iconMap: { [key: string]: any } = {
   MapPin
 };
 
+// Modern accent colors for icon badges
+const accentColors = [
+  'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400',
+  'bg-teal-100 text-teal-600 dark:bg-teal-900/20 dark:text-teal-400',
+  'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400',
+  'bg-amber-100 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400',
+  'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
+  'bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400',
+  'bg-rose-100 text-rose-600 dark:bg-rose-900/20 dark:text-rose-400',
+  'bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400'
+];
+
 interface Category {
   id: string;
   name: string;
@@ -43,30 +55,39 @@ interface CategoryCardProps {
 export const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick }) => {
   const Icon = iconMap[category.icon] || Flag;
   
+  // Get consistent accent color based on category ID
+  const accentColorIndex = category.id.charCodeAt(0) % accentColors.length;
+  const accentColor = accentColors[accentColorIndex];
+  
   return (
     <Card 
-      className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border-border/50 overflow-hidden h-48"
+      className="group cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-2 border-border/50 bg-card rounded-xl overflow-hidden h-auto min-h-[200px]"
       onClick={onClick}
     >
-      {/* Header with Icon Background */}
-      <div className={`relative h-20 ${category.color_class} flex items-center justify-center`}>
-        <Icon className="h-8 w-8 text-white" />
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/10" />
-      </div>
-      
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <CardTitle className="text-lg font-semibold leading-tight group-hover:text-primary transition-colors">
-            {category.name}
-          </CardTitle>
+      <CardHeader className="pb-4 pt-6">
+        {/* Icon Badge */}
+        <div className="flex items-start justify-between mb-3">
+          <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${accentColor} transition-transform group-hover:scale-110`}>
+            <Icon className="h-6 w-6" />
+          </div>
+          {/* Group Count Badge */}
+          <Badge 
+            variant="outline" 
+            className="text-xs px-2 py-1 bg-muted/50 text-muted-foreground border-muted-foreground/20 hover:bg-muted/70 transition-colors"
+          >
+            {category.group_count || 0} groups
+          </Badge>
         </div>
-        <Badge variant="secondary" className="w-fit">
-          {category.group_count || 0} groups
-        </Badge>
+        
+        {/* Title */}
+        <CardTitle className="text-xl font-bold leading-tight group-hover:text-primary transition-colors duration-200 mb-2">
+          {category.name}
+        </CardTitle>
       </CardHeader>
       
-      <CardContent>
-        <p className="text-sm text-muted-foreground line-clamp-2">
+      <CardContent className="pt-0">
+        {/* Description */}
+        <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
           {category.description}
         </p>
       </CardContent>
