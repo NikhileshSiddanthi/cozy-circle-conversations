@@ -31,7 +31,7 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
     name: "",
     description: "",
     categoryId: "",
-    type: "topic-based" as "topic-based" | "personality-driven" | "institutional",
+    type: "topic" as "topic" | "personality" | "institutional",
     isPublic: true,
     inviteEmails: ""
   });
@@ -119,7 +119,7 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
         description: "Your group suggestion has been sent to administrators for approval.",
       });
 
-      setFormData({ name: "", description: "", categoryId: "", type: "topic-based", isPublic: true, inviteEmails: "" });
+      setFormData({ name: "", description: "", categoryId: "", type: "topic", isPublic: true, inviteEmails: "" });
       setOpen(false);
       onSuccess?.();
     } catch (error: any) {
@@ -190,7 +190,7 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
             <label className="text-sm font-medium">Group Type</label>
             <Select
               value={formData.type}
-              onValueChange={(value: "topic-based" | "personality-driven" | "institutional") => 
+              onValueChange={(value: "topic" | "personality" | "institutional") => 
                 setFormData({ ...formData, type: value })
               }
             >
@@ -198,8 +198,8 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="topic-based">Topic-based (e.g., Trump Discussion)</SelectItem>
-                <SelectItem value="personality-driven">Personality-driven (e.g., Prof. Rao Group)</SelectItem>
+                <SelectItem value="topic">Topic-based (e.g., Trump Discussion)</SelectItem>
+                <SelectItem value="personality">Personality-driven (e.g., Prof. Rao Group)</SelectItem>
                 <SelectItem value="institutional">Institutional (e.g., YSC School)</SelectItem>
               </SelectContent>
             </Select>
