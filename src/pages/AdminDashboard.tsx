@@ -12,6 +12,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { AdminBreadcrumbs } from '@/components/AdminBreadcrumbs';
 import { MemberRequestsTab } from '@/components/admin/MemberRequestsTab';
 import { CategoryManagementTab } from '@/components/admin/CategoryManagementTab';
+import { GroupManagementTab } from '@/components/admin/GroupManagementTab';
 
 // Type definitions
 
@@ -551,15 +552,11 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="groups">
-            <Card>
-              <CardHeader>
-                <CardTitle>Group Management</CardTitle>
-                <CardDescription>Manage group approvals and moderation</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Group management features coming soon...</p>
-              </CardContent>
-            </Card>
+            <GroupManagementTab
+              pendingGroups={pendingGroups}
+              onApproveGroup={handleApproveGroup}
+              onRejectGroup={handleRejectGroup}
+            />
           </TabsContent>
         </Tabs>
       </div>
