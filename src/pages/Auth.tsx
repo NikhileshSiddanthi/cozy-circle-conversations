@@ -203,7 +203,7 @@ const Auth = () => {
             <CardTitle className="text-2xl font-bold text-primary">COZI</CardTitle>
           </div>
           <CardDescription>
-            Your platform for moderated political discussions
+            Welcome to COZI, Forum for public debate
           </CardDescription>
         </CardHeader>
         <CardContent>
