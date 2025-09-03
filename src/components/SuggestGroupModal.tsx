@@ -38,7 +38,14 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to suggest a group.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsLoading(true);
     try {
