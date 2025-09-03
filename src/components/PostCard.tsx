@@ -231,15 +231,13 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
 
       case "link":
         return (
-          <a
-            href={post.media_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent transition-colors"
+          <div
+            onClick={() => window.open(post.media_url, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')}
+            className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
           >
             <ExternalLink className="h-4 w-4" />
             <span className="text-sm font-medium truncate">{post.media_url}</span>
-          </a>
+          </div>
         );
 
       default:

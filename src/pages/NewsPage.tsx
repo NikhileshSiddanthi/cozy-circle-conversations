@@ -321,10 +321,12 @@ const FeaturedArticleCard: React.FC<{ article: NewsArticle }> = ({ article }) =>
               <Badge variant="outline" className="text-xs">Verified</Badge>
             )}
           </div>
-          <Button variant="outline" size="sm" asChild>
-            <a href={article.url} target="_blank" rel="noopener noreferrer">
-              Read More <ExternalLink className="h-3 w-3 ml-1" />
-            </a>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.open(article.url, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')}
+          >
+            Read More <ExternalLink className="h-3 w-3 ml-1" />
           </Button>
         </div>
       </CardContent>
@@ -363,10 +365,12 @@ const ArticleCard: React.FC<{ article: NewsArticle }> = ({ article }) => {
               <Badge variant="outline" className="text-xs">✓</Badge>
             )}
           </div>
-          <Button variant="outline" size="sm" asChild>
-            <a href={article.url} target="_blank" rel="noopener noreferrer">
-              Read <ExternalLink className="h-3 w-3 ml-1" />
-            </a>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => window.open(article.url, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')}
+          >
+            Read <ExternalLink className="h-3 w-3 ml-1" />
           </Button>
         </div>
       </CardContent>

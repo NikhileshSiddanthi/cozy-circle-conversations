@@ -122,15 +122,9 @@ export const RelatedNewsSidebar = ({ postTitle }: RelatedNewsSidebarProps) => {
                   variant="outline" 
                   size="sm" 
                   className="h-6 text-xs"
-                  asChild
+                  onClick={() => window.open(article.url, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')}
                 >
-                  <a 
-                    href={article.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                  >
-                    Read <ExternalLink className="h-2 w-2 ml-1" />
-                  </a>
+                  Read <ExternalLink className="h-2 w-2 ml-1" />
                 </Button>
               </div>
             </div>

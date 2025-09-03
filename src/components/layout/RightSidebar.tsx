@@ -215,7 +215,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                         variant="ghost"
                         size="sm"
                         className="w-full mt-2 justify-start text-xs h-auto py-1"
-                        onClick={() => window.open(article.url, '_blank')}
+                        onClick={() => window.open(article.url, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')}
                       >
                         <ExternalLink className="h-3 w-3 mr-1" />
                         Read full article
