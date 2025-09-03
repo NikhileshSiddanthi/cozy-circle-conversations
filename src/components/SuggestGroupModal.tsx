@@ -47,6 +47,25 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
       return;
     }
 
+    // Validate required fields
+    if (!formData.name.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter a group name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.categoryId) {
+      toast({
+        title: "Missing Information", 
+        description: "Please select a category.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Create the group suggestion
