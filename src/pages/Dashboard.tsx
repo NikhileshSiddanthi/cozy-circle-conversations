@@ -83,9 +83,9 @@ const Dashboard = () => {
     <MainLayout>
       {/* Welcome Section */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-3">Welcome to COZI Political Forum</h1>
+        <h1 className="text-4xl font-bold mb-3">Welcome to COZI, Forum for public debate</h1>
         <p className="text-xl text-muted-foreground">
-          Engage in moderated discussions on politics, elections, policies, and world leaders
+          Your platform for structured political discussions and debate
         </p>
       </div>
 
