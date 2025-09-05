@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useTrendingGroups } from '@/hooks/useTrendingGroups';
 import { useTrendingTopics } from '@/hooks/useTrendingTopics';
+import { useLatestGroups } from '@/hooks/useLatestGroups';
 import { useRelatedNews } from '@/hooks/useRelatedNews';
 import { 
   TrendingUp, 
@@ -14,7 +15,8 @@ import {
   ExternalLink,
   Hash,
   Users,
-  Newspaper
+  Newspaper,
+  Clock
 } from 'lucide-react';
 
 interface RightSidebarProps {
@@ -33,6 +35,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
   const navigate = useNavigate();
   const { trendingGroups, loading: trendingLoading } = useTrendingGroups(5);
   const { trendingTopics, loading: topicsLoading } = useTrendingTopics(5);
+  const { latestGroups, loading: latestLoading } = useLatestGroups(5);
   const { articles: relatedNews, loading: newsLoading } = useRelatedNews(
     contextData?.postTitle || 'political news'
   );
@@ -52,11 +55,15 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Tabs defaultValue="groups" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mx-4 mb-4">
-                <TabsTrigger value="groups" className="text-xs">
-                  <Users className="h-3 w-3 mr-1" />
-                  Groups
+            <Tabs defaultValue="trending" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mx-4 mb-4">
+                <TabsTrigger value="trending" className="text-xs">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  Trending
+                </TabsTrigger>
+                <TabsTrigger value="latest" className="text-xs">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Latest
                 </TabsTrigger>
                 <TabsTrigger value="topics" className="text-xs">
                   <Hash className="h-3 w-3 mr-1" />
@@ -64,7 +71,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="groups" className="px-4 pb-4 mt-0">
+              <TabsContent value="trending" className="px-4 pb-4 mt-0">
                 <div className="space-y-3">
                   {trendingLoading ? (
                     <div className="space-y-3">
@@ -106,6 +113,44 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                   ) : (
                     <p className="text-xs text-muted-foreground text-center py-4">
                       No trending groups
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="latest" className="px-4 pb-4 mt-0">
+                <div className="space-y-3">
+                  {latestLoading ? (
+                    <div className="space-y-3">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="h-4 bg-muted rounded mb-1"></div>
+                          <div className="h-3 bg-muted rounded w-2/3"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : latestGroups.length > 0 ? (
+                    latestGroups.map((group) => (
+                      <div 
+                        key={group.id} 
+                        className="cursor-pointer hover:bg-muted/50 p-2 rounded-lg -m-2 transition-colors"
+                        onClick={() => navigate(`/group/${group.id}`)}
+                      >
+                        <p className="font-medium text-sm leading-tight">{group.name}</p>
+                        <p className="text-xs text-muted-foreground mb-1">{group.category_name}</p>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {group.member_count.toLocaleString()} members
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {new Date(group.created_at).toLocaleDateString()}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      No recent groups
                     </p>
                   )}
                 </div>
