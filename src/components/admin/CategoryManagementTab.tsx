@@ -54,9 +54,9 @@ interface CategoryForm {
 
 interface CategoryManagementTabProps {
   categories: Category[];
-  onCreateCategory: (form: CategoryForm) => void;
-  onUpdateCategory: (form: CategoryForm) => void;
-  onDeleteCategory: (categoryId: string) => void;
+  onCreateCategory: (form: CategoryForm) => Promise<void>;
+  onUpdateCategory: (form: CategoryForm) => Promise<void>;
+  onDeleteCategory: (categoryId: string) => Promise<void>;
 }
 
 export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
@@ -80,11 +80,11 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
     color_class: 'bg-primary'
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (editingCategory) {
-      onUpdateCategory(categoryForm);
+      await onUpdateCategory(categoryForm);
     } else {
-      onCreateCategory(categoryForm);
+      await onCreateCategory(categoryForm);
     }
     resetForm();
   };
@@ -106,8 +106,8 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
     setShowForm(true);
   };
 
-  const handleDelete = (categoryId: string) => {
-    onDeleteCategory(categoryId);
+  const handleDelete = async (categoryId: string) => {
+    await onDeleteCategory(categoryId);
     setConfirmModal({ open: false, categoryId: '', categoryName: '' });
   };
 
