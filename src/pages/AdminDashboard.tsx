@@ -178,11 +178,11 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleCreateCategory = async () => {
+  const handleCreateCategory = async (formData: { name: string; description: string; icon: string; color_class: string }) => {
     try {
       const { error } = await supabase
         .from('categories')
-        .insert([categoryForm]);
+        .insert([formData]);
 
       if (error) throw error;
 
@@ -191,8 +191,6 @@ const AdminDashboard = () => {
         description: "Category created successfully",
       });
       
-      setCategoryForm({ name: '', description: '', icon: 'Flag', color_class: 'bg-primary' });
-      setShowCategoryForm(false);
       fetchData();
     } catch (error) {
       console.error('Error creating category:', error);
@@ -204,13 +202,13 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleUpdateCategory = async () => {
+  const handleUpdateCategory = async (formData: { name: string; description: string; icon: string; color_class: string }) => {
     if (!editingCategory) return;
     
     try {
       const { error } = await supabase
         .from('categories')
-        .update(categoryForm)
+        .update(formData)
         .eq('id', editingCategory.id);
 
       if (error) throw error;
@@ -234,10 +232,6 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    if (!confirm('Are you sure you want to delete this category? This will also delete all groups in this category.')) {
-      return;
-    }
-    
     try {
       const { error } = await supabase
         .from('categories')
