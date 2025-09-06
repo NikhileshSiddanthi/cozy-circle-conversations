@@ -495,7 +495,22 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
               </TabsContent>
 
               <TabsContent value="media" className="mt-4">
-                {currentDraft ? (
+                {!postData.groupId ? (
+                  <div className="text-center py-8 space-y-3">
+                    <Image className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                    <div>
+                      <h4 className="font-medium mb-1">Select a group first</h4>
+                      <p className="text-muted-foreground text-sm">
+                        Choose a group above to start uploading media files
+                      </p>
+                    </div>
+                  </div>
+                ) : isDraftLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span className="text-muted-foreground">Setting up media upload...</span>
+                  </div>
+                ) : currentDraft ? (
                   <MediaUploadTab
                     files={postData.mediaFiles}
                     onFilesChange={(urls) => setPostData(prev => ({ ...prev, mediaFiles: urls }))}
@@ -503,14 +518,24 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
                     groupId={postData.groupId}
                     userId={user.id}
                   />
-                ) : isDraftLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                    <span className="text-muted-foreground">Loading draft...</span>
-                  </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Please select a group to upload media
+                  <div className="text-center py-8 space-y-3">
+                    <div className="h-12 w-12 mx-auto rounded-full bg-destructive/10 flex items-center justify-center">
+                      <Image className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium mb-1 text-destructive">Media upload unavailable</h4>
+                      <p className="text-muted-foreground text-sm">
+                        There was an issue setting up media upload. Try refreshing the page.
+                      </p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.location.reload()}
+                    >
+                      Refresh Page
+                    </Button>
                   </div>
                 )}
               </TabsContent>
