@@ -9,6 +9,7 @@ import { Plus } from "lucide-react";
 interface Group {
   id: string;
   name: string;
+  is_public: boolean;
 }
 
 export const CreatePostButton = () => {
@@ -31,7 +32,7 @@ export const CreatePostButton = () => {
         .from('group_members')
         .select(`
           group_id,
-          groups!inner(id, name, is_approved)
+          groups!inner(id, name, is_public, is_approved)
         `)
         .eq('user_id', user.id)
         .eq('status', 'approved')
@@ -41,7 +42,8 @@ export const CreatePostButton = () => {
 
       const groups = data?.map(item => ({
         id: item.groups.id,
-        name: item.groups.name
+        name: item.groups.name,
+        is_public: item.groups.is_public
       })) || [];
 
       setUserGroups(groups);

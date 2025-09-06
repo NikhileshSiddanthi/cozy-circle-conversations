@@ -54,19 +54,19 @@ export const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
     const fileExt = file.name.split('.').pop();
     const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
-    const { data, error } = await supabase.storage
-      .from('post-files')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
+      const { data, error } = await supabase.storage
+        .from('post-files')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
     if (error) throw error;
 
-    // Get the public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('post-files')
-      .getPublicUrl(data.path);
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('post-files')
+        .getPublicUrl(data.path);
 
     return publicUrl;
   }, [user]);

@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 interface Group {
   id: string;
   name: string;
+  is_public: boolean;
 }
 
 interface CreatePostModalProps {

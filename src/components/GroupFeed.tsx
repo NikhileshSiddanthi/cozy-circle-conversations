@@ -241,7 +241,7 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
       {/* Post Composer */}
       {isMember && (
         <PostComposer
-          groups={[{ id: group.id, name: group.name }]}
+          groups={[{ id: group.id, name: group.name, is_public: group.is_public }]}
           selectedGroupId={groupId}
           onSuccess={fetchPosts}
         />
@@ -270,7 +270,7 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
         <CreatePostModal
           open={showCreateModal}
           onOpenChange={setShowCreateModal}
-          groups={[{ id: group.id, name: group.name }]}
+          groups={[{ id: group.id, name: group.name, is_public: group.is_public }]}
           selectedGroupId={groupId}
           onSuccess={() => {
             setShowCreateModal(false);

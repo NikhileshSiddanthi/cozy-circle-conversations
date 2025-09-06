@@ -8,6 +8,7 @@ import { Plus } from "lucide-react";
 interface Group {
   id: string;
   name: string;
+  is_public: boolean;
 }
 
 interface CreatePostWithValidationProps {
