@@ -109,19 +109,24 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
     
     setIsDraftLoading(true);
     try {
-      // Load existing draft for this group
-      const { data, error } = await supabase.functions.invoke('draft-manager', {
-        body: { groupId: postData.groupId }
+      // Load existing draft for this group using GET request
+      const response = await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/draft-manager/drafts?groupId=${postData.groupId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
+          'Content-Type': 'application/json',
+        },
       });
 
-      if (error) {
-        console.error('Error loading drafts:', error);
+      if (!response.ok) {
+        console.error('Error loading drafts:', response.statusText);
         await createNewDraft();
         return;
       }
 
-      const draftsResponse = data as { drafts: any[] };
-      const existingDraft = draftsResponse.drafts.find(d => d.group_id === postData.groupId);
+      const data = await response.json();
+      const existingDraft = data.drafts.find((d: any) => d.group_id === postData.groupId);
 
       if (existingDraft) {
         // Load existing draft
@@ -139,6 +144,7 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
       }
     } catch (error) {
       console.error('Failed to create or load draft:', error);
+      await createNewDraft();
     } finally {
       setIsDraftLoading(false);
     }
@@ -148,19 +154,33 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
     if (!user || !postData.groupId) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke('draft-manager', {
-        body: {
+      // Get user session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No valid session');
+      }
+
+      const response = await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/draft-manager/drafts`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           groupId: postData.groupId,
           title: '',
           content: '',
           metadata: {}
-        }
+        })
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`Failed to create draft: ${response.statusText}`);
+      }
 
-      const draftResponse = data as { draft: any };
-      setCurrentDraft(draftResponse.draft);
+      const data = await response.json();
+      setCurrentDraft(data.draft);
     } catch (error) {
       console.error('Failed to create new draft:', error);
     }
@@ -170,19 +190,32 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
     if (!currentDraft || !user || (!postData.content.trim() && !postData.title.trim())) return;
     
     try {
-      const { error } = await supabase.functions.invoke('draft-manager', {
-        body: {
-          draftId: currentDraft.id,
+      // Get user session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No valid session');
+      }
+
+      const response = await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/draft-manager/drafts/${currentDraft.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           title: postData.title,
           content: postData.content,
           metadata: {
             mentions: postData.mentions,
             hashtags: postData.hashtags
           }
-        }
+        })
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        throw new Error(`Failed to save draft: ${response.statusText}`);
+      }
       
       setIsDraft(true);
       setTimeout(() => setIsDraft(false), 2000);
@@ -195,9 +228,25 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
     if (!currentDraft || !user) return;
     
     try {
-      await supabase.functions.invoke('draft-manager', {
-        body: { draftId: currentDraft.id, action: 'delete' }
+      // Get user session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No valid session');
+      }
+
+      const response = await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/draft-manager/drafts/${currentDraft.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
+          'Content-Type': 'application/json',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete draft: ${response.statusText}`);
+      }
+
       setCurrentDraft(null);
     } catch (error) {
       console.error('Failed to delete draft:', error);
