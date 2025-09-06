@@ -95,6 +95,53 @@ export type Database = {
           },
         ]
       }
+      draft_media: {
+        Row: {
+          created_at: string
+          draft_id: string | null
+          file_id: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          status: Database["public"]["Enums"]["media_status"]
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          draft_id?: string | null
+          file_id: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          status?: Database["public"]["Enums"]["media_status"]
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          draft_id?: string | null
+          file_id?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          status?: Database["public"]["Enums"]["media_status"]
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "draft_media_draft_id_fkey"
+            columns: ["draft_id"]
+            isOneToOne: false
+            referencedRelation: "post_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           group_id: string
@@ -383,6 +430,50 @@ export type Database = {
           },
         ]
       }
+      post_drafts: {
+        Row: {
+          content: string | null
+          created_at: string
+          group_id: string | null
+          id: string
+          metadata: Json | null
+          status: Database["public"]["Enums"]["draft_status"]
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: Database["public"]["Enums"]["draft_status"]
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          metadata?: Json | null
+          status?: Database["public"]["Enums"]["draft_status"]
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_drafts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       posts: {
         Row: {
           comment_count: number | null
@@ -563,6 +654,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      draft_status: "editing" | "scheduled" | "published" | "discarded"
+      media_status: "pending" | "uploaded" | "attached" | "expired" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -691,6 +784,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      draft_status: ["editing", "scheduled", "published", "discarded"],
+      media_status: ["pending", "uploaded", "attached", "expired", "failed"],
     },
   },
 } as const

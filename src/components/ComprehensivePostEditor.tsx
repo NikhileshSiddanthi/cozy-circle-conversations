@@ -1,47 +1,36 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useOptimisticMutation } from '@/hooks/useOptimisticMutation';
-import { 
-  X, 
-  Bold, 
-  Italic, 
-  Underline, 
-  Strikethrough, 
-  Code, 
-  Quote, 
-  List, 
-  ListOrdered,
-  Heading1,
-  Heading2,
-  Heading3,
-  Smile,
-  AtSign,
-  Hash,
-  Image,
-  Video,
-  Link2,
-  BarChart3,
-  Save,
-  Send,
-  Loader2
-} from 'lucide-react';
-import ReactQuill from 'react-quill';
-import DOMPurify from 'dompurify';
-import 'react-quill/dist/quill.snow.css';
 import { RichTextToolbar } from './RichTextToolbar';
 import { MentionHashtagPicker } from './MentionHashtagPicker';
 import { MediaUploadTab } from './MediaUploadTab';
 import { LinkPreviewTab } from './LinkPreviewTab';
 import { PollCreatorTab } from './PollCreatorTab';
-import { DraftManager } from './DraftManager';
+import { 
+  X, 
+  Loader2, 
+  Save, 
+  Send,
+  Type,
+  Image,
+  Link,
+  BarChart3
+} from 'lucide-react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import DOMPurify from 'dompurify';
+
+const MAX_TITLE_LENGTH = 100;
+const MAX_CONTENT_LENGTH = 5000;
+const MIN_CONTENT_LENGTH = 10;
 
 interface Group {
   id: string;
@@ -63,15 +52,39 @@ interface PostData {
   content: string;
   groupId: string;
   mediaFiles: string[];
-  linkPreview?: any;
+  mentions: string[];
+  hashtags: string[];
   poll?: {
     question: string;
     options: string[];
     duration: number;
-    multipleChoice: boolean;
   };
-  mentions: string[];
-  hashtags: string[];
+  linkPreview?: {
+    url: string;
+    title: string;
+    description: string;
+    image: string;
+  };
+}
+
+interface ServerDraft {
+  id: string;
+  user_id: string;
+  group_id: string;
+  title: string;
+  content: string;
+  status: string;
+  metadata: any;
+  draft_media?: Array<{
+    id: string;
+    file_id: string;
+    url: string;
+    mime_type: string;
+    file_size: number;
+    status: string;
+  }>;
+  created_at: string;
+  updated_at: string;
 }
 
 export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
@@ -84,16 +97,16 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
 }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const quillRef = useRef<ReactQuill>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
-
-  const [activeTab, setActiveTab] = useState('text');
+  
+  const [activeTab, setActiveTab] = useState<'text' | 'media' | 'link' | 'poll'>('text');
   const [showMentions, setShowMentions] = useState(false);
   const [showHashtags, setShowHashtags] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [hashtagQuery, setHashtagQuery] = useState('');
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [currentDraft, setCurrentDraft] = useState<ServerDraft | null>(null);
+  const [isDraftLoading, setIsDraftLoading] = useState(false);
   
   const [postData, setPostData] = useState<PostData>({
     title: '',
@@ -110,120 +123,157 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
     generalError: ''
   });
 
-  const MAX_TITLE_LENGTH = 100;
-  const MAX_CONTENT_LENGTH = 5000;
-  const MIN_CONTENT_LENGTH = 10;
-  const AUTO_SAVE_INTERVAL = 10000; // 10 seconds
-
-  // Initialize editing post
+  // Auto-save effect
   useEffect(() => {
-    if (editingPost) {
-      setPostData({
-        title: editingPost.title || '',
-        content: editingPost.content || '',
-        groupId: editingPost.group_id || selectedGroupId || '',
-        mediaFiles: editingPost.media_url ? JSON.parse(editingPost.media_url) : [],
-        mentions: [],
-        hashtags: [],
-        poll: editingPost.poll_question ? {
-          question: editingPost.poll_question,
-          options: editingPost.poll_options || [],
-          duration: 7,
-          multipleChoice: false
-        } : undefined
-      });
+    if (currentDraft && (postData.title.trim() || postData.content.trim())) {
+      const timeoutId = setTimeout(autoSaveDraft, 10000); // Auto-save every 10 seconds
+      return () => clearTimeout(timeoutId);
     }
-  }, [editingPost, selectedGroupId]);
+  }, [postData.title, postData.content, currentDraft]);
 
-  // Auto-focus title on open
+  // Create or load draft when component opens
   useEffect(() => {
-    if (isOpen && titleInputRef.current) {
-      titleInputRef.current.focus();
+    if (isOpen && user && !editingPost && postData.groupId) {
+      createOrLoadDraft();
     }
-  }, [isOpen]);
+  }, [isOpen, editingPost, postData.groupId]);
 
-  // Auto-save functionality
-  useEffect(() => {
-    if (!isOpen || !postData.title && !postData.content) return;
-
-    const saveTimer = setTimeout(async () => {
-      await autoSaveDraft();
-    }, AUTO_SAVE_INTERVAL);
-
-    return () => clearTimeout(saveTimer);
-  }, [postData, isOpen]);
-
-  // Load draft on open
+  // Auto-focus title when editor opens
   useEffect(() => {
     if (isOpen && !editingPost) {
-      loadDraft();
+      const titleInput = document.getElementById('title');
+      if (titleInput) {
+        titleInput.focus();
+      }
     }
   }, [isOpen, editingPost]);
 
+  const createOrLoadDraft = useCallback(async () => {
+    if (!user || !postData.groupId) return;
+    
+    setIsDraftLoading(true);
+    try {
+      // First try to load existing draft for this group
+      const { data, error } = await supabase.functions.invoke('draft-manager', {
+        body: { groupId: postData.groupId }
+      });
+
+      if (error) {
+        console.error('Error loading drafts:', error);
+        // Create new draft if loading fails
+        await createNewDraft();
+        return;
+      }
+
+      const draftsResponse = data as { drafts: ServerDraft[] };
+      const existingDraft = draftsResponse.drafts.find(d => d.group_id === postData.groupId);
+
+      if (existingDraft) {
+        // Load existing draft
+        setCurrentDraft(existingDraft);
+        setPostData({
+          title: existingDraft.title || '',
+          content: existingDraft.content || '',
+          groupId: existingDraft.group_id,
+          mediaFiles: existingDraft.draft_media?.map(m => m.url) || [],
+          mentions: existingDraft.metadata?.mentions || [],
+          hashtags: existingDraft.metadata?.hashtags || [],
+          poll: existingDraft.metadata?.poll,
+          linkPreview: existingDraft.metadata?.linkPreview
+        });
+        setLastSaved(new Date(existingDraft.updated_at));
+      } else {
+        // Create new draft
+        await createNewDraft();
+      }
+    } catch (error) {
+      console.error('Failed to create or load draft:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load draft. Starting with empty composer.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDraftLoading(false);
+    }
+  }, [user, postData.groupId]);
+
+  const createNewDraft = useCallback(async () => {
+    if (!user || !postData.groupId) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('draft-manager', {
+        body: {
+          groupId: postData.groupId,
+          title: '',
+          content: '',
+          metadata: {}
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      const draftResponse = data as { draft: ServerDraft };
+      setCurrentDraft(draftResponse.draft);
+      console.log('New draft created:', draftResponse.draft.id);
+    } catch (error) {
+      console.error('Failed to create new draft:', error);
+      throw error;
+    }
+  }, [user, postData.groupId]);
+
   const autoSaveDraft = useCallback(async () => {
-    if (!user || !postData.groupId || (!postData.title.trim() && !postData.content.trim())) return;
+    if (!currentDraft || !user || (!postData.title.trim() && !postData.content.trim())) return;
     
     try {
       setIsAutoSaving(true);
-      const draft = {
-        ...postData,
-        userId: user.id,
-        savedAt: new Date().toISOString()
-      };
       
-      localStorage.setItem(`post_draft_${user.id}_${postData.groupId}`, JSON.stringify(draft));
+      const { data, error } = await supabase.functions.invoke('draft-manager', {
+        body: {
+          title: postData.title,
+          content: postData.content,
+          metadata: {
+            mentions: postData.mentions,
+            hashtags: postData.hashtags,
+            poll: postData.poll,
+            linkPreview: postData.linkPreview
+          }
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+
       setLastSaved(new Date());
     } catch (error) {
       console.error('Auto-save failed:', error);
     } finally {
       setIsAutoSaving(false);
     }
-  }, [postData, user]);
-
-  const loadDraft = useCallback(() => {
-    if (!user || !postData.groupId) return;
-    
-    try {
-      const savedDraft = localStorage.getItem(`post_draft_${user.id}_${postData.groupId}`);
-      if (savedDraft) {
-        const draft = JSON.parse(savedDraft);
-        // Only load if it's for the same group
-        if (draft.groupId === postData.groupId) {
-          setPostData(draft);
-          setLastSaved(new Date(draft.savedAt));
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load draft:', error);
-    }
-  }, [user, postData.groupId]);
+  }, [postData, user, currentDraft]);
 
   const clearDraft = useCallback(async () => {
-    if (!user || !postData.groupId) return;
+    if (!currentDraft || !user) return;
     
     try {
-      // Clean up any uploaded media files associated with this draft
-      if (postData.mediaFiles.length > 0) {
-        await Promise.all(
-          postData.mediaFiles.map(async (url) => {
-            try {
-              const fileName = url.split('/').pop();
-              if (fileName) {
-                await supabase.storage.from('post-files').remove([fileName]);
-              }
-            } catch (error) {
-              console.error('Failed to clean up media:', error);
-            }
-          })
-        );
+      const { error } = await supabase.functions.invoke('draft-manager', {
+        body: null
+      });
+
+      if (error) {
+        throw error;
       }
-      
-      localStorage.removeItem(`post_draft_${user.id}_${postData.groupId}`);
+
+      setCurrentDraft(null);
       setLastSaved(null);
+      console.log('Draft deleted successfully');
     } catch (error) {
-      console.error('Failed to clear draft:', error);
+      console.error('Failed to delete draft:', error);
     }
-  }, [user, postData.groupId, postData.mediaFiles]);
+  }, [user, currentDraft]);
 
   const validateForm = useCallback(() => {
     const errors = {
@@ -264,52 +314,33 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
 
   const createPostMutation = useOptimisticMutation({
     mutationFn: async (data: PostData) => {
-      if (!user) throw new Error('User not authenticated');
+      if (!user || !currentDraft) throw new Error('User not authenticated or no draft');
       if (!validateForm()) throw new Error('Validation failed');
 
-      // Sanitize content
-      const sanitizedContent = DOMPurify.sanitize(data.content);
-
-      const postPayload = {
-        title: data.title.trim(),
-        content: sanitizedContent || null,
-        group_id: data.groupId,
-        user_id: user.id,
-        media_type: data.mediaFiles.length > 0 ? 'multiple' : null,
-        media_url: data.mediaFiles.length > 0 ? JSON.stringify(data.mediaFiles) : null,
-        poll_question: data.poll?.question?.trim() || null,
-        poll_options: data.poll?.options?.filter(opt => opt.trim()) || null,
-      };
-
-      // Atomic transaction - create post and associate media
-      const { data: post, error } = await supabase
-        .from('posts')
-        .insert(postPayload)
-        .select(`
-          *,
-          profiles:user_id (display_name, avatar_url),
-          groups (name, is_public)
-        `)
-        .single();
+      const { data: result, error } = await supabase.functions.invoke('publish-post', {
+        body: {
+          draftId: currentDraft.id,
+          groupId: data.groupId
+        }
+      });
 
       if (error) {
-        // If post creation fails, don't clean up media (keep in draft)
         throw new Error(`Failed to publish post: ${error.message}`);
       }
 
-      return post;
+      return result.post;
     },
     queryKey: ['posts'],
     successMessage: "Post published successfully!",
     errorContext: "Failed to publish post",
     onSuccess: () => {
-      clearDraft();
+      setCurrentDraft(null);
       resetForm();
       onSuccess?.();
       onClose();
     },
     onError: (error) => {
-      // On error, keep draft intact and show retry options
+      // On error, draft remains intact on server
       toast({
         title: "Failed to publish",
         description: "Your draft is saved. You can retry, edit, or discard it.",
@@ -344,7 +375,6 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
       generalError: ''
     });
     setActiveTab('text');
-    clearDraft();
   };
 
   const handleClose = () => {
@@ -362,6 +392,7 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
     if (window.confirm('This will permanently delete your draft and all uploaded media. Are you sure?')) {
       await clearDraft();
       resetForm();
+      onClose();
       toast({
         title: "Draft discarded",
         description: "Your draft and uploaded media have been removed.",
@@ -426,6 +457,20 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
   const isSaving = saveDraftMutation.isPending;
 
   if (!isOpen || !user) return null;
+
+  // Show loading while creating/loading draft
+  if (isDraftLoading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+        <Card className="p-8">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Loading draft...</span>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -505,33 +550,35 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
                 Title *
               </label>
               <Input
-                ref={titleInputRef}
                 id="title"
+                type="text"
                 value={postData.title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="Give your post a title..."
-                className={`text-lg font-medium ${validation.titleError ? 'border-destructive' : ''}`}
-                maxLength={MAX_TITLE_LENGTH}
-                required
-                aria-describedby={validation.titleError ? 'title-error' : 'title-counter'}
+                placeholder="What's this post about?"
+                className="text-lg font-medium"
+                autoFocus
               />
               <div className="flex justify-between items-center">
                 {validation.titleError && (
-                  <p id="title-error" className="text-sm text-destructive">
-                    {validation.titleError}
-                  </p>
+                  <p className="text-sm text-destructive">{validation.titleError}</p>
                 )}
-                <p id="title-counter" className="text-sm text-muted-foreground ml-auto">
+                <p className={`text-sm ml-auto ${
+                  postData.title.length > MAX_TITLE_LENGTH * 0.8 
+                    ? postData.title.length > MAX_TITLE_LENGTH 
+                      ? 'text-destructive' 
+                      : 'text-orange-500'
+                    : 'text-muted-foreground'
+                }`}>
                   {postData.title.length}/{MAX_TITLE_LENGTH}
                 </p>
               </div>
             </div>
 
-            {/* Content Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            {/* Tabbed Content */}
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="text" className="flex items-center gap-2">
-                  <Hash className="h-4 w-4" />
+                  <Type className="h-4 w-4" />
                   Text
                 </TabsTrigger>
                 <TabsTrigger value="media" className="flex items-center gap-2">
@@ -539,7 +586,7 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
                   Media
                 </TabsTrigger>
                 <TabsTrigger value="link" className="flex items-center gap-2">
-                  <Link2 className="h-4 w-4" />
+                  <Link className="h-4 w-4" />
                   Link
                 </TabsTrigger>
                 <TabsTrigger value="poll" className="flex items-center gap-2">
@@ -548,30 +595,27 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
                 </TabsTrigger>
               </TabsList>
 
-              {/* Text Content Tab */}
+              {/* Text Tab */}
               <TabsContent value="text" className="space-y-4">
-                <RichTextToolbar quillRef={quillRef} />
+                {/* Rich Text Toolbar */}
+                <RichTextToolbar
+                  onFormat={(format) => {
+                    console.log('Format:', format);
+                  }}
+                />
                 
+                {/* Content Editor */}
                 <div className="relative">
                   <ReactQuill
-                    ref={quillRef}
                     value={postData.content}
                     onChange={handleContentChange}
-                    placeholder="Share your thoughts, ideas, or start a discussion..."
-                    className={`${validation.contentError ? 'border-destructive' : ''}`}
+                    placeholder="Share your thoughts..."
+                    className="min-h-[200px]"
                     modules={{
-                      toolbar: false, // Using custom toolbar
-                      keyboard: {
-                        bindings: {
-                          tab: {
-                            key: 9,
-                            handler: () => {
-                              // Show formatting help
-                              return true;
-                            }
-                          }
-                        }
-                      }
+                      toolbar: false, // We use custom toolbar
+                      clipboard: {
+                        matchVisual: false,
+                      },
                     }}
                     formats={[
                       'bold', 'italic', 'underline', 'strike',
@@ -588,14 +632,10 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
                       query={showMentions ? mentionQuery : hashtagQuery}
                       groupId={postData.groupId}
                       onSelect={(item) => {
-                        const quill = quillRef.current?.getEditor();
-                        if (quill) {
-                          const range = quill.getSelection();
-                          if (range) {
-                            const prefix = showMentions ? '@' : '#';
-                            quill.insertText(range.index - (showMentions ? mentionQuery.length + 1 : hashtagQuery.length + 1), `${prefix}${item.name} `);
-                          }
-                        }
+                        const newContent = showMentions
+                          ? postData.content.replace(/@\w*$/, `@${item} `)
+                          : postData.content.replace(/#\w*$/, `#${item} `);
+                        handleContentChange(newContent);
                         setShowMentions(false);
                         setShowHashtags(false);
                       }}
@@ -627,12 +667,15 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
 
               {/* Media Tab */}
               <TabsContent value="media">
-                <MediaUploadTab
-                  files={postData.mediaFiles}
-                  onFilesChange={(files) => setPostData(prev => ({ ...prev, mediaFiles: files }))}
-                  groupId={postData.groupId}
-                  userId={user?.id}
-                />
+                {currentDraft && (
+                  <MediaUploadTab
+                    files={postData.mediaFiles}
+                    onFilesChange={(files) => setPostData(prev => ({ ...prev, mediaFiles: files }))}
+                    groupId={postData.groupId}
+                    userId={user?.id}
+                    draftId={currentDraft.id}
+                  />
+                )}
               </TabsContent>
 
               {/* Link Tab */}
