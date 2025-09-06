@@ -139,16 +139,29 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
 
   const createPostMutation = useOptimisticMutation({
     mutationFn: async (data: PostData) => {
+      console.log('Creating post with data:', data);
+      console.log('User:', user);
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+      
+      if (!data.groupId) {
+        throw new Error('Group not selected');
+      }
+
       const postPayload = {
         title: data.title,
-        content: data.content,
+        content: data.content || null,
         group_id: data.groupId,
-        user_id: user!.id,
+        user_id: user.id,
         media_type: data.mediaFiles.length > 0 ? 'multiple' : null,
         media_url: data.mediaFiles.length > 0 ? JSON.stringify(data.mediaFiles) : null,
         poll_question: data.poll?.question || null,
-        poll_options: data.poll?.options || null,
+        poll_options: data.poll?.options ? data.poll.options : null,
       };
+
+      console.log('Post payload:', postPayload);
 
       const { data: post, error } = await supabase
         .from('posts')
@@ -159,7 +172,12 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
         `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Post created successfully:', post);
       return post;
     },
     queryKey: ['posts'],
