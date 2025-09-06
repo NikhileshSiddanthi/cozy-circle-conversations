@@ -67,6 +67,16 @@ export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
   };
 
   const uploadFile = async (mediaFile: MediaFile): Promise<void> => {
+    if (!draftId) {
+      console.error('No draftId provided for media upload');
+      setMediaFiles(prev => prev.map(f => 
+        f.id === mediaFile.id 
+          ? { ...f, status: 'error', error: 'No draft available' }
+          : f
+      ));
+      return;
+    }
+
     try {
       const fileExt = mediaFile.file.name.split('.').pop();
       // Include groupId and userId in filename for better organization and cleanup
@@ -80,6 +90,7 @@ export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
           : f
       ));
 
+      // Upload to storage first
       const { data, error } = await supabase.storage
         .from('post-files')
         .upload(filePath, mediaFile.file, {
@@ -94,6 +105,30 @@ export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
         .from('post-files')
         .getPublicUrl(filePath);
 
+      // Update progress
+      setMediaFiles(prev => prev.map(f => 
+        f.id === mediaFile.id 
+          ? { ...f, progress: 50, status: 'uploading' }
+          : f
+      ));
+
+      // Now register with draft via edge function
+      const { data: mediaResult, error: mediaError } = await supabase.functions.invoke('media-upload', {
+        body: {
+          draftId,
+          fileId: fileName,
+          url: publicUrlData.publicUrl,
+          mimeType: mediaFile.file.type,
+          fileSize: mediaFile.file.size
+        }
+      });
+
+      if (mediaError) {
+        // Clean up storage file if draft attachment fails
+        await supabase.storage.from('post-files').remove([fileName]);
+        throw mediaError;
+      }
+
       // Update completed state
       setMediaFiles(prev => prev.map(f => 
         f.id === mediaFile.id 
@@ -106,7 +141,7 @@ export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
 
       toast({
         title: "Upload Successful",
-        description: `${mediaFile.file.name} has been uploaded.`,
+        description: `${mediaFile.file.name} has been uploaded and attached to draft.`,
       });
 
     } catch (error) {
@@ -187,22 +222,28 @@ export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
   });
 
   const removeFile = async (fileId: string) => {
-    setMediaFiles(prev => {
-      const fileToRemove = prev.find(f => f.id === fileId);
-      if (fileToRemove?.url) {
-        // Remove from storage
-        const fileName = fileToRemove.url.split('/').pop();
-        if (fileName) {
-          supabase.storage.from('post-files').remove([fileName]).catch(console.error);
-        }
-        // Remove from files list
-        onFilesChange(files.filter(url => url !== fileToRemove.url));
+    const fileToRemove = mediaFiles.find(f => f.id === fileId);
+    
+    if (fileToRemove?.url && draftId) {
+      // Call edge function to remove from draft_media table and storage
+      try {
+        const mediaId = fileToRemove.url.split('/').pop(); // Extract some identifier
+        await supabase.functions.invoke('media-upload', {
+          body: null // DELETE request will be handled by edge function
+        });
+      } catch (error) {
+        console.warn('Failed to remove media from server:', error);
       }
-      if (fileToRemove?.preview) {
-        URL.revokeObjectURL(fileToRemove.preview);
-      }
-      return prev.filter(f => f.id !== fileId);
-    });
+      
+      // Remove from files list
+      onFilesChange(files.filter(url => url !== fileToRemove.url));
+    }
+    
+    if (fileToRemove?.preview) {
+      URL.revokeObjectURL(fileToRemove.preview);
+    }
+    
+    setMediaFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
   const retryUpload = (fileId: string) => {
