@@ -112,7 +112,16 @@ serve(async (req) => {
       }
 
       // Validate draft has minimum content
-      if (!draft.title?.trim() && !draft.content?.trim() && (!draft.draft_media || draft.draft_media.length === 0)) {
+      console.log('Draft validation:', {
+        hasTitle: !!draft.title?.trim(),
+        hasContent: !!draft.content?.trim(),
+        mediaCount: draft.draft_media?.length || 0,
+        mediaStatuses: draft.draft_media?.map(m => m.status) || []
+      })
+      
+      const hasUploadedMedia = draft.draft_media?.some(m => m.status === 'uploaded') || false
+      
+      if (!draft.title?.trim() && !draft.content?.trim() && !hasUploadedMedia) {
         throw new Error('Draft must have title, content, or media')
       }
 
