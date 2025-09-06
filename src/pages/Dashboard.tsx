@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { CategoryCard } from '@/components/CategoryCard';
+import { DraftScopingTest } from '@/components/DraftScopingTest';
 import { Vote } from 'lucide-react';
 
 interface Category {
@@ -83,10 +84,15 @@ const Dashboard = () => {
     <MainLayout>
       {/* Welcome Section */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-3">Welcome to COZI, Forum for public debate</h1>
+        <h1 className="text-4xl font-bold mb-3">Welcome to COZI - Testing Draft System</h1>
         <p className="text-xl text-muted-foreground">
-          Your platform for structured political discussions and debate
+          Testing the draft scoping fix to ensure media doesn't leak between groups
         </p>
+      </div>
+
+      {/* Draft Scoping Test */}
+      <div className="mb-8">
+        <DraftScopingTest />
       </div>
 
       {/* Categories Grid */}
