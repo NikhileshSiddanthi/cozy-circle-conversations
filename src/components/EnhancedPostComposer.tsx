@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MultiMediaUpload } from "./MultiMediaUpload";
+import { MediaUploadTab } from "./MediaUploadTab";
 import { RichTextEditor } from "./RichTextEditor";
 import { MentionsInput } from "./MentionsInput";
 import { LinkPreview } from "./LinkPreview";
@@ -69,6 +69,8 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
   const [currentTab, setCurrentTab] = useState("text");
   const [characterCount, setCharacterCount] = useState(0);
   const [isDraft, setIsDraft] = useState(false);
+  const [currentDraft, setCurrentDraft] = useState<any>(null);
+  const [isDraftLoading, setIsDraftLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const [postData, setPostData] = useState<PostData>({
@@ -84,101 +86,149 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
   const MAX_CHARACTERS = 5000;
   const DRAFT_SAVE_INTERVAL = 10000; // 10 seconds
 
+  // Create or load draft when group changes
+  useEffect(() => {
+    if (user && postData.groupId && isExpanded) {
+      createOrLoadDraft();
+    }
+  }, [user, postData.groupId, isExpanded]);
+
   // Auto-save draft
   useEffect(() => {
-    if (postData.content.trim() || postData.title.trim()) {
+    if (currentDraft && (postData.content.trim() || postData.title.trim())) {
       const timer = setTimeout(() => {
         saveDraft();
       }, DRAFT_SAVE_INTERVAL);
 
       return () => clearTimeout(timer);
     }
-  }, [postData]);
+  }, [postData, currentDraft]);
 
-  // Load draft on mount
-  useEffect(() => {
-    loadDraft();
-  }, []);
+  const createOrLoadDraft = useCallback(async () => {
+    if (!user || !postData.groupId) return;
+    
+    setIsDraftLoading(true);
+    try {
+      // Load existing draft for this group
+      const { data, error } = await supabase.functions.invoke('draft-manager', {
+        body: { groupId: postData.groupId }
+      });
+
+      if (error) {
+        console.error('Error loading drafts:', error);
+        await createNewDraft();
+        return;
+      }
+
+      const draftsResponse = data as { drafts: any[] };
+      const existingDraft = draftsResponse.drafts.find(d => d.group_id === postData.groupId);
+
+      if (existingDraft) {
+        // Load existing draft
+        setCurrentDraft(existingDraft);
+        setPostData(prev => ({
+          ...prev,
+          title: existingDraft.title || '',
+          content: existingDraft.content || '',
+          mediaFiles: existingDraft.draft_media?.map((m: any) => m.url) || []
+        }));
+        setCharacterCount(existingDraft.content?.length || 0);
+      } else {
+        // Create new draft
+        await createNewDraft();
+      }
+    } catch (error) {
+      console.error('Failed to create or load draft:', error);
+    } finally {
+      setIsDraftLoading(false);
+    }
+  }, [user, postData.groupId]);
+
+  const createNewDraft = useCallback(async () => {
+    if (!user || !postData.groupId) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('draft-manager', {
+        body: {
+          groupId: postData.groupId,
+          title: '',
+          content: '',
+          metadata: {}
+        }
+      });
+
+      if (error) throw error;
+
+      const draftResponse = data as { draft: any };
+      setCurrentDraft(draftResponse.draft);
+    } catch (error) {
+      console.error('Failed to create new draft:', error);
+    }
+  }, [user, postData.groupId]);
 
   const saveDraft = useCallback(async () => {
-    if (!user || (!postData.content.trim() && !postData.title.trim())) return;
+    if (!currentDraft || !user || (!postData.content.trim() && !postData.title.trim())) return;
     
     try {
-      localStorage.setItem(`draft_${user.id}`, JSON.stringify({
-        ...postData,
-        savedAt: new Date().toISOString()
-      }));
-      setIsDraft(true);
+      const { error } = await supabase.functions.invoke('draft-manager', {
+        body: {
+          draftId: currentDraft.id,
+          title: postData.title,
+          content: postData.content,
+          metadata: {
+            mentions: postData.mentions,
+            hashtags: postData.hashtags
+          }
+        }
+      });
+
+      if (error) throw error;
       
-      // Show subtle indication
+      setIsDraft(true);
       setTimeout(() => setIsDraft(false), 2000);
     } catch (error) {
       console.error('Failed to save draft:', error);
     }
-  }, [postData, user]);
+  }, [postData, user, currentDraft]);
 
-  const loadDraft = useCallback(() => {
-    if (!user) return;
+  const clearDraft = useCallback(async () => {
+    if (!currentDraft || !user) return;
     
     try {
-      const saved = localStorage.getItem(`draft_${user.id}`);
-      if (saved) {
-        const draft = JSON.parse(saved);
-        setPostData(draft);
-        setCharacterCount(draft.content.length);
-      }
+      await supabase.functions.invoke('draft-manager', {
+        body: { draftId: currentDraft.id, action: 'delete' }
+      });
+      setCurrentDraft(null);
     } catch (error) {
-      console.error('Failed to load draft:', error);
+      console.error('Failed to delete draft:', error);
     }
-  }, [user]);
-
-  const clearDraft = useCallback(() => {
-    if (!user) return;
-    localStorage.removeItem(`draft_${user.id}`);
-  }, [user]);
+  }, [user, currentDraft]);
 
   const createPostMutation = useOptimisticMutation({
     mutationFn: async (data: PostData) => {
-      console.log('Creating post with data:', data);
-      console.log('User:', user);
-      
-      if (!user) {
-        throw new Error('User not authenticated');
+      if (!user || !currentDraft) {
+        throw new Error('User not authenticated or no draft available');
       }
       
       if (!data.groupId) {
         throw new Error('Group not selected');
       }
 
-      const postPayload = {
-        title: data.title,
-        content: data.content || null,
-        group_id: data.groupId,
-        user_id: user.id,
-        media_type: data.mediaFiles.length > 0 ? 'multiple' : null,
-        media_url: data.mediaFiles.length > 0 ? JSON.stringify(data.mediaFiles) : null,
-        poll_question: data.poll?.question || null,
-        poll_options: data.poll?.options ? data.poll.options : null,
-      };
-
-      console.log('Post payload:', postPayload);
-
-      const { data: post, error } = await supabase
-        .from('posts')
-        .insert(postPayload)
-        .select(`
-          *,
-          profiles:user_id (display_name, avatar_url)
-        `)
-        .single();
+      // Use the publish-post edge function to atomically publish the draft
+      const { data: result, error } = await supabase.functions.invoke('publish-post', {
+        body: {
+          draftId: currentDraft.id,
+          groupId: data.groupId
+        }
+      });
 
       if (error) {
-        console.error('Supabase error:', error);
-        throw error;
+        console.error('Publish error:', error);
+        throw new Error(`Failed to publish post: ${error.message}`);
       }
       
-      console.log('Post created successfully:', post);
-      return post;
+      console.log('Post published successfully:', result.post);
+      return result.post;
     },
     queryKey: ['posts'],
     optimisticUpdate: (oldData: any, variables: PostData) => {
@@ -445,11 +495,24 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
               </TabsContent>
 
               <TabsContent value="media" className="mt-4">
-                <MultiMediaUpload
-                  onFilesUploaded={(urls) => setPostData(prev => ({ ...prev, mediaFiles: urls }))}
-                  maxFiles={10}
-                  currentFiles={postData.mediaFiles}
-                />
+                {currentDraft ? (
+                  <MediaUploadTab
+                    files={postData.mediaFiles}
+                    onFilesChange={(urls) => setPostData(prev => ({ ...prev, mediaFiles: urls }))}
+                    draftId={currentDraft.id}
+                    groupId={postData.groupId}
+                    userId={user.id}
+                  />
+                ) : isDraftLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span className="text-muted-foreground">Loading draft...</span>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Please select a group to upload media
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="link" className="mt-4">
