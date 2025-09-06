@@ -58,12 +58,13 @@ interface PostData {
     question: string;
     options: string[];
     duration: number;
+    multipleChoice: boolean;
   };
   linkPreview?: {
     url: string;
-    title: string;
-    description: string;
-    image: string;
+    title?: string;
+    description?: string;
+    image?: string;
   };
 }
 
@@ -597,13 +598,6 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
 
               {/* Text Tab */}
               <TabsContent value="text" className="space-y-4">
-                {/* Rich Text Toolbar */}
-                <RichTextToolbar
-                  onFormat={(format) => {
-                    console.log('Format:', format);
-                  }}
-                />
-                
                 {/* Content Editor */}
                 <div className="relative">
                   <ReactQuill
@@ -612,7 +606,13 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
                     placeholder="Share your thoughts..."
                     className="min-h-[200px]"
                     modules={{
-                      toolbar: false, // We use custom toolbar
+                      toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['clean']
+                      ],
                       clipboard: {
                         matchVisual: false,
                       },

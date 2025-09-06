@@ -30,13 +30,15 @@ interface MediaUploadTabProps {
   onFilesChange: (files: string[]) => void;
   groupId?: string;
   userId?: string;
+  draftId?: string;
 }
 
 export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
   files,
   onFilesChange,
   groupId,
-  userId
+  userId,
+  draftId
 }) => {
   const { toast } = useToast();
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
