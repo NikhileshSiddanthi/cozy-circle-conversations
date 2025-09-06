@@ -42,6 +42,11 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    /* Gradients for modern design */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(215 80% 60%));
+    --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(355 80% 65%));
+    --gradient-bg: linear-gradient(135deg, hsl(var(--background)), hsl(220 20% 98%));
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
