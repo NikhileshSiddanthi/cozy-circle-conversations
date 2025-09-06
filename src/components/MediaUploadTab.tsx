@@ -77,11 +77,22 @@ export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
       return;
     }
 
+    if (!userId) {
+      console.error('No userId provided for media upload');
+      setMediaFiles(prev => prev.map(f => 
+        f.id === mediaFile.id 
+          ? { ...f, status: 'error', error: 'User not authenticated' }
+          : f
+      ));
+      return;
+    }
+
     try {
       const fileExt = mediaFile.file.name.split('.').pop();
       // Include groupId and userId in filename for better organization and cleanup
       const fileName = `${userId || 'user'}_${groupId || 'group'}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${fileName}`;
+      // Storage RLS policy requires userId as first folder in path
+      const filePath = `${userId}/${fileName}`;
 
       // Update progress
       setMediaFiles(prev => prev.map(f => 
@@ -112,22 +123,30 @@ export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
           : f
       ));
 
-      // Now register with draft via edge function
-      const { data: mediaResult, error: mediaError } = await supabase.functions.invoke('media-upload', {
-        body: {
-          draftId,
-          fileId: fileName,
-          url: publicUrlData.publicUrl,
-          mimeType: mediaFile.file.type,
-          fileSize: mediaFile.file.size
-        }
-      });
+        // Now register with draft via edge function
+        const response = await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/media-upload/complete`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            draftId,
+            fileId: `${userId}/${fileName}`,
+            url: publicUrlData.publicUrl,
+            mimeType: mediaFile.file.type,
+            fileSize: mediaFile.file.size
+          })
+        });
 
-      if (mediaError) {
-        // Clean up storage file if draft attachment fails
-        await supabase.storage.from('post-files').remove([fileName]);
-        throw mediaError;
-      }
+        if (!response.ok) {
+          // Clean up storage file if draft attachment fails
+          await supabase.storage.from('post-files').remove([`${userId}/${fileName}`]);
+          throw new Error(`Failed to register media: ${response.statusText}`);
+        }
+
+        const mediaResult = await response.json();
 
       // Update completed state
       setMediaFiles(prev => prev.map(f => 
