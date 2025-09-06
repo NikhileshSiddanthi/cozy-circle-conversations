@@ -77,6 +77,8 @@ serve(async (req) => {
     // Start atomic transaction simulation using multiple operations
     try {
       // 1. Verify user membership and permissions
+      console.log('Checking membership for:', { groupId: body.groupId, userId: user.id })
+      
       const { data: membership, error: membershipError } = await supabaseClient
         .from('group_members')
         .select('status, role')
@@ -84,11 +86,16 @@ serve(async (req) => {
         .eq('user_id', user.id)
         .single()
 
+      console.log('Membership check result:', { membership, membershipError })
+
       if (membershipError || !membership || membership.status !== 'approved') {
+        console.error('Membership check failed:', { membershipError, membership })
         throw new Error('User not authorized to post in this group')
       }
 
       // 2. Get draft with media
+      console.log('Fetching draft:', { draftId: body.draftId, userId: user.id })
+      
       const { data: draft, error: draftError } = await supabaseClient
         .from('post_drafts')
         .select(`
@@ -107,7 +114,13 @@ serve(async (req) => {
         .eq('status', 'editing')
         .single()
 
+      console.log('Draft fetch result:', { 
+        draft: draft ? { ...draft, draft_media: draft.draft_media?.length } : null, 
+        draftError 
+      })
+
       if (draftError || !draft) {
+        console.error('Draft fetch failed:', { draftError, draft })
         throw new Error('Draft not found or already published')
       }
 
@@ -165,6 +178,8 @@ serve(async (req) => {
         poll_options: draft.metadata?.poll?.options || null,
       }
 
+      console.log('Creating post with data:', postData)
+      
       const { data: post, error: postError } = await supabaseClient
         .from('posts')
         .insert(postData)
@@ -175,7 +190,13 @@ serve(async (req) => {
         `)
         .single()
 
+      console.log('Post creation result:', { 
+        post: post ? { id: post.id, title: post.title } : null, 
+        postError 
+      })
+
       if (postError) {
+        console.error('Post creation failed:', postError)
         throw new Error(`Failed to create post: ${postError.message}`)
       }
 
