@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { CreatePostModal } from "./CreatePostModal";
+import { ComprehensivePostEditor } from "./ComprehensivePostEditor";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 
@@ -17,6 +17,7 @@ export const CreatePostButton = () => {
   const { toast } = useToast();
   const [userGroups, setUserGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showEditor, setShowEditor] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -61,7 +62,7 @@ export const CreatePostButton = () => {
         description: "Please log in to create a post.",
         variant: "destructive",
       });
-      return false;
+      return;
     }
 
     if (userGroups.length === 0) {
@@ -70,10 +71,10 @@ export const CreatePostButton = () => {
         description: "You need to join and be approved in at least one group to create posts.",
         variant: "destructive", 
       });
-      return false;
+      return;
     }
     
-    return true;
+    setShowEditor(true);
   };
 
   if (loading) {
@@ -85,19 +86,24 @@ export const CreatePostButton = () => {
     );
   }
 
-  if (!user || userGroups.length === 0) {
-    return (
+  return (
+    <>
       <Button onClick={handleCreatePostClick} className="w-full">
         <Plus className="h-4 w-4 mr-2" />
         Create Post
       </Button>
-    );
-  }
 
-  return (
-    <CreatePostModal 
-      groups={userGroups} 
-      onSuccess={fetchUserGroups}
-    />
+      {showEditor && userGroups.length > 0 && (
+        <ComprehensivePostEditor
+          groups={userGroups}
+          isOpen={showEditor}
+          onClose={() => setShowEditor(false)}
+          onSuccess={() => {
+            setShowEditor(false);
+            fetchUserGroups();
+          }}
+        />
+      )}
+    </>
   );
 };
