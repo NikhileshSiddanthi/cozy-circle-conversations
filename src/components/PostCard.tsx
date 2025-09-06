@@ -197,6 +197,47 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   const renderMedia = () => {
     if (!post.media_url || !post.media_type) return null;
 
+    // Handle multiple media files
+    if (post.media_type === "multiple") {
+      let mediaUrls: string[] = [];
+      try {
+        mediaUrls = JSON.parse(post.media_url);
+      } catch {
+        mediaUrls = [post.media_url]; // Fallback to single URL
+      }
+
+      return (
+        <div className="space-y-3">
+          {mediaUrls.map((url, index) => {
+            const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i);
+            const isVideo = url.match(/\.(mp4|webm|mov)(\?|$)/i);
+
+            if (isImage) {
+              return (
+                <img
+                  key={index}
+                  src={url}
+                  alt={`Post media ${index + 1}`}
+                  className="w-full max-h-96 object-cover rounded-lg"
+                />
+              );
+            } else if (isVideo) {
+              return (
+                <video
+                  key={index}
+                  src={url}
+                  controls
+                  className="w-full max-h-96 rounded-lg"
+                />
+              );
+            }
+            return null;
+          })}
+        </div>
+      );
+    }
+
+    // Handle single media files (legacy)
     switch (post.media_type) {
       case "image":
         return (
@@ -387,10 +428,9 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
               postTitle={post.title}
               isAuthor={user?.id === post.user_id}
               onEdit={() => {
-                // TODO: Implement edit functionality
                 toast({
                   title: "Edit Coming Soon",
-                  description: "Post editing will be available in a future update.",
+                  description: "Post editing functionality is being developed.",
                 });
               }}
               onDelete={onUpdate}

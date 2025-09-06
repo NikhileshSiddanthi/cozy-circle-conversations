@@ -119,13 +119,38 @@ serve(async (req) => {
       // 3. Create post record
       const mediaUrls = draft.draft_media?.filter(m => m.status === 'uploaded').map(m => m.url) || []
       
+      // Determine media type based on uploaded files
+      let mediaType = null;
+      let mediaUrl = null;
+      
+      if (mediaUrls.length > 0) {
+        if (mediaUrls.length === 1) {
+          // Single media file - detect type
+          const url = mediaUrls[0];
+          if (url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)) {
+            mediaType = 'image';
+            mediaUrl = url;
+          } else if (url.match(/\.(mp4|webm|mov)(\?|$)/i)) {
+            mediaType = 'video';
+            mediaUrl = url;
+          } else {
+            mediaType = 'file';
+            mediaUrl = url;
+          }
+        } else {
+          // Multiple media files
+          mediaType = 'multiple';
+          mediaUrl = JSON.stringify(mediaUrls);
+        }
+      }
+      
       const postData = {
         title: draft.title || 'Untitled',
         content: draft.content,
         group_id: body.groupId,
         user_id: user.id,
-        media_type: mediaUrls.length > 0 ? 'multiple' : null,
-        media_url: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
+        media_type: mediaType,
+        media_url: mediaUrl,
         // Handle poll data if exists in metadata
         poll_question: draft.metadata?.poll?.question || null,
         poll_options: draft.metadata?.poll?.options || null,
