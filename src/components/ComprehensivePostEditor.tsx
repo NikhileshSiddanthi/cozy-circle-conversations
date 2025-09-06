@@ -161,7 +161,7 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
   }, [isOpen, editingPost]);
 
   const autoSaveDraft = useCallback(async () => {
-    if (!user || (!postData.title.trim() && !postData.content.trim())) return;
+    if (!user || !postData.groupId || (!postData.title.trim() && !postData.content.trim())) return;
     
     try {
       setIsAutoSaving(true);
@@ -171,7 +171,7 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
         savedAt: new Date().toISOString()
       };
       
-      localStorage.setItem(`post_draft_${user.id}`, JSON.stringify(draft));
+      localStorage.setItem(`post_draft_${user.id}_${postData.groupId}`, JSON.stringify(draft));
       setLastSaved(new Date());
     } catch (error) {
       console.error('Auto-save failed:', error);
@@ -181,25 +181,49 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
   }, [postData, user]);
 
   const loadDraft = useCallback(() => {
-    if (!user) return;
+    if (!user || !postData.groupId) return;
     
     try {
-      const savedDraft = localStorage.getItem(`post_draft_${user.id}`);
+      const savedDraft = localStorage.getItem(`post_draft_${user.id}_${postData.groupId}`);
       if (savedDraft) {
         const draft = JSON.parse(savedDraft);
-        setPostData(draft);
-        setLastSaved(new Date(draft.savedAt));
+        // Only load if it's for the same group
+        if (draft.groupId === postData.groupId) {
+          setPostData(draft);
+          setLastSaved(new Date(draft.savedAt));
+        }
       }
     } catch (error) {
       console.error('Failed to load draft:', error);
     }
-  }, [user]);
+  }, [user, postData.groupId]);
 
-  const clearDraft = useCallback(() => {
-    if (!user) return;
-    localStorage.removeItem(`post_draft_${user.id}`);
-    setLastSaved(null);
-  }, [user]);
+  const clearDraft = useCallback(async () => {
+    if (!user || !postData.groupId) return;
+    
+    try {
+      // Clean up any uploaded media files associated with this draft
+      if (postData.mediaFiles.length > 0) {
+        await Promise.all(
+          postData.mediaFiles.map(async (url) => {
+            try {
+              const fileName = url.split('/').pop();
+              if (fileName) {
+                await supabase.storage.from('post-files').remove([fileName]);
+              }
+            } catch (error) {
+              console.error('Failed to clean up media:', error);
+            }
+          })
+        );
+      }
+      
+      localStorage.removeItem(`post_draft_${user.id}_${postData.groupId}`);
+      setLastSaved(null);
+    } catch (error) {
+      console.error('Failed to clear draft:', error);
+    }
+  }, [user, postData.groupId, postData.mediaFiles]);
 
   const validateForm = useCallback(() => {
     const errors = {
@@ -257,6 +281,7 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
         poll_options: data.poll?.options?.filter(opt => opt.trim()) || null,
       };
 
+      // Atomic transaction - create post and associate media
       const { data: post, error } = await supabase
         .from('posts')
         .insert(postPayload)
@@ -267,17 +292,30 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
         `)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        // If post creation fails, don't clean up media (keep in draft)
+        throw new Error(`Failed to publish post: ${error.message}`);
+      }
+
       return post;
     },
     queryKey: ['posts'],
     successMessage: "Post published successfully!",
-    errorContext: "Failed to create post",
+    errorContext: "Failed to publish post",
     onSuccess: () => {
       clearDraft();
       resetForm();
       onSuccess?.();
       onClose();
+    },
+    onError: (error) => {
+      // On error, keep draft intact and show retry options
+      toast({
+        title: "Failed to publish",
+        description: "Your draft is saved. You can retry, edit, or discard it.",
+        variant: "destructive",
+        duration: 10000,
+      });
     }
   });
 
@@ -310,12 +348,31 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
   };
 
   const handleClose = () => {
-    if (postData.title.trim() || postData.content.trim()) {
+    if (postData.title.trim() || postData.content.trim() || postData.mediaFiles.length > 0) {
       if (window.confirm('You have unsaved changes. Save as draft before closing?')) {
         autoSaveDraft();
+      } else if (window.confirm('Discard draft and all uploaded media?')) {
+        clearDraft();
       }
     }
     onClose();
+  };
+
+  const handleDiscardDraft = async () => {
+    if (window.confirm('This will permanently delete your draft and all uploaded media. Are you sure?')) {
+      await clearDraft();
+      resetForm();
+      toast({
+        title: "Draft discarded",
+        description: "Your draft and uploaded media have been removed.",
+      });
+    }
+  };
+
+  const handleRetryPublish = () => {
+    if (validateForm()) {
+      createPostMutation.mutate(postData);
+    }
   };
 
   const handleTitleChange = (value: string) => {
@@ -573,6 +630,8 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
                 <MediaUploadTab
                   files={postData.mediaFiles}
                   onFilesChange={(files) => setPostData(prev => ({ ...prev, mediaFiles: files }))}
+                  groupId={postData.groupId}
+                  userId={user?.id}
                 />
               </TabsContent>
 
@@ -615,25 +674,55 @@ export const ComprehensivePostEditor: React.FC<PostEditorProps> = ({
                   <Save className="h-4 w-4" />
                   {isSaving ? 'Saving...' : 'Save Draft'}
                 </Button>
+
+                {/* Show discard option if there's content */}
+                {(postData.title.trim() || postData.content.trim() || postData.mediaFiles.length > 0) && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={handleDiscardDraft}
+                    disabled={isPublishing || isSaving}
+                    size="sm"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Discard
+                  </Button>
+                )}
               </div>
 
-              <Button
-                type="submit"
-                disabled={isPublishing || isSaving}
-                className="flex items-center gap-2"
-              >
-                {isPublishing ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Publishing...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    Publish
-                  </>
+              <div className="flex items-center gap-2">
+                {/* Show retry button if there was a previous error */}
+                {createPostMutation.isError && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRetryPublish}
+                    disabled={isPublishing || !postData.title.trim() || !postData.groupId}
+                    className="flex items-center gap-2"
+                  >
+                    <Loader2 className="h-4 w-4" />
+                    Retry
+                  </Button>
                 )}
-              </Button>
+
+                <Button
+                  type="submit"
+                  disabled={isPublishing || isSaving || !postData.title.trim() || !postData.groupId}
+                  className="flex items-center gap-2"
+                >
+                  {isPublishing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Publishing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      Publish
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>

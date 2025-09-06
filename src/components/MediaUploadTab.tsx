@@ -28,11 +28,15 @@ interface MediaFile {
 interface MediaUploadTabProps {
   files: string[];
   onFilesChange: (files: string[]) => void;
+  groupId?: string;
+  userId?: string;
 }
 
 export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
   files,
-  onFilesChange
+  onFilesChange,
+  groupId,
+  userId
 }) => {
   const { toast } = useToast();
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
@@ -63,7 +67,8 @@ export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
   const uploadFile = async (mediaFile: MediaFile): Promise<void> => {
     try {
       const fileExt = mediaFile.file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      // Include groupId and userId in filename for better organization and cleanup
+      const fileName = `${userId || 'user'}_${groupId || 'group'}_${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = `${fileName}`;
 
       // Update progress
@@ -179,10 +184,15 @@ export const MediaUploadTab: React.FC<MediaUploadTabProps> = ({
     multiple: true
   });
 
-  const removeFile = (fileId: string) => {
+  const removeFile = async (fileId: string) => {
     setMediaFiles(prev => {
       const fileToRemove = prev.find(f => f.id === fileId);
       if (fileToRemove?.url) {
+        // Remove from storage
+        const fileName = fileToRemove.url.split('/').pop();
+        if (fileName) {
+          supabase.storage.from('post-files').remove([fileName]).catch(console.error);
+        }
         // Remove from files list
         onFilesChange(files.filter(url => url !== fileToRemove.url));
       }
