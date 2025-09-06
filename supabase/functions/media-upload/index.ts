@@ -64,7 +64,7 @@ serve(async (req) => {
     })
 
     // POST /media-upload/complete - Mark upload as complete and attach to draft
-    if (method === 'POST' && pathSegments.length === 3 && pathSegments[2] === 'complete') {
+    if (method === 'POST' && pathSegments.includes('complete')) {
       const body: MediaUploadCompleteData = await req.json()
 
       // Validate required fields
@@ -139,7 +139,7 @@ serve(async (req) => {
     }
 
     // POST /media-upload/attach - Attach existing uploaded files to draft
-    if (method === 'POST' && pathSegments.length === 3 && pathSegments[2] === 'attach') {
+    if (method === 'POST' && pathSegments.includes('attach')) {
       const body: MediaAttachData = await req.json()
 
       if (!body.draftId || !body.mediaIds || body.mediaIds.length === 0) {
@@ -185,7 +185,7 @@ serve(async (req) => {
     }
 
     // GET /media-upload/temp - Get temporary uploads (not attached to any draft)
-    if (method === 'GET' && pathSegments.length === 3 && pathSegments[2] === 'temp') {
+    if (method === 'GET' && pathSegments.includes('temp')) {
       const { data: tempMedia, error } = await supabaseClient
         .from('draft_media')
         .select('*')
@@ -215,7 +215,7 @@ serve(async (req) => {
     }
 
     // DELETE /media-upload/:id - Remove media file
-    if (method === 'DELETE' && pathSegments.length === 3) {
+    if (method === 'DELETE' && pathSegments.length >= 3) {
       const mediaId = pathSegments[2]
 
       // Get media info first
