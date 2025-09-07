@@ -158,6 +158,14 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
         });
       } else {
         // Create new post
+        console.log('Creating post with data:', {
+          title: formData.title.trim(),
+          content: formData.content.trim(),
+          groupId: formData.groupId,
+          mediaFiles: formData.mediaFiles,
+          mediaCount: formData.mediaFiles.length
+        });
+
         const postData: any = {
           user_id: user!.id,
           group_id: formData.groupId,
@@ -168,13 +176,20 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
           media_url: formData.mediaFiles.length > 0 ? formData.mediaFiles[0] : null
         };
 
+        console.log('Inserting post with data:', postData);
+
         const { data: post, error: postError } = await supabase
           .from('posts')
           .insert(postData)
           .select()
           .single();
 
-        if (postError) throw postError;
+        if (postError) {
+          console.error('Post insertion error:', postError);
+          throw postError;
+        }
+
+        console.log('Post created successfully:', post);
 
         // Insert media files if any
         if (formData.mediaFiles.length > 0) {
@@ -188,15 +203,20 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
             status: 'attached'
           }));
 
+          console.log('Inserting media with data:', mediaInserts);
+
           const { error: mediaError } = await supabase
             .from('post_media')
             .insert(mediaInserts);
 
           if (mediaError) {
+            console.error('Media insertion error:', mediaError);
             // Rollback post if media fails
             await supabase.from('posts').delete().eq('id', post.id);
             throw mediaError;
           }
+
+          console.log('Media inserted successfully');
         }
 
         toast({
@@ -209,7 +229,18 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
       onSuccess();
       
     } catch (error) {
-      console.error('Post submission error:', error);
+      console.error('Post submission error details:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        formData: {
+          title: formData.title,
+          content: formData.content,
+          groupId: formData.groupId,
+          mediaFilesCount: formData.mediaFiles.length,
+          mediaFiles: formData.mediaFiles
+        }
+      });
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to submit post. Please try again.",
