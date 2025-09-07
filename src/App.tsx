@@ -13,6 +13,7 @@ import GroupPage from "./pages/GroupPage";
 import NewsPage from "./pages/NewsPage";
 import PostDetailPage from "./pages/PostDetailPage";
 import TrendingTopics from "./pages/TrendingTopics";
+import TestPage from "./pages/TestPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <TrendingTopics />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/test" 
+            element={
+              <ProtectedRoute>
+                <TestPage />
               </ProtectedRoute>
             } 
           />

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 interface UploadResponse {
   uploadId: string;
@@ -23,6 +23,7 @@ export const MultiImageUploadTest: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [testDraftId] = useState('05c18a93-6c14-4fc9-9c43-5842546cc55d'); // Using existing draft
+  const { toast } = useToast();
 
   // Test function for initializing upload
   const testInitUpload = useCallback(async () => {
@@ -45,12 +46,19 @@ export const MultiImageUploadTest: React.FC = () => {
       const uploadResponse: UploadResponse = data;
       console.log('Upload init response:', uploadResponse);
       
-      toast.success(`Upload initialized! Upload ID: ${uploadResponse.uploadId}`);
+      toast({
+        title: "Upload Initialized",
+        description: `Upload ID: ${uploadResponse.uploadId}`,
+      });
       
       return uploadResponse;
     } catch (error) {
       console.error('Upload init error:', error);
-      toast.error(`Upload init failed: ${error.message}`);
+      toast({
+        title: "Upload Init Failed", 
+        description: error.message,
+        variant: "destructive",
+      });
       throw error;
     } finally {
       setUploading(false);
@@ -75,12 +83,19 @@ export const MultiImageUploadTest: React.FC = () => {
       const mediaFile: MediaFile = data;
       console.log('Upload complete response:', mediaFile);
       
-      toast.success(`Upload completed! File ID: ${mediaFile.fileId}`);
+      toast({
+        title: "Upload Completed",
+        description: `File ID: ${mediaFile.fileId}`,
+      });
       
       return mediaFile;
     } catch (error) {
       console.error('Upload complete error:', error);
-      toast.error(`Upload complete failed: ${error.message}`);
+      toast({
+        title: "Upload Complete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
       throw error;
     } finally {
       setUploading(false);
@@ -104,10 +119,17 @@ export const MultiImageUploadTest: React.FC = () => {
       console.log('Media list response:', data);
       setMediaFiles(data || []);
       
-      toast.success(`Found ${data?.length || 0} media files`);
+      toast({
+        title: "Media Listed",
+        description: `Found ${data?.length || 0} media files`,
+      });
     } catch (error) {
       console.error('List media error:', error);
-      toast.error(`List media failed: ${error.message}`);
+      toast({
+        title: "List Media Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   }, [testDraftId]);
 
@@ -127,13 +149,20 @@ export const MultiImageUploadTest: React.FC = () => {
       }
 
       console.log('Delete response:', data);
-      toast.success(`File ${fileId} deleted successfully`);
+      toast({
+        title: "File Deleted",
+        description: `File ${fileId} deleted successfully`,
+      });
       
       // Refresh media list
       await testListMedia();
     } catch (error) {
       console.error('Delete media error:', error);
-      toast.error(`Delete failed: ${error.message}`);
+      toast({
+        title: "Delete Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   }, [testDraftId, testListMedia]);
 
@@ -156,13 +185,20 @@ export const MultiImageUploadTest: React.FC = () => {
       }
 
       console.log('Reorder response:', data);
-      toast.success('Media reordered successfully');
+      toast({
+        title: "Media Reordered",
+        description: "Media reordered successfully",
+      });
       
       // Refresh media list
       await testListMedia();
     } catch (error) {
       console.error('Reorder media error:', error);
-      toast.error(`Reorder failed: ${error.message}`);
+      toast({
+        title: "Reorder Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   }, [testDraftId, mediaFiles, testListMedia]);
 
@@ -181,7 +217,10 @@ export const MultiImageUploadTest: React.FC = () => {
       // Step 4: Refresh media list
       await testListMedia();
       
-      toast.success('Full upload flow completed successfully!');
+      toast({
+        title: "Success",
+        description: "Full upload flow completed successfully!",
+      });
     } catch (error) {
       console.error('Full upload flow error:', error);
     }
