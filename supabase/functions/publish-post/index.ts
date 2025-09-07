@@ -183,11 +183,7 @@ serve(async (req) => {
       const { data: post, error: postError } = await supabaseClient
         .from('posts')
         .insert(postData)
-        .select(`
-          *,
-          profiles:user_id (display_name, avatar_url),
-          groups (name, is_public)
-        `)
+        .select('*')
         .single()
 
       console.log('Post creation result:', { 
