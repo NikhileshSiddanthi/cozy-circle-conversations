@@ -30,6 +30,7 @@ interface MediaFile {
 interface EnhancedMediaUploadProps {
   files: string[];
   onFilesChange: (files: string[]) => void;
+  onUploadStatusChange?: (uploading: boolean) => void;
   groupId?: string;
   userId?: string;
   draftId?: string;
@@ -40,6 +41,7 @@ interface EnhancedMediaUploadProps {
 export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
   files,
   onFilesChange,
+  onUploadStatusChange,
   groupId,
   userId,
   draftId,
@@ -110,33 +112,48 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
     return null;
   };
 
+  const checkAllUploadsComplete = useCallback((updatedFiles: MediaFile[]) => {
+    const allDone = updatedFiles.every(f => f.status === 'completed' || f.status === 'error');
+    if (allDone) {
+      onUploadStatusChange?.(false);
+    }
+  }, [onUploadStatusChange]);
+
   const uploadFile = async (mediaFile: MediaFile): Promise<void> => {
     console.log('Upload attempt:', { draftId, userId, groupId, isWorkingMode });
     
     if (!draftId || !userId) {
       console.error('Missing required params:', { draftId, userId });
-      setMediaFiles(prev => prev.map(f => 
-        f.id === mediaFile.id 
-          ? { ...f, status: 'error', error: `Missing required information` }
-          : f
-      ));
+      setMediaFiles(prev => {
+        const updatedFiles = prev.map(f => 
+          f.id === mediaFile.id 
+            ? { ...f, status: 'error' as const, error: `Missing required information` }
+            : f
+        );
+        checkAllUploadsComplete(updatedFiles);
+        return updatedFiles;
+      });
       return;
     }
 
     // For working mode or fallback drafts, use local preview only
     if (isWorkingMode || draftId.startsWith('working_') || draftId.startsWith('local_') || draftId.startsWith('fallback_')) {
       console.log('Working mode - using local preview only');
-      setMediaFiles(prev => prev.map(f => 
-        f.id === mediaFile.id 
-          ? { 
-              ...f, 
-              progress: 100, 
-              status: 'completed', 
-              url: f.preview, // Use preview URL as final URL
-              serverId: `preview_${f.id}`
-            }
-          : f
-      ));
+      setMediaFiles(prev => {
+        const updatedFiles = prev.map(f => 
+          f.id === mediaFile.id 
+            ? { 
+                ...f, 
+                progress: 100, 
+                status: 'completed' as const, 
+                url: f.preview, // Use preview URL as final URL
+                serverId: `preview_${f.id}`
+              }
+            : f
+        );
+        checkAllUploadsComplete(updatedFiles);
+        return updatedFiles;
+      });
       
       // Add to files list for local preview
       if (!files.includes(mediaFile.preview)) {
@@ -159,7 +176,7 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
       // Update progress
       setMediaFiles(prev => prev.map(f => 
         f.id === mediaFile.id 
-          ? { ...f, progress: 10, status: 'uploading' }
+          ? { ...f, progress: 10, status: 'uploading' as const }
           : f
       ));
 
@@ -209,18 +226,22 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
       const mediaResult = await response.json();
 
       // Replace preview with server URL and mark as completed
-      setMediaFiles(prev => prev.map(f => 
-        f.id === mediaFile.id 
-          ? { 
-              ...f, 
-              progress: 100, 
-              status: 'completed', 
-              url: publicUrlData.publicUrl,
-              serverId: mediaResult.id,
-              preview: publicUrlData.publicUrl // Replace blob URL with server URL
-            }
-          : f
-      ));
+      setMediaFiles(prev => {
+        const updatedFiles = prev.map(f => 
+          f.id === mediaFile.id 
+            ? { 
+                ...f, 
+                progress: 100, 
+                status: 'completed' as const, 
+                url: publicUrlData.publicUrl,
+                serverId: mediaResult.id,
+                preview: publicUrlData.publicUrl // Replace blob URL with server URL
+              }
+            : f
+        );
+        checkAllUploadsComplete(updatedFiles);
+        return updatedFiles;
+      });
 
       // Revoke the original object URL since we now have server URL
       if (mediaFile.preview.startsWith('blob:')) {
@@ -240,15 +261,19 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
     } catch (error) {
       console.error('Upload failed:', error);
       
-      setMediaFiles(prev => prev.map(f => 
-        f.id === mediaFile.id 
-          ? { 
-              ...f, 
-              status: 'error', 
-              error: error instanceof Error ? error.message : 'Upload failed'
-            }
-          : f
-      ));
+      setMediaFiles(prev => {
+        const updatedFiles = prev.map(f => 
+          f.id === mediaFile.id 
+            ? { 
+                ...f, 
+                status: 'error' as const, 
+                error: error instanceof Error ? error.message : 'Upload failed'
+              }
+            : f
+        );
+        checkAllUploadsComplete(updatedFiles);
+        return updatedFiles;
+      });
 
       toast({
         title: "Upload Failed",
@@ -297,11 +322,14 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
 
     console.log('Current mediaFiles:', mediaFiles.length, 'Current files from parent:', files.length);
     
+    // Notify parent that upload is starting
+    onUploadStatusChange?.(true);
+    
     const newMediaFiles: MediaFile[] = validFiles.map(file => ({
       id: Math.random().toString(36).substring(2),
       file,
       preview: URL.createObjectURL(file), // Immediate preview with blob URL
-      status: 'uploading',
+      status: 'uploading' as const,
       progress: 0
     }));
 
@@ -312,7 +340,7 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
       uploadFile(mediaFile);
     });
 
-  }, [mediaFiles.length, files, onFilesChange, disabled, draftId, userId, groupId, toast]);
+  }, [mediaFiles.length, files, onFilesChange, onUploadStatusChange, disabled, draftId, userId, groupId, toast, checkAllUploadsComplete]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -358,7 +386,7 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
     if (mediaFile && mediaFile.status === 'error') {
       setMediaFiles(prev => prev.map(f => 
         f.id === fileId 
-          ? { ...f, status: 'uploading', progress: 0, error: undefined }
+          ? { ...f, status: 'uploading' as const, progress: 0, error: undefined }
           : f
       ));
       uploadFile(mediaFile);

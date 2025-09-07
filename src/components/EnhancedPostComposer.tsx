@@ -73,6 +73,7 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
   const [isDraftLoading, setIsDraftLoading] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
   const [titleSaveTimer, setTitleSaveTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isMediaUploading, setIsMediaUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const [postData, setPostData] = useState<PostData>({
@@ -95,6 +96,11 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
       createOrLoadDraft();
     }
   }, [user, postData.groupId, isExpanded]);
+
+  // Handle media upload status
+  const handleMediaUploadStatus = useCallback((uploading: boolean) => {
+    setIsMediaUploading(uploading);
+  }, []);
 
   // Auto-save draft
   useEffect(() => {
@@ -407,6 +413,16 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Prevent submission if media is uploading
+    if (isMediaUploading) {
+      toast({
+        title: "Media Upload in Progress",
+        description: "Please wait for media files to finish uploading before publishing",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // Validate content - must have title OR content OR media
     const hasTitle = postData.title.trim().length > 0;
     const hasContent = postData.content.trim().length > 0;
@@ -426,6 +442,15 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
         title: "Group Required",
         description: "Please select a group for your post.",
         variant: "destructive",
+      });
+      return;
+    }
+
+    if (isOverLimit) {
+      toast({
+        title: "Post Too Long",
+        description: `Please reduce your post to under ${MAX_CHARACTERS} characters`,
+        variant: "destructive"
       });
       return;
     }
@@ -650,15 +675,16 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
                         </div>
                       </div>
                     )}
-                    <EnhancedMediaUpload
-                      files={postData.mediaFiles}
-                      onFilesChange={(urls) => setPostData(prev => ({ ...prev, mediaFiles: urls }))}
-                      draftId={currentDraft?.id || `working_${user?.id}_${postData.groupId}`}
-                      groupId={postData.groupId}
-                      userId={user?.id || 'unknown'}
-                      disabled={createPostMutation.isPending || isDraftLoading}
-                      isWorkingMode={currentDraft.isWorking || currentDraft.isLocalFallback}
-                    />
+                     <EnhancedMediaUpload
+                       files={postData.mediaFiles}
+                       onFilesChange={(urls) => setPostData(prev => ({ ...prev, mediaFiles: urls }))}
+                       onUploadStatusChange={handleMediaUploadStatus}
+                       draftId={currentDraft?.id || `working_${user?.id}_${postData.groupId}`}
+                       groupId={postData.groupId}
+                       userId={user?.id || 'unknown'}
+                       disabled={createPostMutation.isPending || isDraftLoading}
+                       isWorkingMode={currentDraft.isWorking || currentDraft.isLocalFallback}
+                     />
                   </div>
                 ) : (
                   <div className="text-center py-8 space-y-3">
@@ -737,20 +763,25 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
                  )}
               </div>
 
-              <Button
-                type="submit"
-                disabled={createPostMutation.isPending || !postData.title.trim() || isOverLimit}
-                className="bg-primary hover:bg-primary/90 px-6"
-              >
-                {createPostMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Publishing...
-                  </>
-                ) : (
-                  'Publish'
-                )}
-              </Button>
+               <Button
+                 type="submit"
+                 disabled={createPostMutation.isPending || !postData.title.trim() || isOverLimit || isMediaUploading}
+                 className="bg-primary hover:bg-primary/90 px-6"
+               >
+                 {createPostMutation.isPending ? (
+                   <>
+                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                     Publishing...
+                   </>
+                 ) : isMediaUploading ? (
+                   <>
+                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                     Uploading Media...
+                   </>
+                 ) : (
+                   'Publish'
+                 )}
+               </Button>
             </div>
           </form>
         )}
