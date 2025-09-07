@@ -207,7 +207,22 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
     }
   };
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <Card className="border-border/50 bg-card">
+        <CardContent className="p-8 text-center">
+          <p className="text-muted-foreground">Please sign in to create posts</p>
+          <Button 
+            onClick={() => window.location.href = '/auth'} 
+            className="mt-4"
+            data-testid="create-post-button"
+          >
+            Sign In to Post
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const selectedGroup = groups.find(g => g.id === formData.groupId);
   const userInitials = user.email?.charAt(0).toUpperCase() || "U";
@@ -225,6 +240,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
             <div 
               className="flex-1 p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors"
               onClick={() => setIsExpanded(true)}
+              data-testid="create-post-button"
             >
               <p className="text-muted-foreground">
                 {editPost ? "Edit your post..." : "What's on your mind?"}

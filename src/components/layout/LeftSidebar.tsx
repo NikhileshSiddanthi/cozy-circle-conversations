@@ -21,7 +21,7 @@ import {
   Calendar,
   BookOpen
 } from 'lucide-react';
-import { CreatePostWithValidation } from '@/components/CreatePostWithValidation';
+import { CreatePostButton } from '@/components/CreatePostButton';
 import { SuggestGroupModal } from '@/components/SuggestGroupModal';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -143,7 +143,7 @@ export const LeftSidebar = () => {
             <SidebarMenu>
               <SidebarMenuItem>
                 <div className="px-2 py-1">
-                  <CreatePostWithValidation userGroups={userGroups} />
+                  <CreatePostButton />
                 </div>
               </SidebarMenuItem>
               <SidebarMenuItem>

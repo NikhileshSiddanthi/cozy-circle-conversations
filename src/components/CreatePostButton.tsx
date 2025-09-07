@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ComprehensivePostEditor } from "./ComprehensivePostEditor";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PostComposer } from "./PostComposer";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 
@@ -17,7 +18,7 @@ export const CreatePostButton = () => {
   const { toast } = useToast();
   const [userGroups, setUserGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showEditor, setShowEditor] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -74,7 +75,7 @@ export const CreatePostButton = () => {
       return;
     }
     
-    setShowEditor(true);
+    setShowDialog(true);
   };
 
   if (loading) {
@@ -88,22 +89,33 @@ export const CreatePostButton = () => {
 
   return (
     <>
-      <Button onClick={handleCreatePostClick} className="w-full">
+      <Button 
+        onClick={handleCreatePostClick} 
+        className="w-full"
+        data-testid="create-post-button"
+      >
         <Plus className="h-4 w-4 mr-2" />
         Create Post
       </Button>
 
-      {showEditor && userGroups.length > 0 && (
-        <ComprehensivePostEditor
-          groups={userGroups}
-          isOpen={showEditor}
-          onClose={() => setShowEditor(false)}
-          onSuccess={() => {
-            setShowEditor(false);
-            fetchUserGroups();
-          }}
-        />
-      )}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create Post</DialogTitle>
+          </DialogHeader>
+          
+          {userGroups.length > 0 && (
+            <PostComposer
+              groups={userGroups}
+              onSuccess={() => {
+                setShowDialog(false);
+                fetchUserGroups();
+                window.location.reload(); // Refresh to show new post
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
