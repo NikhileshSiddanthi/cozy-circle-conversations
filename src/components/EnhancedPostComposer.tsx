@@ -358,10 +358,15 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!postData.title.trim()) {
+    // Validate content - must have title OR content OR media
+    const hasTitle = postData.title.trim().length > 0;
+    const hasContent = postData.content.trim().length > 0;
+    const hasMedia = postData.mediaFiles.length > 0;
+    
+    if (!hasTitle && !hasContent && !hasMedia) {
       toast({
-        title: "Title Required",
-        description: "Please enter a title for your post.",
+        title: "Content Required",
+        description: "Please add a title, content, or media to your post.",
         variant: "destructive",
       });
       return;
@@ -506,14 +511,14 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
               </Select>
             )}
 
-             <Input
-               placeholder="Give your post a title..."
-               value={postData.title}
-               onChange={(e) => handleTitleChange(e.target.value)}
-               className="border-border/50 focus:border-primary text-base py-3 font-medium"
-               data-testid="title-input"
-               required
-             />
+              <Input
+                placeholder="Give your post a title..."
+                value={postData.title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                className="border-border/50 focus:border-primary text-base py-3 font-medium"
+                data-testid="title-input"
+                required={false}
+              />
 
             <div className="space-y-3">
               <RichTextEditor
@@ -522,6 +527,7 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
                 placeholder="Share your thoughts, ideas, or start a discussion..."
                 maxLength={MAX_CHARACTERS}
                 showToolbar
+                data-testid="content-textarea"
               />
               
               <div className="flex justify-between items-center text-xs">
@@ -548,10 +554,10 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
                   <Hash className="h-3 w-3 mr-1" />
                   Text
                 </TabsTrigger>
-                <TabsTrigger value="media" className="text-xs">
-                  <Image className="h-3 w-3 mr-1" />
-                  Media
-                </TabsTrigger>
+                 <TabsTrigger value="media" className="text-xs" data-value="media">
+                   <Image className="h-3 w-3 mr-1" />
+                   Media
+                 </TabsTrigger>
                 <TabsTrigger value="link" className="text-xs">
                   <Link2 className="h-3 w-3 mr-1" />
                   Link

@@ -20,6 +20,7 @@ interface RichTextEditorProps {
   showToolbar?: boolean;
   onMention?: (query: string) => void;
   onHashtag?: (query: string) => void;
+  'data-testid'?: string;
 }
 
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({
@@ -30,6 +31,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   showToolbar = true,
   onMention,
   onHashtag,
+  'data-testid': dataTestId,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showMentions, setShowMentions] = useState(false);
@@ -266,6 +268,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           maxLength={maxLength}
           className="border-border/50 focus:border-primary resize-none overflow-hidden min-h-[120px] max-h-[200px]"
           rows={4}
+          data-testid={dataTestId}
         />
         
         {/* Mention/Hashtag suggestions would go here */}

@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Publishing draft ${draftId} for user ${user.id}`);
+    console.log(`PUB START: draftId=${draftId}, userId=${user.id}`);
 
     // Check for idempotency - see if post already exists for this draft
     const { data: existingPost } = await supabaseClient
@@ -126,12 +126,19 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${draftMedia?.length || 0} media files to attach`);
 
-    // Validate draft has content
-    if (!draft.title && !draft.content && (!draftMedia || draftMedia.length === 0)) {
+    // Validate draft has content (title OR content OR media)
+    const hasTitle = draft.title && draft.title.trim().length > 0;
+    const hasContent = draft.content && draft.content.trim().length > 0;
+    const hasMedia = draftMedia && draftMedia.length > 0;
+    
+    console.log('PUB VALIDATE:', { hasTitle, hasContent, hasMedia, title: draft.title, content: draft.content?.length });
+    
+    if (!hasTitle && !hasContent && !hasMedia) {
       return new Response(
         JSON.stringify({ 
           error: 'Draft must have title, content, or media to publish', 
-          code: 'INSUFFICIENT_CONTENT' 
+          code: 'INSUFFICIENT_CONTENT',
+          message: 'Draft must have title, content, or media'
         }),
         { 
           status: 400, 
@@ -175,7 +182,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Created post ${postData.id}`);
+    console.log(`POST CREATED: id=${postData.id}, title="${postData.title}"`);
 
     let attachedMediaCount = 0;
 

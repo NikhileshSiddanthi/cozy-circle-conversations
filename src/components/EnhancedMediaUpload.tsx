@@ -48,7 +48,7 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-  const MAX_FILES = 5;
+  const MAX_FILES = 10; // Allow up to 10 files
   const ACCEPTED_TYPES = {
     'image/jpeg': ['.jpg', '.jpeg'],
     'image/png': ['.png'],
@@ -184,10 +184,9 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
       }
 
       // Add to files list - only add if not already present
-      const updatedFiles = files.includes(publicUrlData.publicUrl) 
-        ? files 
-        : [...files, publicUrlData.publicUrl];
-      onFilesChange(updatedFiles);
+      if (!files.includes(publicUrlData.publicUrl)) {
+        onFilesChange([...files, publicUrlData.publicUrl]);
+      }
 
       toast({
         title: "Upload Successful",
@@ -219,10 +218,12 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
     if (disabled) return;
     
     const currentFileCount = mediaFiles.filter(f => f.status !== 'error').length;
-    if (currentFileCount + acceptedFiles.length > MAX_FILES) {
+    const totalAfterUpload = currentFileCount + acceptedFiles.length;
+    
+    if (totalAfterUpload > MAX_FILES) {
       toast({
         title: "Too Many Files",
-        description: `You can only upload up to ${MAX_FILES} files. You currently have ${currentFileCount} files.`,
+        description: `You can only upload up to ${MAX_FILES} files. You currently have ${currentFileCount} files, trying to add ${acceptedFiles.length} more.`,
         variant: "destructive"
       });
       return;
