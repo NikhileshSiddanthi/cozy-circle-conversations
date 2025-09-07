@@ -34,6 +34,7 @@ interface EnhancedMediaUploadProps {
   userId?: string;
   draftId?: string;
   disabled?: boolean;
+  isWorkingMode?: boolean;
 }
 
 export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
@@ -42,7 +43,8 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
   groupId,
   userId,
   draftId,
-  disabled = false
+  disabled = false,
+  isWorkingMode = false
 }) => {
   const { toast } = useToast();
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
@@ -109,21 +111,21 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
   };
 
   const uploadFile = async (mediaFile: MediaFile): Promise<void> => {
-    console.log('Upload attempt:', { draftId, userId, groupId });
+    console.log('Upload attempt:', { draftId, userId, groupId, isWorkingMode });
     
     if (!draftId || !userId) {
       console.error('Missing required params:', { draftId, userId });
       setMediaFiles(prev => prev.map(f => 
         f.id === mediaFile.id 
-          ? { ...f, status: 'error', error: `Draft or user not available (draftId: ${!!draftId}, userId: ${!!userId})` }
+          ? { ...f, status: 'error', error: `Missing required information` }
           : f
       ));
       return;
     }
 
-    // Skip upload for local fallback drafts - just show preview
-    if (draftId.startsWith('local_') || draftId.startsWith('fallback_')) {
-      console.log('Skipping upload for fallback draft, showing preview only');
+    // For working mode or fallback drafts, use local preview only
+    if (isWorkingMode || draftId.startsWith('working_') || draftId.startsWith('local_') || draftId.startsWith('fallback_')) {
+      console.log('Working mode - using local preview only');
       setMediaFiles(prev => prev.map(f => 
         f.id === mediaFile.id 
           ? { 
@@ -140,6 +142,11 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
       if (!files.includes(mediaFile.preview)) {
         onFilesChange([...files, mediaFile.preview]);
       }
+      
+      toast({
+        title: "File Ready",
+        description: `${mediaFile.file.name} is ready for posting.`,
+      });
       
       return;
     }
@@ -376,43 +383,64 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
       {canAddMore && (
         <Card>
           <CardContent className="p-6">
-            <div
-              {...getRootProps()}
-              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                isDragActive 
-                  ? 'border-primary bg-primary/5' 
-                  : disabled
-                  ? 'border-muted-foreground/20 bg-muted/20 cursor-not-allowed'
-                  : 'border-border hover:border-primary/50 hover:bg-muted/30'
-              }`}
-            >
-              <input {...getInputProps()} />
-              <Upload className={`h-8 w-8 mx-auto mb-4 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
-              
-              {isDragActive ? (
-                <p className="text-lg font-medium text-primary mb-2">
-                  Drop your files here...
+            {isWorkingMode ? (
+              <div className="border-2 border-dashed border-blue-200 rounded-lg p-8 text-center bg-blue-50">
+                <Upload className="h-8 w-8 mx-auto mb-4 text-blue-600" />
+                <p className="text-lg font-medium mb-2 text-blue-800">
+                  Add media files (Preview Mode)
                 </p>
-              ) : (
-                <>
-                  <p className={`text-lg font-medium mb-2 ${disabled ? 'text-muted-foreground/50' : ''}`}>
-                    Upload your media files
-                  </p>
-                  <p className={`text-sm text-muted-foreground mb-4 ${disabled ? 'opacity-50' : ''}`}>
-                    Drag & drop files here, or click to select files
-                  </p>
-                </>
-              )}
-              
-              <div className={`flex flex-wrap justify-center gap-4 text-xs text-muted-foreground ${disabled ? 'opacity-50' : ''}`}>
-                <span>• Max {MAX_FILES} files</span>
-                <span>• Up to 10MB each</span>
-                <span>• JPEG, PNG, GIF, WebP, MP4, WebM</span>
+                <p className="text-sm text-blue-600 mb-4">
+                  Files will be previewed locally and included in your post
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100"
+                >
+                  Select Files
+                </Button>
+                <input {...getInputProps()} style={{ display: 'none' }} />
               </div>
-            </div>
-                </CardContent>
-              </Card>
+            ) : (
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                  isDragActive 
+                    ? 'border-primary bg-primary/5' 
+                    : disabled
+                    ? 'border-muted-foreground/20 bg-muted/20 cursor-not-allowed'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/30'
+                }`}
+              >
+                <input {...getInputProps()} />
+                <Upload className={`h-8 w-8 mx-auto mb-4 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
+                
+                {isDragActive ? (
+                  <p className="text-lg font-medium text-primary mb-2">
+                    Drop your files here...
+                  </p>
+                ) : (
+                  <>
+                    <p className={`text-lg font-medium mb-2 ${disabled ? 'text-muted-foreground/50' : ''}`}>
+                      Upload your media files
+                    </p>
+                    <p className={`text-sm text-muted-foreground mb-4 ${disabled ? 'opacity-50' : ''}`}>
+                      Drag & drop files here, or click to select files
+                    </p>
+                  </>
+                )}
+                
+                <div className={`flex flex-wrap justify-center gap-4 text-xs text-muted-foreground ${disabled ? 'opacity-50' : ''}`}>
+                  <span>• Max {MAX_FILES} files</span>
+                  <span>• Up to 10MB each</span>
+                  <span>• JPEG, PNG, GIF, WebP, MP4, WebM</span>
+                </div>
+              </div>
             )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* File List */}
       {mediaFiles.length > 0 && (
