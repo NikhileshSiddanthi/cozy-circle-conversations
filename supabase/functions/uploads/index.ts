@@ -41,12 +41,18 @@ serve(async (req) => {
       });
     }
 
-    const url = new URL(req.url);
-    const pathSegments = url.pathname.split('/').filter(Boolean);
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const requestBody = await req.json();
     
-    // Handle POST /uploads/init
-    if (req.method === 'POST' && pathSegments.includes('init')) {
-      const { filename, mimeType, size, draftId } = await req.json();
+    // Handle init upload request
+    if (requestBody.uploadId === undefined && requestBody.filename) {
+      const { filename, mimeType, size, draftId } = requestBody;
 
       // Validate required fields
       if (!filename || !mimeType || !size || !draftId) {
@@ -183,9 +189,9 @@ serve(async (req) => {
       });
     }
 
-    // Handle POST /uploads/complete
-    if (req.method === 'POST' && pathSegments.includes('complete')) {
-      const { uploadId } = await req.json();
+    // Handle complete upload request
+    if (requestBody.uploadId && !requestBody.filename) {
+      const { uploadId } = requestBody;
 
       if (!uploadId) {
         return new Response(JSON.stringify({ 

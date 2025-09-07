@@ -107,8 +107,8 @@ export const MultiImageUploadTest: React.FC = () => {
     try {
       const { data, error } = await supabase.functions.invoke('draft-media', {
         body: {
-          draftId: testDraftId,
           action: 'list',
+          draftId: testDraftId,
         },
       });
 
@@ -138,9 +138,9 @@ export const MultiImageUploadTest: React.FC = () => {
     try {
       const { data, error } = await supabase.functions.invoke('draft-media', {
         body: {
+          action: 'delete',
           draftId: testDraftId,
           fileId,
-          action: 'delete',
         },
       });
 
@@ -174,9 +174,9 @@ export const MultiImageUploadTest: React.FC = () => {
 
       const { data, error } = await supabase.functions.invoke('draft-media', {
         body: {
+          action: 'reorder',
           draftId: testDraftId,
           order: reversedOrder,
-          action: 'reorder',
         },
       });
 

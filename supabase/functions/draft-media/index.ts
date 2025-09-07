@@ -38,19 +38,23 @@ serve(async (req) => {
       });
     }
 
-    const url = new URL(req.url);
-    const pathSegments = url.pathname.split('/').filter(Boolean);
-    
-    // Extract draftId from path: /drafts/:draftId/media or /drafts/:draftId/mediaOrder
-    const draftIndex = pathSegments.findIndex(segment => segment === 'drafts');
-    if (draftIndex === -1 || draftIndex + 1 >= pathSegments.length) {
-      return new Response(JSON.stringify({ error: 'Invalid URL format' }), {
-        status: 400,
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+        status: 405,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const draftId = pathSegments[draftIndex + 1];
+    const { action, draftId, fileId, order } = await req.json();
+
+    if (!action || !draftId) {
+      return new Response(JSON.stringify({ 
+        error: 'Missing required fields: action, draftId' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Verify draft ownership
     const { data: draft, error: draftError } = await supabase
@@ -69,11 +73,11 @@ serve(async (req) => {
       });
     }
 
-    // Handle GET /drafts/:draftId/media
-    if (req.method === 'GET' && pathSegments.includes('media')) {
+    // Handle list action
+    if (action === 'list') {
       const { data: mediaFiles, error: mediaError } = await supabase
         .from('draft_media')
-        .select('*')
+        .select('id, file_id, url, thumbnail_url, mime_type, file_size, order_index')
         .eq('draft_id', draftId)
         .in('status', ['uploaded', 'attached'])
         .order('order_index', { ascending: true });
@@ -88,22 +92,29 @@ serve(async (req) => {
         });
       }
 
-      return new Response(JSON.stringify(mediaFiles || []), {
+      // Transform to match expected interface
+      const transformedFiles = (mediaFiles || []).map(file => ({
+        fileId: file.id,
+        url: file.url,
+        thumbnailUrl: file.thumbnail_url,
+        mimeType: file.mime_type,
+        size: file.file_size,
+        orderIndex: file.order_index,
+      }));
+
+      return new Response(JSON.stringify(transformedFiles), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Handle DELETE /drafts/:draftId/media/:fileId
-    if (req.method === 'DELETE' && pathSegments.includes('media')) {
-      const mediaIndex = pathSegments.findIndex(segment => segment === 'media');
-      if (mediaIndex === -1 || mediaIndex + 1 >= pathSegments.length) {
-        return new Response(JSON.stringify({ error: 'Missing fileId' }), {
+    // Handle delete action
+    if (action === 'delete') {
+      if (!fileId) {
+        return new Response(JSON.stringify({ error: 'Missing fileId for delete action' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-
-      const fileId = pathSegments[mediaIndex + 1];
 
       // Get the media record first
       const { data: mediaFile, error: findError } = await supabase
@@ -150,38 +161,13 @@ serve(async (req) => {
         });
       }
 
-      // Reorder remaining files
-      const { data: remainingFiles, error: reorderFetchError } = await supabase
-        .from('draft_media')
-        .select('id, order_index')
-        .eq('draft_id', draftId)
-        .in('status', ['uploaded', 'attached'])
-        .order('order_index', { ascending: true });
-
-      if (reorderFetchError) {
-        console.error('Reorder fetch error:', reorderFetchError);
-      } else if (remainingFiles && remainingFiles.length > 0) {
-        // Update order_index for remaining files
-        const reorderPromises = remainingFiles.map((file, index) => 
-          supabase
-            .from('draft_media')
-            .update({ order_index: index })
-            .eq('id', file.id)
-        );
-
-        await Promise.all(reorderPromises);
-      }
-
-      return new Response(null, {
-        status: 204,
-        headers: corsHeaders,
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Handle PATCH /drafts/:draftId/mediaOrder
-    if (req.method === 'PATCH' && pathSegments.includes('mediaOrder')) {
-      const { order } = await req.json();
-
+    // Handle reorder action
+    if (action === 'reorder') {
       if (!Array.isArray(order)) {
         return new Response(JSON.stringify({ 
           error: 'Order must be an array of file IDs' 
@@ -237,8 +223,8 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: 'Endpoint not found' }), {
-      status: 404,
+    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+      status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
