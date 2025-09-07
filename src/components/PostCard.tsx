@@ -14,13 +14,14 @@ import {
   ExternalLink,
   Play,
   BarChart3,
-  Eye
+  Eye,
+  Edit3
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { CommentSection } from "./CommentSection";
 import { PostActionsMenu } from "./PostActionsMenu";
 import { ViewCounter } from "./ViewCounter";
-import { EditablePost } from "./EditablePost";
+import { EditPostModal } from "./EditPostModal";
 import { useUserRole } from "@/hooks/useUserRole";
 
 interface Post {
@@ -36,6 +37,7 @@ interface Post {
   dislike_count: number;
   comment_count: number;
   is_pinned: boolean;
+  is_edited?: boolean;
   created_at: string;
   user_id: string;
   profiles: {
@@ -57,6 +59,8 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   const [pollVote, setPollVote] = useState<number | null>(null);
   const [pollResults, setPollResults] = useState<number[]>([]);
   const [showComments, setShowComments] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -377,12 +381,33 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <EditablePost
-          post={post}
-          onUpdate={onUpdate}
-          isAuthor={user?.id === post.user_id}
-          isAdmin={userRole === 'admin'}
-        />
+        <div className="group">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-2">
+                {post.title}
+                {post.is_edited && (
+                  <span className="ml-2 text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                    Edited
+                  </span>
+                )}
+              </h3>
+              {post.content && (
+                <p className="text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+              )}
+            </div>
+            {user && (user.id === post.user_id || userRole === 'admin') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEditModal(true)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+              >
+                <Edit3 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
 
         {renderMedia()}
         {renderPoll()}
@@ -430,9 +455,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
               postId={post.id}
               postTitle={post.title}
               isAuthor={user?.id === post.user_id}
-              onEdit={() => {
-                // Edit functionality is now handled by EditablePost component
-              }}
+              onEdit={() => setShowEditModal(true)}
               onDelete={onUpdate}
             />
           </div>
@@ -445,6 +468,16 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
           />
         )}
       </CardContent>
+
+      <EditPostModal
+        postId={post.id}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSuccess={() => {
+          setShowEditModal(false);
+          onUpdate?.();
+        }}
+      />
     </Card>
   );
 };

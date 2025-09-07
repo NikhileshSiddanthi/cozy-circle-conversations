@@ -11,11 +11,13 @@ import {
   Image, 
   Video, 
   Send,
-  Loader2
+  Loader2,
+  Link as LinkIcon
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MediaUpload } from "./MediaUpload";
+import { URLPreview } from "./URLPreview";
 
 interface Group {
   id: string;
@@ -47,8 +49,9 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
   const [formData, setFormData] = useState({
     title: editPost?.title || "",
     content: editPost?.content || "",
-    groupId: selectedGroupId || editPost ? "" : "",
-    mediaFiles: editPost?.media_urls || []
+    groupId: selectedGroupId || "",
+    mediaFiles: editPost?.media_urls || [],
+    linkPreview: ""
   });
 
   const MAX_CHARACTERS = 5000;
@@ -71,7 +74,8 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
       title: "",
       content: "",
       groupId: selectedGroupId || "",
-      mediaFiles: []
+      mediaFiles: [],
+      linkPreview: ""
     });
     setIsExpanded(false);
     setCurrentTab("text");
@@ -89,15 +93,24 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
       return;
     }
 
-    // Validate content - must have title OR content OR media
+    // Validate required fields - title is required
     const hasTitle = formData.title.trim().length > 0;
     const hasContent = formData.content.trim().length > 0;
     const hasMedia = formData.mediaFiles.length > 0;
     
-    if (!hasTitle && !hasContent && !hasMedia) {
+    if (!hasTitle) {
+      toast({
+        title: "Title Required",
+        description: "Please add a title to your post.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!hasContent && !hasMedia) {
       toast({
         title: "Content Required",
-        description: "Please add a title, content, or media to your post.",
+        description: "Please add content or media to your post.",
         variant: "destructive",
       });
       return;
@@ -148,8 +161,8 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
         const postData: any = {
           user_id: user!.id,
           group_id: formData.groupId,
-          title: formData.title || "Untitled Post",
-          content: formData.content || "",
+          title: formData.title.trim(),
+          content: formData.content.trim() || "",
           media_type: formData.mediaFiles.length > 1 ? 'multiple' : 
                      formData.mediaFiles.length === 1 ? 'image' : null,
           media_url: formData.mediaFiles.length > 0 ? formData.mediaFiles[0] : null
@@ -262,10 +275,10 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
                 size="sm"
                 onClick={() => {
                   setIsExpanded(true);
-                  setCurrentTab("media");
+                  setCurrentTab("link");
                 }}
               >
-                <Video className="h-4 w-4" />
+                <LinkIcon className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -279,45 +292,58 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="font-medium text-sm">
-                    {user.user_metadata?.display_name || user.email?.split('@')[0] || 'You'}
-                  </span>
-                  <span className="text-muted-foreground">•</span>
-                  <Select
-                    value={formData.groupId}
-                    onValueChange={(value) => 
-                      setFormData(prev => ({ ...prev, groupId: value }))
-                    }
-                  >
-                    <SelectTrigger className="w-48 h-8">
-                      <SelectValue placeholder="Select group" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {groups.map(group => (
-                        <SelectItem key={group.id} value={group.id}>
-                          {group.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                   <span className="font-medium text-sm">
+                     {user.user_metadata?.display_name || user.email?.split('@')[0] || 'You'}
+                   </span>
+                   {selectedGroupId && groups.length > 0 ? (
+                     <>
+                       <span className="text-muted-foreground">•</span>
+                       <span className="text-sm text-muted-foreground">
+                         posting to {groups.find(g => g.id === selectedGroupId)?.name}
+                       </span>
+                     </>
+                   ) : (
+                     <>
+                       <span className="text-muted-foreground">•</span>
+                       <Select
+                         value={formData.groupId}
+                         onValueChange={(value) => 
+                           setFormData(prev => ({ ...prev, groupId: value }))
+                         }
+                       >
+                         <SelectTrigger className="w-48 h-8">
+                           <SelectValue placeholder="Select group" />
+                         </SelectTrigger>
+                         <SelectContent>
+                           {groups.map(group => (
+                             <SelectItem key={group.id} value={group.id}>
+                               {group.name}
+                             </SelectItem>
+                           ))}
+                         </SelectContent>
+                       </Select>
+                     </>
+                   )}
+                 </div>
               </div>
             </div>
 
             <div className="space-y-3">
               <Input
-                placeholder="Post title (optional)"
+                placeholder="Post title *"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 className="border-0 bg-transparent text-lg font-medium placeholder:text-muted-foreground focus-visible:ring-0 px-0"
                 data-testid="title-input"
+                required
               />
 
               <Tabs value={currentTab} onValueChange={setCurrentTab}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="text">Text</TabsTrigger>
-                  <TabsTrigger value="media">Media</TabsTrigger>
-                </TabsList>
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="text">Text</TabsTrigger>
+                    <TabsTrigger value="media">Media</TabsTrigger>
+                    <TabsTrigger value="link">Link</TabsTrigger>
+                  </TabsList>
                 
                 <TabsContent value="text" className="mt-4">
                   <Textarea
@@ -340,14 +366,31 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
                   </div>
                 </TabsContent>
                 
-                <TabsContent value="media" className="mt-4">
-                  <MediaUpload
-                    files={formData.mediaFiles}
-                    onFilesChange={(files) => setFormData(prev => ({ ...prev, mediaFiles: files }))}
-                    onUploadStatusChange={setMediaUploading}
-                    maxFiles={10}
-                  />
-                </TabsContent>
+                  <TabsContent value="media" className="mt-4">
+                    <MediaUpload
+                      files={formData.mediaFiles}
+                      onFilesChange={(files) => setFormData(prev => ({ ...prev, mediaFiles: files }))}
+                      onUploadStatusChange={setMediaUploading}
+                      maxFiles={10}
+                    />
+                  </TabsContent>
+                  
+                  <TabsContent value="link" className="mt-4">
+                    <div className="space-y-4">
+                      <Input
+                        placeholder="Paste a URL to show preview"
+                        value={formData.linkPreview}
+                        onChange={(e) => setFormData(prev => ({ ...prev, linkPreview: e.target.value }))}
+                        className="w-full"
+                      />
+                      {formData.linkPreview && (
+                        <URLPreview 
+                          url={formData.linkPreview}
+                          onRemove={() => setFormData(prev => ({ ...prev, linkPreview: "" }))}
+                        />
+                      )}
+                    </div>
+                  </TabsContent>
               </Tabs>
             </div>
 

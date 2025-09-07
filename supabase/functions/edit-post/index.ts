@@ -48,15 +48,15 @@ serve(async (req) => {
       )
     }
 
-    if (req.method !== 'PATCH') {
-      return new Response(
-        JSON.stringify({ error: 'Method not allowed' }),
-        { 
-          status: 405, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      )
-    }
+      if (req.method !== 'POST') {
+        return new Response(
+          JSON.stringify({ error: 'Method not allowed' }),
+          { 
+            status: 405, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        )
+      }
 
     const body: EditPostData = await req.json()
 
@@ -135,26 +135,58 @@ serve(async (req) => {
         )
       }
 
-      // 2. Prepare media data
+      // 2. Handle media files
       let mediaType = null;
       let mediaUrl = null;
       
-      if (body.mediaFiles && body.mediaFiles.length > 0) {
-        if (body.mediaFiles.length === 1) {
-          const url = body.mediaFiles[0];
-          if (url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)) {
-            mediaType = 'image';
-            mediaUrl = url;
-          } else if (url.match(/\.(mp4|webm|mov)(\?|$)/i)) {
-            mediaType = 'video';
+      if (body.mediaFiles !== undefined) {
+        // First, delete existing media for this post
+        const { error: deleteMediaError } = await supabaseClient
+          .from('post_media')
+          .delete()
+          .eq('post_id', body.postId)
+
+        if (deleteMediaError) {
+          console.error('Failed to delete existing media:', deleteMediaError)
+          throw new Error('Failed to update media files')
+        }
+
+        if (body.mediaFiles.length > 0) {
+          if (body.mediaFiles.length === 1) {
+            const url = body.mediaFiles[0];
+            if (url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)) {
+              mediaType = 'image';
+            } else if (url.match(/\.(mp4|webm|mov)(\?|$)/i)) {
+              mediaType = 'video';
+            } else {
+              mediaType = 'file';
+            }
             mediaUrl = url;
           } else {
-            mediaType = 'file';
-            mediaUrl = url;
+            mediaType = 'multiple';
+            mediaUrl = body.mediaFiles[0]; // Use first URL for legacy support
           }
-        } else {
-          mediaType = 'multiple';
-          mediaUrl = JSON.stringify(body.mediaFiles);
+
+          // Insert new media records
+          const mediaInserts = body.mediaFiles.map((url, index) => ({
+            post_id: body.postId,
+            user_id: user.id,
+            file_id: `media_${body.postId}_${index}_${Date.now()}`,
+            url: url,
+            mime_type: url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i) ? 'image/jpeg' : 
+                      url.match(/\.(mp4|webm|mov)(\?|$)/i) ? 'video/mp4' : 'application/octet-stream',
+            order_index: index,
+            status: 'attached'
+          }));
+
+          const { error: mediaError } = await supabaseClient
+            .from('post_media')
+            .insert(mediaInserts)
+
+          if (mediaError) {
+            console.error('Failed to insert new media:', mediaError)
+            throw new Error('Failed to update media files')
+          }
         }
       }
 
