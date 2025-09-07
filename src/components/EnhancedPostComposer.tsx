@@ -71,6 +71,7 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
   const [isDraft, setIsDraft] = useState(false);
   const [currentDraft, setCurrentDraft] = useState<any>(null);
   const [isDraftLoading, setIsDraftLoading] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
   const [titleSaveTimer, setTitleSaveTimer] = useState<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
@@ -119,12 +120,16 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
     if (!user || !postData.groupId) return;
     
     setIsDraftLoading(true);
+    setDraftError(null);
+    
     try {
       // Get user session token
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        throw new Error('No valid session');
+        throw new Error('No valid session - please refresh the page');
       }
+
+      console.log('Loading drafts for group:', postData.groupId);
 
       // Load existing draft for this group using supabase client
       const response = await supabase.functions.invoke('draft-manager', {
@@ -136,6 +141,7 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
 
       if (response.error) {
         console.error('Error loading drafts:', response.error);
+        // Try to create new draft if loading fails
         await createNewDraft();
         return;
       }
@@ -159,11 +165,31 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
       }
     } catch (error) {
       console.error('Failed to create or load draft:', error);
-      await createNewDraft();
+      setDraftError(error instanceof Error ? error.message : 'Failed to load draft');
+      
+      // Create a fallback local draft to allow posting
+      const fallbackDraft = {
+        id: `local_${Date.now()}`,
+        user_id: user.id,
+        group_id: postData.groupId,
+        title: '',
+        content: '',
+        status: 'editing',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        isLocalFallback: true
+      };
+      setCurrentDraft(fallbackDraft);
+      
+      toast({
+        title: "Draft Creation Failed",
+        description: "Using offline mode. Your post will be created directly.",
+        variant: "destructive",
+      });
     } finally {
       setIsDraftLoading(false);
     }
-  }, [user, postData.groupId]);
+  }, [user, postData.groupId, toast]);
 
   const createNewDraft = useCallback(async () => {
     if (!user || !postData.groupId) return;
@@ -185,15 +211,43 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
       });
 
       if (response.error) {
-        throw new Error(`Failed to create draft: ${response.error.message}`);
+        throw new Error(`Failed to create draft: ${response.error.message || 'Unknown error'}`);
+      }
+
+      if (!response.data?.draft) {
+        throw new Error('No draft returned from server');
       }
 
       console.log('New draft created:', response.data.draft.id);
       setCurrentDraft(response.data.draft);
+      setDraftError(null);
+      
     } catch (error) {
       console.error('Failed to create new draft:', error);
+      
+      // Create fallback local draft
+      const fallbackDraft = {
+        id: `local_${Date.now()}`,
+        user_id: user.id,
+        group_id: postData.groupId,
+        title: '',
+        content: '',
+        status: 'editing',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        isLocalFallback: true
+      };
+      
+      setCurrentDraft(fallbackDraft);
+      setDraftError('Draft creation failed - using offline mode');
+      
+      toast({
+        title: "Draft Creation Failed",
+        description: "Using offline mode. You can still create posts.",
+        variant: "destructive",
+      });
     }
-  }, [user, postData.groupId]);
+  }, [user, postData.groupId, toast]);
 
   const saveDraft = useCallback(async (specificData?: { title?: string; content?: string }) => {
     if (!currentDraft || !user) return;
@@ -283,9 +337,43 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
   const createPostMutation = useOptimisticMutation({
     mutationFn: async (postData: PostData) => {
       if (!currentDraft) {
-        throw new Error('No draft to publish');
+        throw new Error('No draft available - please refresh the page');
       }
 
+      // Handle local fallback drafts by creating post directly
+      if (currentDraft.isLocalFallback) {
+        console.log('Publishing with local fallback draft');
+        
+        // Create post directly without publish-post function
+        const { data: postResult, error: postError } = await supabase
+          .from('posts')
+          .insert({
+            user_id: user!.id,
+            group_id: postData.groupId,
+            title: postData.title || 'Untitled Post',
+            content: postData.content || '',
+            media_type: postData.mediaFiles.length > 0 ? (postData.mediaFiles.length > 1 ? 'multiple' : 'image') : null,
+            media_url: postData.mediaFiles.length > 0 ? postData.mediaFiles[0] : null,
+            metadata: {
+              fallback_mode: true,
+              visibility: postData.visibility || 'public'
+            }
+          })
+          .select()
+          .single();
+
+        if (postError) {
+          throw new Error(postError.message);
+        }
+
+        return {
+          postId: postResult.id,
+          attachedMediaCount: postData.mediaFiles.length,
+          postUrl: `/posts/${postResult.id}`
+        };
+      }
+
+      // Normal draft publishing
       const response = await supabase.functions.invoke('publish-post', {
         body: {
           draftId: currentDraft.id,
@@ -598,7 +686,7 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
                     draftId={currentDraft.id}
                     groupId={postData.groupId}
                     userId={user.id}
-                    disabled={createPostMutation.isPending || isDraftLoading}
+                    disabled={createPostMutation.isPending || isDraftLoading || currentDraft.isLocalFallback}
                   />
                 ) : (
                   <div className="text-center py-8 space-y-3">
@@ -608,16 +696,33 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
                     <div>
                       <h4 className="font-medium mb-1 text-destructive">Media upload unavailable</h4>
                       <p className="text-muted-foreground text-sm">
-                        There was an issue setting up media upload. Try refreshing the page.
+                        {draftError || 'There was an issue setting up media upload. Try refreshing the page.'}
                       </p>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => window.location.reload()}
-                    >
-                      Refresh Page
-                    </Button>
+                    <div className="flex gap-2 justify-center">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => createOrLoadDraft()}
+                        disabled={isDraftLoading}
+                      >
+                        {isDraftLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Retrying...
+                          </>
+                        ) : (
+                          'Retry Setup'
+                        )}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => window.location.reload()}
+                      >
+                        Refresh Page
+                      </Button>
+                    </div>
                   </div>
                 )}
               </TabsContent>
