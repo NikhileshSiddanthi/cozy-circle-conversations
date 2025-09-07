@@ -1,49 +1,51 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface PublishPostData {
-  draftId: string
-  groupId: string
+interface PublishPostRequest {
+  draftId: string;
+  visibility?: 'public' | 'private' | 'group';
+  publishOptions?: {
+    notifyMembers?: boolean;
+  };
 }
 
-serve(async (req) => {
+interface PublishPostResponse {
+  postId: string;
+  attachedMediaCount: number;
+  postUrl: string;
+}
+
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseClient = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    { auth: { persistSession: false } }
+  );
+
   try {
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    )
+    // Get user from JWT
+    const authHeader = req.headers.get('Authorization')!;
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
-    // Get authenticated user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser()
-
-    if (userError || !user) {
-      console.log('Authentication error:', userError)
+    if (authError || !user) {
+      console.log('Auth error:', authError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ error: 'Unauthorized', code: 'INVALID_TOKEN' }),
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
-      )
+      );
     }
 
     if (req.method !== 'POST') {
@@ -53,267 +55,220 @@ serve(async (req) => {
           status: 405, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
-      )
+      );
     }
 
-    const body: PublishPostData = await req.json()
+    const { draftId, visibility = 'public', publishOptions = {} }: PublishPostRequest = await req.json();
 
-    if (!body.draftId || !body.groupId) {
+    if (!draftId) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: draftId, groupId' }),
+        JSON.stringify({ error: 'Draft ID is required', code: 'MISSING_DRAFT_ID' }),
         { 
           status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
-      )
+      );
     }
 
-    console.log('Publishing post:', { 
-      draftId: body.draftId, 
-      groupId: body.groupId, 
-      userId: user.id 
-    })
+    console.log(`Publishing draft ${draftId} for user ${user.id}`);
 
-    // Start atomic transaction simulation using multiple operations
-    try {
-      // 1. Verify user membership and permissions
-      console.log('Checking membership for:', { groupId: body.groupId, userId: user.id })
-      
-      const { data: membership, error: membershipError } = await supabaseClient
-        .from('group_members')
-        .select('status, role')
-        .eq('group_id', body.groupId)
-        .eq('user_id', user.id)
-        .single()
+    // Check for idempotency - see if post already exists for this draft
+    const { data: existingPost } = await supabaseClient
+      .from('posts')
+      .select('id, title')
+      .eq('metadata->>draft_id', draftId)
+      .single();
 
-      console.log('Membership check result:', { membership, membershipError })
-
-      if (membershipError || !membership || membership.status !== 'approved') {
-        console.error('Membership check failed:', { membershipError, membership })
-        throw new Error('User not authorized to post in this group')
-      }
-
-      // 2. Get draft with media
-      console.log('Fetching draft:', { draftId: body.draftId, userId: user.id })
-      
-      const { data: draft, error: draftError } = await supabaseClient
-        .from('post_drafts')
-        .select(`
-          *,
-          draft_media (
-            id,
-            file_id,
-            url,
-            mime_type,
-            file_size,
-            status
-          )
-        `)
-        .eq('id', body.draftId)
-        .eq('user_id', user.id)
-        .eq('status', 'editing')
-        .single()
-
-      console.log('Draft fetch result:', { 
-        draft: draft ? { ...draft, draft_media: draft.draft_media?.length } : null, 
-        draftError 
-      })
-
-      if (draftError || !draft) {
-        console.error('Draft fetch failed:', { draftError, draft })
-        throw new Error('Draft not found or already published')
-      }
-
-      // Validate draft has minimum content
-      console.log('Draft validation:', {
-        hasTitle: !!draft.title?.trim(),
-        hasContent: !!draft.content?.trim(),
-        mediaCount: draft.draft_media?.length || 0,
-        mediaStatuses: draft.draft_media?.map(m => m.status) || []
-      })
-      
-      const hasUploadedMedia = draft.draft_media?.some(m => m.status === 'uploaded') || false
-      
-      if (!draft.title?.trim() && !draft.content?.trim() && !hasUploadedMedia) {
-        throw new Error('Draft must have title, content, or media')
-      }
-
-      // 3. Create post record
-      const mediaUrls = draft.draft_media?.filter(m => m.status === 'uploaded').map(m => m.url) || []
-      
-      // Determine media type based on uploaded files
-      let mediaType = null;
-      let mediaUrl = null;
-      
-      if (mediaUrls.length > 0) {
-        if (mediaUrls.length === 1) {
-          // Single media file - detect type
-          const url = mediaUrls[0];
-          if (url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)) {
-            mediaType = 'image';
-            mediaUrl = url;
-          } else if (url.match(/\.(mp4|webm|mov)(\?|$)/i)) {
-            mediaType = 'video';
-            mediaUrl = url;
-          } else {
-            mediaType = 'file';
-            mediaUrl = url;
-          }
-        } else {
-          // Multiple media files
-          mediaType = 'multiple';
-          mediaUrl = JSON.stringify(mediaUrls);
-        }
-      }
-      
-      const postData = {
-        title: draft.title || 'Untitled',
-        content: draft.content,
-        group_id: body.groupId,
-        user_id: user.id,
-        media_type: mediaType,
-        media_url: mediaUrl,
-        // Handle poll data if exists in metadata
-        poll_question: draft.metadata?.poll?.question || null,
-        poll_options: draft.metadata?.poll?.options || null,
-      }
-
-      console.log('Creating post with data:', postData)
-      
-      const { data: post, error: postError } = await supabaseClient
-        .from('posts')
-        .insert(postData)
-        .select('*')
-        .single()
-
-      console.log('Post creation result:', { 
-        post: post ? { id: post.id, title: post.title } : null, 
-        postError 
-      })
-
-      if (postError) {
-        console.error('Post creation failed:', postError)
-        throw new Error(`Failed to create post: ${postError.message}`)
-      }
-
-      // 4. Create post_media records and mark draft media as attached
-      if (draft.draft_media && draft.draft_media.length > 0) {
-        // Insert into post_media table
-        const postMediaData = draft.draft_media
-          .filter(m => m.status === 'uploaded')
-          .map(m => ({
-            post_id: post.id,
-            file_id: m.file_id,
-            url: m.url,
-            mime_type: m.mime_type,
-            file_size: m.file_size,
-            status: 'attached'
-          }))
-
-        const { error: postMediaError } = await supabaseClient
-          .from('post_media')
-          .insert(postMediaData)
-
-        if (postMediaError) {
-          // Rollback: delete the created post
-          await supabaseClient
-            .from('posts')
-            .delete()
-            .eq('id', post.id)
-
-          throw new Error(`Failed to create post media: ${postMediaError.message}`)
-        }
-
-        // Mark draft media as attached
-        const { error: mediaUpdateError } = await supabaseClient
-          .from('draft_media')
-          .update({ 
-            status: 'attached',
-            updated_at: new Date().toISOString()
-          })
-          .eq('draft_id', body.draftId)
-          .eq('status', 'uploaded')
-
-        if (mediaUpdateError) {
-          // Rollback: delete the created post and post_media
-          await supabaseClient
-            .from('posts')
-            .delete()
-            .eq('id', post.id)
-          
-          await supabaseClient
-            .from('post_media')
-            .delete()
-            .eq('post_id', post.id)
-
-          throw new Error(`Failed to attach media: ${mediaUpdateError.message}`)
-        }
-      }
-
-      // 5. Mark draft as published (or delete it)
-      const { error: draftUpdateError } = await supabaseClient
-        .from('post_drafts')
-        .update({ 
-          status: 'published',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', body.draftId)
-
-      if (draftUpdateError) {
-        // Rollback: delete post and reset media status
-        await supabaseClient.from('posts').delete().eq('id', post.id)
-        
-        if (draft.draft_media && draft.draft_media.length > 0) {
-          await supabaseClient
-            .from('draft_media')
-            .update({ status: 'uploaded' })
-            .eq('draft_id', body.draftId)
-        }
-
-        throw new Error(`Failed to update draft status: ${draftUpdateError.message}`)
-      }
-
-      console.log('Post published successfully:', { 
-        postId: post.id, 
-        draftId: body.draftId,
-        mediaCount: draft.draft_media?.length || 0 
-      })
-
+    if (existingPost) {
+      console.log(`Draft ${draftId} already published as post ${existingPost.id}`);
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          post,
-          mediaAttached: draft.draft_media?.length || 0
-        }),
+        JSON.stringify({
+          postId: existingPost.id,
+          attachedMediaCount: 0,
+          postUrl: `/posts/${existingPost.id}`,
+          message: 'Post already published'
+        } as PublishPostResponse),
         { 
-          status: 201, 
+          status: 200, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
-      )
+      );
+    }
 
-    } catch (error) {
-      console.error('Publish failed - transaction rolled back:', error)
+    // Validate draft ownership and get draft data
+    const { data: draft, error: draftError } = await supabaseClient
+      .from('post_drafts')
+      .select('*')
+      .eq('id', draftId)
+      .eq('user_id', user.id)
+      .single();
       
+    if (draftError || !draft) {
+      console.log('Draft not found or access denied:', draftError);
       return new Response(
         JSON.stringify({ 
-          error: error instanceof Error ? error.message : 'Failed to publish post',
-          rollback: true
+          error: draftError?.code === 'PGRST116' ? 'Draft not found' : 'Access denied', 
+          code: draftError?.code === 'PGRST116' ? 'DRAFT_NOT_FOUND' : 'ACCESS_DENIED' 
+        }),
+        { 
+          status: draftError?.code === 'PGRST116' ? 404 : 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Get draft media ordered by order_index
+    const { data: draftMedia } = await supabaseClient
+      .from('draft_media')
+      .select('*')
+      .eq('draft_id', draftId)
+      .order('order_index', { ascending: true });
+
+    console.log(`Found ${draftMedia?.length || 0} media files to attach`);
+
+    // Validate draft has content
+    if (!draft.title && !draft.content && (!draftMedia || draftMedia.length === 0)) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Draft must have title, content, or media to publish', 
+          code: 'INSUFFICIENT_CONTENT' 
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Begin atomic transaction to create post and attach media
+    const { data: postData, error: postError } = await supabaseClient
+      .from('posts')
+      .insert({
+        user_id: user.id,
+        group_id: draft.group_id,
+        title: draft.title || 'Untitled Post',
+        content: draft.content || '',
+        media_type: draftMedia && draftMedia.length > 0 ? (draftMedia.length > 1 ? 'multiple' : 'image') : null,
+        media_url: draftMedia && draftMedia.length > 0 ? draftMedia[0].url : null,
+        media_thumbnail: draftMedia && draftMedia.length > 0 ? draftMedia[0].thumbnail_url : null,
+        metadata: { 
+          draft_id: draftId,
+          visibility,
+          publish_options: publishOptions
+        }
+      })
+      .select()
+      .single();
+
+    if (postError) {
+      console.log('Failed to create post:', postError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to create post', 
+          code: 'PUBLISH_DB_ERROR',
+          details: postError.message 
         }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
-      )
+      );
     }
 
-  } catch (error) {
-    console.error('Unexpected error:', error)
+    console.log(`Created post ${postData.id}`);
+
+    let attachedMediaCount = 0;
+
+    // Attach media files if they exist
+    if (draftMedia && draftMedia.length > 0) {
+      const mediaInserts = draftMedia.map((media, index) => ({
+        post_id: postData.id,
+        user_id: user.id,
+        file_id: media.file_id,
+        url: media.url,
+        thumbnail_url: media.thumbnail_url,
+        mime_type: media.mime_type,
+        file_size: media.file_size,
+        order_index: index,
+        status: 'attached'
+      }));
+
+      const { error: mediaError } = await supabaseClient
+        .from('post_media')
+        .insert(mediaInserts);
+
+      if (mediaError) {
+        console.log('Failed to attach media, rolling back post:', mediaError);
+        
+        // Rollback - delete the created post
+        await supabaseClient
+          .from('posts')
+          .delete()
+          .eq('id', postData.id);
+
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to attach media', 
+            code: 'PUBLISH_DB_ERROR',
+            details: mediaError.message 
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+
+      console.log(`Attached ${draftMedia.length} media files`);
+      attachedMediaCount = draftMedia.length;
+
+      // Mark draft media as attached
+      await supabaseClient
+        .from('draft_media')
+        .update({ status: 'attached' })
+        .eq('draft_id', draftId);
+    }
+
+    // Mark draft as published
+    const { error: draftUpdateError } = await supabaseClient
+      .from('post_drafts')
+      .update({ 
+        status: 'published',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', draftId);
+
+    if (draftUpdateError) {
+      console.log('Warning: Failed to update draft status:', draftUpdateError);
+      // Don't fail the publish for this, post is already created
+    }
+
+    console.log(`Successfully published draft ${draftId} as post ${postData.id}`);
+
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({
+        postId: postData.id,
+        attachedMediaCount,
+        postUrl: `/posts/${postData.id}`
+      } as PublishPostResponse),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+
+  } catch (error) {
+    console.error('Unexpected error during publish:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        code: 'INTERNAL_ERROR',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
-    )
+    );
   }
-})
+});

@@ -254,30 +254,26 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
   }, [user, currentDraft]);
 
   const createPostMutation = useOptimisticMutation({
-    mutationFn: async (data: PostData) => {
-      if (!user || !currentDraft) {
-        throw new Error('User not authenticated or no draft available');
-      }
-      
-      if (!data.groupId) {
-        throw new Error('Group not selected');
+    mutationFn: async (postData: PostData) => {
+      if (!currentDraft) {
+        throw new Error('No draft to publish');
       }
 
-      // Use the publish-post edge function to atomically publish the draft
-      const { data: result, error } = await supabase.functions.invoke('publish-post', {
+      const response = await supabase.functions.invoke('publish-post', {
         body: {
           draftId: currentDraft.id,
-          groupId: data.groupId
+          visibility: postData.visibility || 'public',
+          publishOptions: {
+            notifyMembers: true
+          }
         }
       });
 
-      if (error) {
-        console.error('Publish error:', error);
-        throw new Error(`Failed to publish post: ${error.message}`);
+      if (response.error) {
+        throw new Error(response.error.message);
       }
-      
-      console.log('Post published successfully:', result.post);
-      return result.post;
+
+      return response.data;
     },
     queryKey: ['posts'],
     optimisticUpdate: (oldData: any, variables: PostData) => {

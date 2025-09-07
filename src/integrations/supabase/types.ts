@@ -493,10 +493,13 @@ export type Database = {
           file_size: number | null
           id: string
           mime_type: string | null
+          order_index: number | null
           post_id: string
           status: string
+          thumbnail_url: string | null
           updated_at: string
           url: string
+          user_id: string
         }
         Insert: {
           created_at?: string
@@ -504,10 +507,13 @@ export type Database = {
           file_size?: number | null
           id?: string
           mime_type?: string | null
+          order_index?: number | null
           post_id: string
           status?: string
+          thumbnail_url?: string | null
           updated_at?: string
           url: string
+          user_id: string
         }
         Update: {
           created_at?: string
@@ -515,12 +521,23 @@ export type Database = {
           file_size?: number | null
           id?: string
           mime_type?: string | null
+          order_index?: number | null
           post_id?: string
           status?: string
+          thumbnail_url?: string | null
           updated_at?: string
           url?: string
+          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "post_media_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       posts: {
         Row: {
@@ -537,6 +554,7 @@ export type Database = {
           media_thumbnail: string | null
           media_type: string | null
           media_url: string | null
+          metadata: Json | null
           poll_options: Json | null
           poll_question: string | null
           title: string
@@ -557,6 +575,7 @@ export type Database = {
           media_thumbnail?: string | null
           media_type?: string | null
           media_url?: string | null
+          metadata?: Json | null
           poll_options?: Json | null
           poll_question?: string | null
           title: string
@@ -577,6 +596,7 @@ export type Database = {
           media_thumbnail?: string | null
           media_type?: string | null
           media_url?: string | null
+          metadata?: Json | null
           poll_options?: Json | null
           poll_question?: string | null
           title?: string

@@ -22,7 +22,8 @@ interface MediaFile {
 export const MultiImageUploadTest: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
-  const [testDraftId] = useState('05c18a93-6c14-4fc9-9c43-5842546cc55d'); // Using existing draft
+  const [testDraftId] = useState('05c18a93-6c14-4fc9-9c43-5842546cc55d');
+  const [publishResult, setPublishResult] = useState<any>(null);
   const { toast } = useToast();
 
   // Test function for initializing upload
@@ -202,6 +203,44 @@ export const MultiImageUploadTest: React.FC = () => {
     }
   }, [testDraftId, mediaFiles, testListMedia]);
 
+  // Test function for publishing post
+  const testPublishPost = useCallback(async () => {
+    try {
+      setUploading(true);
+      
+      const { data, error } = await supabase.functions.invoke('publish-post', {
+        body: {
+          draftId: testDraftId,
+          visibility: 'public',
+          publishOptions: {
+            notifyMembers: true
+          }
+        },
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      console.log('Publish response:', data);
+      setPublishResult(data);
+      
+      toast({
+        title: "Post Published Successfully!",
+        description: `Post ID: ${data.postId}`,
+      });
+    } catch (error) {
+      console.error('Publish error:', error);
+      toast({
+        title: "Publish Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  }, [testDraftId]);
+
   // Full upload test workflow
   const testFullUploadFlow = useCallback(async () => {
     try {
@@ -229,7 +268,7 @@ export const MultiImageUploadTest: React.FC = () => {
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle>Multi-Image Upload API Test</CardTitle>
+        <CardTitle>Multi-Image Upload & Publish Test</CardTitle>
         <p className="text-muted-foreground">
           Test draft ID: {testDraftId}
         </p>
@@ -237,7 +276,7 @@ export const MultiImageUploadTest: React.FC = () => {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
           <Button onClick={testInitUpload} disabled={uploading}>
-            Test Init Upload
+            Init Upload
           </Button>
           <Button onClick={testListMedia} disabled={uploading}>
             List Media
@@ -245,10 +284,24 @@ export const MultiImageUploadTest: React.FC = () => {
           <Button onClick={testReorderMedia} disabled={uploading || mediaFiles.length < 2}>
             Reverse Order
           </Button>
-          <Button onClick={testFullUploadFlow} disabled={uploading} variant="default">
+          <Button onClick={testPublishPost} disabled={uploading} variant="default">
+            Publish Post
+          </Button>
+          <Button onClick={testFullUploadFlow} disabled={uploading} variant="outline">
             Full Upload Test
           </Button>
         </div>
+
+        {publishResult && (
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded">
+            <h3 className="text-sm font-medium text-green-800">Publish Success!</h3>
+            <div className="mt-2 space-y-1 text-sm text-green-700">
+              <div data-testid="post-id" data-post-id={publishResult.postId}>Post ID: {publishResult.postId}</div>
+              <div data-testid="media-count">Media Count: {publishResult.attachedMediaCount}</div>
+              <div>URL: {publishResult.postUrl}</div>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2">
           <h3 className="text-lg font-semibold">Media Files ({mediaFiles.length})</h3>
@@ -257,7 +310,7 @@ export const MultiImageUploadTest: React.FC = () => {
           ) : (
             <div className="grid gap-2">
               {mediaFiles.map((file) => (
-                <div key={file.fileId} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={file.fileId} className="flex items-center justify-between p-3 border rounded-lg" data-testid="media-item">
                   <div className="flex-1">
                     <div className="font-mono text-sm">{file.fileId}</div>
                     <div className="text-xs text-muted-foreground">
@@ -298,6 +351,7 @@ export const MultiImageUploadTest: React.FC = () => {
             <div>GET /functions/v1/draft-media (list)</div>
             <div>DELETE /functions/v1/draft-media (delete)</div>
             <div>PATCH /functions/v1/draft-media (reorder)</div>
+            <div>POST /functions/v1/publish-post (publish draft)</div>
           </div>
         </div>
       </CardContent>
