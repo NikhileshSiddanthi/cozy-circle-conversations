@@ -325,6 +325,7 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
     setCharacterCount(0);
     setIsExpanded(false);
     setCurrentTab("text");
+    console.log('Form reset, postData cleared');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -480,7 +481,10 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
             <Input
               placeholder="Give your post a title..."
               value={postData.title}
-              onChange={(e) => setPostData(prev => ({ ...prev, title: e.target.value }))}
+              onChange={(e) => {
+                console.log('Title changing to:', e.target.value);
+                setPostData(prev => ({ ...prev, title: e.target.value }));
+              }}
               className="border-border/50 focus:border-primary text-base py-3 font-medium"
               required
             />

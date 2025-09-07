@@ -58,6 +58,22 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
     'video/webm': ['.webm'],
   };
 
+  // Sync with existing files from parent
+  useEffect(() => {
+    if (files.length > 0) {
+      const existingFiles: MediaFile[] = files.map((url, index) => ({
+        id: `existing-${index}`,
+        file: new File([''], 'existing-file', { type: 'image/jpeg' }),
+        preview: url,
+        status: 'completed' as const,
+        progress: 100,
+        url: url,
+        serverId: `existing-${index}`
+      }));
+      setMediaFiles(existingFiles);
+    }
+  }, [files.length === 0 ? 0 : files.join(',')]);
+
   // Clean up object URLs on unmount
   useEffect(() => {
     return () => {
@@ -167,8 +183,11 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
         URL.revokeObjectURL(mediaFile.preview);
       }
 
-      // Add to files list
-      onFilesChange([...files, publicUrlData.publicUrl]);
+      // Add to files list - only add if not already present
+      const updatedFiles = files.includes(publicUrlData.publicUrl) 
+        ? files 
+        : [...files, publicUrlData.publicUrl];
+      onFilesChange(updatedFiles);
 
       toast({
         title: "Upload Successful",
@@ -199,10 +218,11 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (disabled) return;
     
-    if (mediaFiles.length + acceptedFiles.length > MAX_FILES) {
+    const currentFileCount = mediaFiles.filter(f => f.status !== 'error').length;
+    if (currentFileCount + acceptedFiles.length > MAX_FILES) {
       toast({
         title: "Too Many Files",
-        description: `You can only upload up to ${MAX_FILES} files.`,
+        description: `You can only upload up to ${MAX_FILES} files. You currently have ${currentFileCount} files.`,
         variant: "destructive"
       });
       return;
@@ -230,6 +250,8 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
 
     if (validFiles.length === 0) return;
 
+    console.log('Current mediaFiles:', mediaFiles.length, 'Current files from parent:', files.length);
+    
     const newMediaFiles: MediaFile[] = validFiles.map(file => ({
       id: Math.random().toString(36).substring(2),
       file,
@@ -245,7 +267,7 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
       uploadFile(mediaFile);
     });
 
-  }, [mediaFiles.length, files, onFilesChange, disabled, draftId, userId, groupId]);
+  }, [mediaFiles.length, files, onFilesChange, disabled, draftId, userId, groupId, toast]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -260,14 +282,16 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
     
     if (fileToRemove?.url && fileToRemove?.serverId && draftId) {
       try {
-        // Remove from server
-        await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/media-upload/${fileToRemove.serverId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
-          },
-        });
+        // Remove from server - only if it has a real serverId (not existing files)
+        if (!fileToRemove.serverId?.startsWith('existing-')) {
+          await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/media-upload/${fileToRemove.serverId}`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
+            },
+          });
+        }
         
         // Remove from files list
         onFilesChange(files.filter(url => url !== fileToRemove.url));
@@ -305,7 +329,8 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
     return <FileText className="h-5 w-5" />;
   };
 
-  const canAddMore = mediaFiles.length < MAX_FILES;
+  const activeFiles = mediaFiles.filter(f => f.status !== 'error');
+  const canAddMore = activeFiles.length < MAX_FILES;
 
   return (
     <div className="space-y-4">
@@ -354,7 +379,7 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
       {/* File List */}
       {mediaFiles.length > 0 && (
         <div className="space-y-3">
-          <h4 className="font-medium">Media Files ({mediaFiles.length}/{MAX_FILES})</h4>
+          <h4 className="font-medium">Media Files ({activeFiles.length}/{MAX_FILES})</h4>
           
           {mediaFiles.map((mediaFile) => (
             <Card key={mediaFile.id}>
