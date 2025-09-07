@@ -46,6 +46,16 @@ export const EditablePost: React.FC<EditablePostProps> = ({
   });
 
   const canEdit = (isAuthor || isAdmin) && user;
+  
+  // Debug logging
+  console.log('EditablePost Debug:', {
+    postId: post.id,
+    userId: user?.id,
+    postUserId: post.user_id,
+    isAuthor,
+    isAdmin,
+    canEdit
+  });
 
   const handleSave = async () => {
     if (!user) return;
