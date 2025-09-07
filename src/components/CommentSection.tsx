@@ -7,6 +7,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { Heart, Reply, MessageCircle, Calendar } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { EditableComment } from "./EditableComment";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Comment {
   id: string;
@@ -16,6 +18,8 @@ interface Comment {
   created_at: string;
   user_id: string;
   parent_comment_id: string | null;
+  is_edited?: boolean;
+  edited_at?: string | null;
   profiles: {
     display_name: string | null;
   } | null;
@@ -29,6 +33,7 @@ interface CommentSectionProps {
 export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { role: userRole } = useUserRole();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
@@ -223,7 +228,12 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
             </div>
           </div>
 
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{comment.content}</p>
+          <EditableComment
+            comment={comment}
+            onUpdate={fetchComments}
+            isAuthor={user?.id === comment.user_id}
+            isAdmin={userRole === 'admin'}
+          />
 
           <div className="flex items-center gap-4">
             <Button

@@ -49,7 +49,9 @@ export type Database = {
           content: string
           created_at: string
           dislike_count: number | null
+          edited_at: string | null
           id: string
+          is_edited: boolean | null
           like_count: number | null
           parent_comment_id: string | null
           post_id: string
@@ -60,7 +62,9 @@ export type Database = {
           content: string
           created_at?: string
           dislike_count?: number | null
+          edited_at?: string | null
           id?: string
+          is_edited?: boolean | null
           like_count?: number | null
           parent_comment_id?: string | null
           post_id: string
@@ -71,7 +75,9 @@ export type Database = {
           content?: string
           created_at?: string
           dislike_count?: number | null
+          edited_at?: string | null
           id?: string
+          is_edited?: boolean | null
           like_count?: number | null
           parent_comment_id?: string | null
           post_id?: string
@@ -474,14 +480,52 @@ export type Database = {
           },
         ]
       }
+      post_media: {
+        Row: {
+          created_at: string
+          file_id: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          post_id: string
+          status: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          file_id: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          post_id: string
+          status?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          file_id?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          post_id?: string
+          status?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           comment_count: number | null
           content: string | null
           created_at: string
           dislike_count: number | null
+          edited_at: string | null
           group_id: string
           id: string
+          is_edited: boolean | null
           is_pinned: boolean | null
           like_count: number | null
           media_thumbnail: string | null
@@ -498,8 +542,10 @@ export type Database = {
           content?: string | null
           created_at?: string
           dislike_count?: number | null
+          edited_at?: string | null
           group_id: string
           id?: string
+          is_edited?: boolean | null
           is_pinned?: boolean | null
           like_count?: number | null
           media_thumbnail?: string | null
@@ -516,8 +562,10 @@ export type Database = {
           content?: string | null
           created_at?: string
           dislike_count?: number | null
+          edited_at?: string | null
           group_id?: string
           id?: string
+          is_edited?: boolean | null
           is_pinned?: boolean | null
           like_count?: number | null
           media_thumbnail?: string | null

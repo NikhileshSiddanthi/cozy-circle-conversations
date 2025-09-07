@@ -200,8 +200,35 @@ serve(async (req) => {
         throw new Error(`Failed to create post: ${postError.message}`)
       }
 
-      // 4. Mark draft media as attached
+      // 4. Create post_media records and mark draft media as attached
       if (draft.draft_media && draft.draft_media.length > 0) {
+        // Insert into post_media table
+        const postMediaData = draft.draft_media
+          .filter(m => m.status === 'uploaded')
+          .map(m => ({
+            post_id: post.id,
+            file_id: m.file_id,
+            url: m.url,
+            mime_type: m.mime_type,
+            file_size: m.file_size,
+            status: 'attached'
+          }))
+
+        const { error: postMediaError } = await supabaseClient
+          .from('post_media')
+          .insert(postMediaData)
+
+        if (postMediaError) {
+          // Rollback: delete the created post
+          await supabaseClient
+            .from('posts')
+            .delete()
+            .eq('id', post.id)
+
+          throw new Error(`Failed to create post media: ${postMediaError.message}`)
+        }
+
+        // Mark draft media as attached
         const { error: mediaUpdateError } = await supabaseClient
           .from('draft_media')
           .update({ 
@@ -212,11 +239,16 @@ serve(async (req) => {
           .eq('status', 'uploaded')
 
         if (mediaUpdateError) {
-          // Rollback: delete the created post
+          // Rollback: delete the created post and post_media
           await supabaseClient
             .from('posts')
             .delete()
             .eq('id', post.id)
+          
+          await supabaseClient
+            .from('post_media')
+            .delete()
+            .eq('post_id', post.id)
 
           throw new Error(`Failed to attach media: ${mediaUpdateError.message}`)
         }

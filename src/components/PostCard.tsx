@@ -20,6 +20,8 @@ import { formatDistanceToNow } from "date-fns";
 import { CommentSection } from "./CommentSection";
 import { PostActionsMenu } from "./PostActionsMenu";
 import { ViewCounter } from "./ViewCounter";
+import { EditablePost } from "./EditablePost";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Post {
   id: string;
@@ -50,6 +52,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { role: userRole } = useUserRole();
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [pollVote, setPollVote] = useState<number | null>(null);
   const [pollResults, setPollResults] = useState<number[]>([]);
@@ -374,12 +377,12 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">{post.title}</h3>
-          {post.content && (
-            <p className="text-muted-foreground whitespace-pre-wrap">{post.content}</p>
-          )}
-        </div>
+        <EditablePost
+          post={post}
+          onUpdate={onUpdate}
+          isAuthor={user?.id === post.user_id}
+          isAdmin={userRole === 'admin'}
+        />
 
         {renderMedia()}
         {renderPoll()}
@@ -428,10 +431,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
               postTitle={post.title}
               isAuthor={user?.id === post.user_id}
               onEdit={() => {
-                toast({
-                  title: "Edit Coming Soon",
-                  description: "Post editing functionality is being developed.",
-                });
+                // Edit functionality is now handled by EditablePost component
               }}
               onDelete={onUpdate}
             />

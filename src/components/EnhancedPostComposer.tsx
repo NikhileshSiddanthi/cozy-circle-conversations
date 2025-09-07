@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MediaUploadTab } from "./MediaUploadTab";
+import { EnhancedMediaUpload } from "./EnhancedMediaUpload";
 import { RichTextEditor } from "./RichTextEditor";
 import { MentionsInput } from "./MentionsInput";
 import { LinkPreview } from "./LinkPreview";
@@ -560,12 +560,13 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
                     <span className="text-muted-foreground">Setting up media upload...</span>
                   </div>
                 ) : currentDraft ? (
-                  <MediaUploadTab
+                  <EnhancedMediaUpload
                     files={postData.mediaFiles}
                     onFilesChange={(urls) => setPostData(prev => ({ ...prev, mediaFiles: urls }))}
                     draftId={currentDraft.id}
                     groupId={postData.groupId}
                     userId={user.id}
+                    disabled={createPostMutation.isPending || isDraftLoading}
                   />
                 ) : (
                   <div className="text-center py-8 space-y-3">
