@@ -20,22 +20,31 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client
+    // Parse request body to get method and path for unified handling
+    const requestBody = await req.json().catch(() => ({}))
+    const actualMethod = requestBody.method || req.method
+    const actualPath = requestBody.path || new URL(req.url).pathname
+    
+    // Initialize Supabase client with service role for direct operations
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    // Get authenticated user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser()
+    // Get user from JWT token
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
 
     if (userError || !user) {
       console.log('Authentication error:', userError)
@@ -49,18 +58,17 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url)
-    const method = req.method
-    const pathSegments = url.pathname.split('/').filter(Boolean)
+    const pathSegments = actualPath.split('/').filter(Boolean)
 
-    console.log(`Draft Manager - ${method} ${url.pathname}`, {
+    console.log(`Draft Manager - ${actualMethod} ${actualPath}`, {
       userId: user.id,
       pathSegments
     })
 
     // GET /drafts - Get drafts for user/group
-    if (method === 'GET' && pathSegments.length === 2) {
-      const groupId = url.searchParams.get('groupId')
-      const status = url.searchParams.get('status') || 'editing'
+    if (actualMethod === 'GET' && pathSegments.length === 2) {
+      const groupId = requestBody.groupId || url.searchParams.get('groupId')
+      const status = requestBody.status || url.searchParams.get('status') || 'editing'
 
       let query = supabaseClient
         .from('post_drafts')
@@ -107,8 +115,8 @@ serve(async (req) => {
     }
 
     // POST /drafts - Create new draft
-    if (method === 'POST' && pathSegments.length === 2) {
-      const body: DraftData = await req.json()
+    if (actualMethod === 'POST' && pathSegments.length === 2) {
+      const body: DraftData = requestBody.data || requestBody
 
       const { data: draft, error } = await supabaseClient
         .from('post_drafts')
@@ -146,9 +154,9 @@ serve(async (req) => {
     }
 
     // PUT /drafts/:id - Update draft
-    if (method === 'PUT' && pathSegments.length === 3) {
+    if (actualMethod === 'PUT' && pathSegments.length === 3) {
       const draftId = pathSegments[2]
-      const body: DraftData = await req.json()
+      const body: DraftData = requestBody.data || requestBody
 
       const { data: draft, error } = await supabaseClient
         .from('post_drafts')
@@ -184,7 +192,7 @@ serve(async (req) => {
     }
 
     // DELETE /drafts/:id - Delete draft and cleanup media
-    if (method === 'DELETE' && pathSegments.length === 3) {
+    if (actualMethod === 'DELETE' && pathSegments.length === 3) {
       const draftId = pathSegments[2]
 
       // Start transaction-like cleanup

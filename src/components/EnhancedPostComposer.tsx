@@ -71,6 +71,7 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
   const [isDraft, setIsDraft] = useState(false);
   const [currentDraft, setCurrentDraft] = useState<any>(null);
   const [isDraftLoading, setIsDraftLoading] = useState(false);
+  const [titleSaveTimer, setTitleSaveTimer] = useState<NodeJS.Timeout | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const [postData, setPostData] = useState<PostData>({
@@ -85,6 +86,7 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
 
   const MAX_CHARACTERS = 5000;
   const DRAFT_SAVE_INTERVAL = 10000; // 10 seconds
+  const TITLE_SAVE_DELAY = 1000; // 1 second debounce for title
 
   // Create or load draft when group changes
   useEffect(() => {
@@ -104,32 +106,45 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
     }
   }, [postData, currentDraft]);
 
+  // Cleanup title save timer on unmount
+  useEffect(() => {
+    return () => {
+      if (titleSaveTimer) {
+        clearTimeout(titleSaveTimer);
+      }
+    };
+  }, [titleSaveTimer]);
+
   const createOrLoadDraft = useCallback(async () => {
     if (!user || !postData.groupId) return;
     
     setIsDraftLoading(true);
     try {
-      // Load existing draft for this group using GET request
-      const response = await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/draft-manager/drafts?groupId=${postData.groupId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
-          'Content-Type': 'application/json',
-        },
+      // Get user session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('No valid session');
+      }
+
+      // Load existing draft for this group using supabase client
+      const response = await supabase.functions.invoke('draft-manager', {
+        body: {
+          method: 'GET',
+          path: `/drafts?groupId=${postData.groupId}`
+        }
       });
 
-      if (!response.ok) {
-        console.error('Error loading drafts:', response.statusText);
+      if (response.error) {
+        console.error('Error loading drafts:', response.error);
         await createNewDraft();
         return;
       }
 
-      const data = await response.json();
-      const existingDraft = data.drafts.find((d: any) => d.group_id === postData.groupId);
+      const existingDraft = response.data?.drafts?.find((d: any) => d.group_id === postData.groupId);
 
       if (existingDraft) {
         // Load existing draft
+        console.log('Loading existing draft:', existingDraft.id, 'Title:', existingDraft.title);
         setCurrentDraft(existingDraft);
         setPostData(prev => ({
           ...prev,
@@ -154,69 +169,63 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
     if (!user || !postData.groupId) return;
 
     try {
-      // Get user session token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('No valid session');
-      }
-
-      const response = await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/draft-manager/drafts`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          groupId: postData.groupId,
-          title: '',
-          content: '',
-          metadata: {}
-        })
+      console.log('Creating new draft for group:', postData.groupId);
+      
+      const response = await supabase.functions.invoke('draft-manager', {
+        body: {
+          method: 'POST',
+          path: '/drafts',
+          data: {
+            groupId: postData.groupId,
+            title: '',
+            content: '',
+            metadata: {}
+          }
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to create draft: ${response.statusText}`);
+      if (response.error) {
+        throw new Error(`Failed to create draft: ${response.error.message}`);
       }
 
-      const data = await response.json();
-      setCurrentDraft(data.draft);
+      console.log('New draft created:', response.data.draft.id);
+      setCurrentDraft(response.data.draft);
     } catch (error) {
       console.error('Failed to create new draft:', error);
     }
   }, [user, postData.groupId]);
 
-  const saveDraft = useCallback(async () => {
-    if (!currentDraft || !user || (!postData.content.trim() && !postData.title.trim())) return;
+  const saveDraft = useCallback(async (specificData?: { title?: string; content?: string }) => {
+    if (!currentDraft || !user) return;
+    
+    const dataToSave = specificData || postData;
+    
+    // Only save if there's actually content
+    if (!dataToSave.content?.trim() && !dataToSave.title?.trim()) return;
     
     try {
-      // Get user session token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('No valid session');
-      }
-
-      const response = await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/draft-manager/drafts/${currentDraft.id}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: postData.title,
-          content: postData.content,
-          metadata: {
-            mentions: postData.mentions,
-            hashtags: postData.hashtags
+      console.log('Saving draft:', currentDraft.id, 'Title:', dataToSave.title);
+      
+      const response = await supabase.functions.invoke('draft-manager', {
+        body: {
+          method: 'PUT',
+          path: `/drafts/${currentDraft.id}`,
+          data: {
+            title: dataToSave.title,
+            content: dataToSave.content,
+            metadata: {
+              mentions: postData.mentions,
+              hashtags: postData.hashtags
+            }
           }
-        })
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to save draft: ${response.statusText}`);
+      if (response.error) {
+        throw new Error(`Failed to save draft: ${response.error.message}`);
       }
       
+      console.log('Draft saved successfully');
       setIsDraft(true);
       setTimeout(() => setIsDraft(false), 2000);
     } catch (error) {
@@ -228,23 +237,15 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
     if (!currentDraft || !user) return;
     
     try {
-      // Get user session token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        throw new Error('No valid session');
-      }
-
-      const response = await fetch(`https://zsquagqhilzjumfjxusk.supabase.co/functions/v1/draft-manager/drafts/${currentDraft.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcXVhZ3FoaWx6anVtZmp4dXNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjA5MDMsImV4cCI6MjA2OTY5NjkwM30.HF6dfD8LhicG73SMomqcZO-8DD5GN9YPX8W6sh4DcFI',
-          'Content-Type': 'application/json',
-        },
+      const response = await supabase.functions.invoke('draft-manager', {
+        body: {
+          method: 'DELETE',
+          path: `/drafts/${currentDraft.id}`
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to delete draft: ${response.statusText}`);
+      if (response.error) {
+        throw new Error(`Failed to delete draft: ${response.error.message}`);
       }
 
       setCurrentDraft(null);
@@ -252,6 +253,32 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
       console.error('Failed to delete draft:', error);
     }
   }, [user, currentDraft]);
+
+  // Debounced title save function
+  const saveTitle = useCallback(async (title: string) => {
+    if (!currentDraft || !title.trim()) return;
+    
+    console.log('Debounced title save:', title);
+    await saveDraft({ title, content: postData.content });
+  }, [currentDraft, postData.content, saveDraft]);
+
+  // Handle title change with debouncing
+  const handleTitleChange = useCallback((newTitle: string) => {
+    console.log('Title changing to:', newTitle);
+    setPostData(prev => ({ ...prev, title: newTitle }));
+    
+    // Clear existing timer
+    if (titleSaveTimer) {
+      clearTimeout(titleSaveTimer);
+    }
+    
+    // Set new timer for debounced save
+    const timer = setTimeout(() => {
+      saveTitle(newTitle);
+    }, TITLE_SAVE_DELAY);
+    
+    setTitleSaveTimer(timer);
+  }, [titleSaveTimer, saveTitle, TITLE_SAVE_DELAY]);
 
   const createPostMutation = useOptimisticMutation({
     mutationFn: async (postData: PostData) => {
@@ -370,22 +397,23 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
       <CardContent className="p-4">
         {!isExpanded ? (
           // Inline composer
-          <div className="flex items-center gap-4">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={user.user_metadata?.avatar_url} />
-              <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                {userInitials}
-              </AvatarFallback>
-            </Avatar>
+           <div className="flex items-center gap-4">
+             <Avatar className="h-10 w-10">
+               <AvatarImage src={user.user_metadata?.avatar_url} />
+               <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                 {userInitials}
+               </AvatarFallback>
+             </Avatar>
 
-            <div 
-              className="flex-1 bg-muted/30 border border-border/50 rounded-xl px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors duration-200"
-              onClick={() => setIsExpanded(true)}
-            >
-              <p className="text-muted-foreground text-sm">
-                Share something with the group...
-              </p>
-            </div>
+             <div 
+               className="flex-1 bg-muted/30 border border-border/50 rounded-xl px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors duration-200"
+               onClick={() => setIsExpanded(true)}
+               data-testid="create-post-button"
+             >
+               <p className="text-muted-foreground text-sm">
+                 Share something with the group...
+               </p>
+             </div>
 
             <div className="flex items-center gap-2">
               <Button 
@@ -412,9 +440,9 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
               </Button>
             </div>
           </div>
-        ) : (
-          // Expanded composer
-          <form onSubmit={handleSubmit} className="space-y-4">
+         ) : (
+           // Expanded composer
+           <form onSubmit={handleSubmit} className="space-y-4" data-testid="post-composer-expanded">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
@@ -478,16 +506,14 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
               </Select>
             )}
 
-            <Input
-              placeholder="Give your post a title..."
-              value={postData.title}
-              onChange={(e) => {
-                console.log('Title changing to:', e.target.value);
-                setPostData(prev => ({ ...prev, title: e.target.value }));
-              }}
-              className="border-border/50 focus:border-primary text-base py-3 font-medium"
-              required
-            />
+             <Input
+               placeholder="Give your post a title..."
+               value={postData.title}
+               onChange={(e) => handleTitleChange(e.target.value)}
+               className="border-border/50 focus:border-primary text-base py-3 font-medium"
+               data-testid="title-input"
+               required
+             />
 
             <div className="space-y-3">
               <RichTextEditor
@@ -615,17 +641,17 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
                 >
                   Cancel
                 </Button>
-                {(postData.content.trim() || postData.title.trim()) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={saveDraft}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    Save Draft
-                  </Button>
-                )}
+                 {(postData.content.trim() || postData.title.trim()) && (
+                   <Button
+                     type="button"
+                     variant="ghost"
+                     size="sm"
+                     onClick={() => saveDraft()}
+                     className="text-muted-foreground hover:text-foreground"
+                   >
+                     Save Draft
+                   </Button>
+                 )}
               </div>
 
               <Button
