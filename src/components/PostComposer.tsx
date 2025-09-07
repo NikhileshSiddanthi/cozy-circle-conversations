@@ -44,7 +44,6 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
   const [currentTab, setCurrentTab] = useState("text");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mediaUploading, setMediaUploading] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const [formData, setFormData] = useState({
     title: editPost?.title || "",
@@ -57,17 +56,6 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
   const MAX_CHARACTERS = 5000;
   const characterCount = formData.content.length;
   const isOverLimit = characterCount > MAX_CHARACTERS;
-
-  useEffect(() => {
-    if (editPost && groups.length > 0) {
-      // For edit mode, we need to find the group from the post data
-      // This would typically come from the post data passed in
-      setFormData(prev => ({
-        ...prev,
-        groupId: selectedGroupId || groups[0]?.id || ""
-      }));
-    }
-  }, [editPost, groups, selectedGroupId]);
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -87,18 +75,13 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
     if (mediaUploading) {
       toast({
         title: "Please wait",
-        description: "Media files are still uploading. Please wait before publishing.",
+        description: "Media files are still uploading.",
         variant: "destructive"
       });
       return;
     }
 
-    // Validate required fields - title is required
-    const hasTitle = formData.title.trim().length > 0;
-    const hasContent = formData.content.trim().length > 0;
-    const hasMedia = formData.mediaFiles.length > 0;
-    
-    if (!hasTitle) {
+    if (!formData.title.trim()) {
       toast({
         title: "Title Required",
         description: "Please add a title to your post.",
@@ -107,7 +90,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
       return;
     }
 
-    if (!hasContent && !hasMedia) {
+    if (!formData.content.trim() && !formData.mediaFiles.length) {
       toast({
         title: "Content Required",
         description: "Please add content or media to your post.",
@@ -125,125 +108,62 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
       return;
     }
 
-    if (isOverLimit) {
-      toast({
-        title: "Post Too Long",
-        description: `Please reduce your post to under ${MAX_CHARACTERS} characters`,
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      if (editPost) {
-        // Edit existing post
-        const response = await supabase.functions.invoke('edit-post', {
-          body: {
-            postId: editPost.id,
-            title: formData.title || undefined,
-            content: formData.content || undefined,
-            mediaFiles: formData.mediaFiles.length > 0 ? formData.mediaFiles : undefined
-          }
-        });
+      const postData = {
+        user_id: user!.id,
+        group_id: formData.groupId,
+        title: formData.title.trim(),
+        content: formData.content.trim() || "",
+        media_type: formData.mediaFiles.length > 1 ? 'multiple' : 
+                   formData.mediaFiles.length === 1 ? 'image' : null,
+        media_url: formData.mediaFiles.length > 0 ? formData.mediaFiles[0] : null
+      };
 
-        if (response.error) {
-          throw new Error(response.error.message || 'Failed to edit post');
-        }
+      const { data: post, error: postError } = await supabase
+        .from('posts')
+        .insert(postData)
+        .select()
+        .single();
 
-        toast({
-          title: "Post Updated",
-          description: "Your post has been successfully updated."
-        });
-      } else {
-        // Create new post
-        console.log('Creating post with data:', {
-          title: formData.title.trim(),
-          content: formData.content.trim(),
-          groupId: formData.groupId,
-          mediaFiles: formData.mediaFiles,
-          mediaCount: formData.mediaFiles.length
-        });
+      if (postError) throw postError;
 
-        const postData: any = {
+      // Insert media files
+      if (formData.mediaFiles.length > 0) {
+        const mediaInserts = formData.mediaFiles.map((url, index) => ({
+          post_id: post.id,
           user_id: user!.id,
-          group_id: formData.groupId,
-          title: formData.title.trim(),
-          content: formData.content.trim() || "",
-          media_type: formData.mediaFiles.length > 1 ? 'multiple' : 
-                     formData.mediaFiles.length === 1 ? 'image' : null,
-          media_url: formData.mediaFiles.length > 0 ? formData.mediaFiles[0] : null
-        };
+          file_id: `media_${post.id}_${index}`,
+          url: url,
+          mime_type: 'image/jpeg',
+          order_index: index,
+          status: 'attached'
+        }));
 
-        console.log('Inserting post with data:', postData);
+        const { error: mediaError } = await supabase
+          .from('post_media')
+          .insert(mediaInserts);
 
-        const { data: post, error: postError } = await supabase
-          .from('posts')
-          .insert(postData)
-          .select()
-          .single();
-
-        if (postError) {
-          console.error('Post insertion error:', postError);
-          throw postError;
+        if (mediaError) {
+          await supabase.from('posts').delete().eq('id', post.id);
+          throw mediaError;
         }
-
-        console.log('Post created successfully:', post);
-
-        // Insert media files if any
-        if (formData.mediaFiles.length > 0) {
-          const mediaInserts = formData.mediaFiles.map((url, index) => ({
-            post_id: post.id,
-            user_id: user!.id,
-            file_id: `media_${post.id}_${index}`,
-            url: url,
-            mime_type: url.includes('.mp4') || url.includes('.webm') ? 'video/mp4' : 'image/jpeg',
-            order_index: index,
-            status: 'attached'
-          }));
-
-          console.log('Inserting media with data:', mediaInserts);
-
-          const { error: mediaError } = await supabase
-            .from('post_media')
-            .insert(mediaInserts);
-
-          if (mediaError) {
-            console.error('Media insertion error:', mediaError);
-            // Rollback post if media fails
-            await supabase.from('posts').delete().eq('id', post.id);
-            throw mediaError;
-          }
-
-          console.log('Media inserted successfully');
-        }
-
-        toast({
-          title: "Post Published",
-          description: "Your post has been successfully published!"
-        });
       }
+
+      toast({
+        title: "Post Published",
+        description: "Your post has been successfully published!"
+      });
 
       resetForm();
       onSuccess();
       
     } catch (error) {
-      console.error('Post submission error details:', {
-        error,
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        formData: {
-          title: formData.title,
-          content: formData.content,
-          groupId: formData.groupId,
-          mediaFilesCount: formData.mediaFiles.length,
-          mediaFiles: formData.mediaFiles
-        }
-      });
+      console.error('Post submission error:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit post. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to submit post.",
         variant: "destructive"
       });
     } finally {
@@ -256,26 +176,17 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
       <Card className="border-border/50 bg-card">
         <CardContent className="p-8 text-center">
           <p className="text-muted-foreground">Please sign in to create posts</p>
-          <Button 
-            onClick={() => window.location.href = '/auth'} 
-            className="mt-4"
-            data-testid="create-post-button"
-          >
-            Sign In to Post
-          </Button>
         </CardContent>
       </Card>
     );
   }
 
-  const selectedGroup = groups.find(g => g.id === formData.groupId);
   const userInitials = user.email?.charAt(0).toUpperCase() || "U";
 
   return (
     <Card className="border-border/50 bg-card hover:shadow-md transition-all duration-200">
       <CardContent className="p-4">
         {!isExpanded ? (
-          // Inline composer
           <div className="flex items-center gap-4">
             <Avatar className="h-10 w-10">
               <AvatarImage src={user.user_metadata?.avatar_url} alt="Your avatar" />
@@ -286,35 +197,18 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
               onClick={() => setIsExpanded(true)}
               data-testid="create-post-button"
             >
-              <p className="text-muted-foreground">
-                {editPost ? "Edit your post..." : "What's on your mind?"}
-              </p>
+              <p className="text-muted-foreground">What's on your mind?</p>
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setIsExpanded(true);
-                  setCurrentTab("media");
-                }}
-              >
+              <Button variant="ghost" size="sm" onClick={() => { setIsExpanded(true); setCurrentTab("media"); }}>
                 <Image className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setIsExpanded(true);
-                  setCurrentTab("link");
-                }}
-              >
+              <Button variant="ghost" size="sm" onClick={() => { setIsExpanded(true); setCurrentTab("link"); }}>
                 <LinkIcon className="h-4 w-4" />
               </Button>
             </div>
           </div>
         ) : (
-          // Expanded composer
           <form onSubmit={handleSubmit} className="space-y-4" data-testid="post-composer-expanded">
             <div className="flex items-center gap-4">
               <Avatar className="h-10 w-10">
@@ -326,7 +220,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
                    <span className="font-medium text-sm">
                      {user.user_metadata?.display_name || user.email?.split('@')[0] || 'You'}
                    </span>
-                   {selectedGroupId && groups.length > 0 ? (
+                   {selectedGroupId ? (
                      <>
                        <span className="text-muted-foreground">•</span>
                        <span className="text-sm text-muted-foreground">
@@ -359,106 +253,87 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
               </div>
             </div>
 
-            <div className="space-y-3">
-              <Input
-                placeholder="Post title *"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className="border-0 bg-transparent text-lg font-medium placeholder:text-muted-foreground focus-visible:ring-0 px-0"
-                data-testid="title-input"
-                required
-              />
+            <Input
+              placeholder="Post title *"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              className="border-0 bg-transparent text-lg font-medium placeholder:text-muted-foreground focus-visible:ring-0 px-0"
+              data-testid="title-input"
+              required
+            />
 
-              <Tabs value={currentTab} onValueChange={setCurrentTab}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="text">Text</TabsTrigger>
-                    <TabsTrigger value="media">Media</TabsTrigger>
-                    <TabsTrigger value="link">Link</TabsTrigger>
-                  </TabsList>
-                
-                <TabsContent value="text" className="mt-4">
-                  <Textarea
-                    ref={textareaRef}
-                    placeholder="Share your thoughts..."
-                    value={formData.content}
-                    onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                    className="border-0 bg-transparent resize-none min-h-[120px] placeholder:text-muted-foreground focus-visible:ring-0 px-0"
-                    data-testid="content-textarea"
+            <Tabs value={currentTab} onValueChange={setCurrentTab}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="text">Text</TabsTrigger>
+                <TabsTrigger value="media">Media</TabsTrigger>
+                <TabsTrigger value="link">Link</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="text" className="mt-4">
+                <Textarea
+                  placeholder="Share your thoughts..."
+                  value={formData.content}
+                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                  className="border-0 bg-transparent resize-none min-h-[120px] placeholder:text-muted-foreground focus-visible:ring-0 px-0"
+                  data-testid="content-textarea"
+                />
+              </TabsContent>
+              
+              <TabsContent value="media" className="mt-4">
+                <MediaUpload
+                  files={formData.mediaFiles}
+                  onFilesChange={(files) => setFormData(prev => ({ ...prev, mediaFiles: files }))}
+                  onUploadStatusChange={setMediaUploading}
+                  maxFiles={10}
+                />
+              </TabsContent>
+              
+              <TabsContent value="link" className="mt-4">
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Paste a URL to show preview"
+                    value={formData.linkPreview}
+                    onChange={(e) => setFormData(prev => ({ ...prev, linkPreview: e.target.value }))}
+                    className="w-full"
                   />
-                  
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="text-xs text-muted-foreground">
-                      {characterCount > MAX_CHARACTERS * 0.8 && (
-                        <span className={isOverLimit ? "text-destructive" : "text-warning"}>
-                          {characterCount}/{MAX_CHARACTERS}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                  <TabsContent value="media" className="mt-4">
-                    <MediaUpload
-                      files={formData.mediaFiles}
-                      onFilesChange={(files) => setFormData(prev => ({ ...prev, mediaFiles: files }))}
-                      onUploadStatusChange={setMediaUploading}
-                      maxFiles={10}
+                  {formData.linkPreview && (
+                    <URLPreview 
+                      url={formData.linkPreview}
+                      onRemove={() => setFormData(prev => ({ ...prev, linkPreview: "" }))}
                     />
-                  </TabsContent>
-                  
-                  <TabsContent value="link" className="mt-4">
-                    <div className="space-y-4">
-                      <Input
-                        placeholder="Paste a URL to show preview"
-                        value={formData.linkPreview}
-                        onChange={(e) => setFormData(prev => ({ ...prev, linkPreview: e.target.value }))}
-                        className="w-full"
-                      />
-                      {formData.linkPreview && (
-                        <URLPreview 
-                          url={formData.linkPreview}
-                          onRemove={() => setFormData(prev => ({ ...prev, linkPreview: "" }))}
-                        />
-                      )}
-                    </div>
-                  </TabsContent>
-              </Tabs>
-            </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
 
             <div className="flex justify-between items-center pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                {selectedGroup && (
-                  <span>Posting to {selectedGroup.name}</span>
-                )}
+                Media: {formData.mediaFiles.length}/10
               </div>
               
               <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={resetForm}
-                  disabled={isSubmitting}
-                >
+                <Button type="button" variant="ghost" onClick={resetForm} disabled={isSubmitting}>
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting || mediaUploading || isOverLimit}
+                  data-testid="publish-button"
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      {editPost ? "Updating..." : "Publishing..."}
+                      Publishing...
                     </>
                   ) : mediaUploading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Uploading Media...
+                      Uploading...
                     </>
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-2" />
-                      {editPost ? "Update" : "Publish"}
+                      Publish
                     </>
                   )}
                 </Button>
