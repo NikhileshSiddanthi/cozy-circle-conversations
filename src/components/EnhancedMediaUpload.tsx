@@ -85,6 +85,17 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
     };
   }, []);
 
+  // Debug logging for props
+  useEffect(() => {
+    console.log('EnhancedMediaUpload props:', { 
+      draftId, 
+      userId, 
+      groupId, 
+      filesCount: files.length,
+      disabled 
+    });
+  }, [draftId, userId, groupId, files.length, disabled]);
+
   const validateFile = (file: File): string | null => {
     if (file.size > MAX_FILE_SIZE) {
       return `File "${file.name}" is too large. Maximum size is 10MB.`;
@@ -98,12 +109,38 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
   };
 
   const uploadFile = async (mediaFile: MediaFile): Promise<void> => {
+    console.log('Upload attempt:', { draftId, userId, groupId });
+    
     if (!draftId || !userId) {
+      console.error('Missing required params:', { draftId, userId });
       setMediaFiles(prev => prev.map(f => 
         f.id === mediaFile.id 
-          ? { ...f, status: 'error', error: 'Draft or user not available' }
+          ? { ...f, status: 'error', error: `Draft or user not available (draftId: ${!!draftId}, userId: ${!!userId})` }
           : f
       ));
+      return;
+    }
+
+    // Skip upload for local fallback drafts - just show preview
+    if (draftId.startsWith('local_') || draftId.startsWith('fallback_')) {
+      console.log('Skipping upload for fallback draft, showing preview only');
+      setMediaFiles(prev => prev.map(f => 
+        f.id === mediaFile.id 
+          ? { 
+              ...f, 
+              progress: 100, 
+              status: 'completed', 
+              url: f.preview, // Use preview URL as final URL
+              serverId: `preview_${f.id}`
+            }
+          : f
+      ));
+      
+      // Add to files list for local preview
+      if (!files.includes(mediaFile.preview)) {
+        onFilesChange([...files, mediaFile.preview]);
+      }
+      
       return;
     }
 
@@ -373,9 +410,9 @@ export const EnhancedMediaUpload: React.FC<EnhancedMediaUploadProps> = ({
                 <span>• JPEG, PNG, GIF, WebP, MP4, WebM</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+                </CardContent>
+              </Card>
+            )}
 
       {/* File List */}
       {mediaFiles.length > 0 && (

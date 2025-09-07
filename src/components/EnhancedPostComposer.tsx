@@ -683,9 +683,9 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
                   <EnhancedMediaUpload
                     files={postData.mediaFiles}
                     onFilesChange={(urls) => setPostData(prev => ({ ...prev, mediaFiles: urls }))}
-                    draftId={currentDraft.id}
+                    draftId={currentDraft?.id || `fallback_${user?.id}_${postData.groupId}`}
                     groupId={postData.groupId}
-                    userId={user.id}
+                    userId={user?.id || 'unknown'}
                     disabled={createPostMutation.isPending || isDraftLoading || currentDraft.isLocalFallback}
                   />
                 ) : (
