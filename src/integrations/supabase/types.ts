@@ -109,7 +109,9 @@ export type Database = {
           file_size: number | null
           id: string
           mime_type: string | null
+          order_index: number | null
           status: Database["public"]["Enums"]["media_status"]
+          thumbnail_url: string | null
           updated_at: string
           url: string
           user_id: string
@@ -121,7 +123,9 @@ export type Database = {
           file_size?: number | null
           id?: string
           mime_type?: string | null
+          order_index?: number | null
           status?: Database["public"]["Enums"]["media_status"]
+          thumbnail_url?: string | null
           updated_at?: string
           url: string
           user_id: string
@@ -133,7 +137,9 @@ export type Database = {
           file_size?: number | null
           id?: string
           mime_type?: string | null
+          order_index?: number | null
           status?: Database["public"]["Enums"]["media_status"]
+          thumbnail_url?: string | null
           updated_at?: string
           url?: string
           user_id?: string
