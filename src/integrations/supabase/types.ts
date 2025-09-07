@@ -104,7 +104,7 @@ export type Database = {
       draft_media: {
         Row: {
           created_at: string
-          draft_id: string | null
+          draft_id: string
           file_id: string
           file_size: number | null
           id: string
@@ -118,7 +118,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          draft_id?: string | null
+          draft_id: string
           file_id: string
           file_size?: number | null
           id?: string
@@ -132,7 +132,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          draft_id?: string | null
+          draft_id?: string
           file_id?: string
           file_size?: number | null
           id?: string
