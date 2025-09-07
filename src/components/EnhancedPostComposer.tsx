@@ -63,7 +63,7 @@ interface PostData {
 }
 
 export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOptimisticPost }: PostComposerProps) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentTab, setCurrentTab] = useState("text");
@@ -467,7 +467,27 @@ export const EnhancedPostComposer = ({ groups, selectedGroupId, onSuccess, onOpt
   const warningThreshold = MAX_CHARACTERS * 0.8;
   const isOverLimit = characterCount > MAX_CHARACTERS;
 
-  if (!user) return null;
+  // Don't render if loading or user not authenticated
+  if (loading) {
+    return (
+      <Card className="border-border/50 bg-card">
+        <CardContent className="p-8 text-center">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+          <p className="text-muted-foreground">Loading...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Card className="border-border/50 bg-card">
+        <CardContent className="p-8 text-center">
+          <p className="text-muted-foreground">Please sign in to create posts</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const userInitials = user.email?.charAt(0).toUpperCase() || "U";
 
