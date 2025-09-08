@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Upload, 
@@ -13,7 +14,9 @@ import {
   AlertCircle,
   Loader2,
   RotateCcw,
-  GripVertical
+  GripVertical,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface MediaFile {
@@ -45,6 +48,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
 }) => {
   const { toast } = useToast();
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
   const ACCEPTED_TYPES = {
@@ -432,6 +437,23 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
 
   const activeFiles = mediaFiles.filter(f => f.status !== 'error');
   const canAddMore = activeFiles.length < maxFiles;
+  const imageFiles = mediaFiles.filter(f => f.file.type.startsWith('image/') && f.status === 'completed');
+
+  const openViewer = (index: number) => {
+    const imageIndex = imageFiles.findIndex(img => img.id === mediaFiles[index].id);
+    if (imageIndex !== -1) {
+      setCurrentImageIndex(imageIndex);
+      setViewerOpen(true);
+    }
+  };
+
+  const navigateImage = (direction: 'next' | 'prev') => {
+    if (direction === 'next') {
+      setCurrentImageIndex((prev) => (prev + 1) % imageFiles.length);
+    } else {
+      setCurrentImageIndex((prev) => (prev - 1 + imageFiles.length) % imageFiles.length);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -503,26 +525,27 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
                     <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
                   </div>
                   
-                  {/* File Preview */}
-                  <div className="flex-shrink-0">
-                    {mediaFile.file.type.startsWith('image/') ? (
-                      <img
-                        src={mediaFile.preview}
-                        alt={mediaFile.file.name}
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                    ) : mediaFile.file.type.startsWith('video/') ? (
-                      <video
-                        src={mediaFile.preview}
-                        className="w-16 h-16 object-cover rounded"
-                        muted
-                      />
-                    ) : (
-                      <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
-                        <ImageIcon className="h-5 w-5" />
-                      </div>
-                    )}
-                  </div>
+                   {/* File Preview */}
+                   <div className="flex-shrink-0">
+                     {mediaFile.file.type.startsWith('image/') ? (
+                       <img
+                         src={mediaFile.preview}
+                         alt={mediaFile.file.name}
+                         className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                         onClick={() => openViewer(index)}
+                       />
+                     ) : mediaFile.file.type.startsWith('video/') ? (
+                       <video
+                         src={mediaFile.preview}
+                         className="w-16 h-16 object-cover rounded"
+                         muted
+                       />
+                     ) : (
+                       <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
+                         <ImageIcon className="h-5 w-5" />
+                       </div>
+                     )}
+                   </div>
                   
                   {/* File Info */}
                   <div className="flex-1">
@@ -586,6 +609,69 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         </div>
       )}
 
+      {/* Image Viewer Modal */}
+      {imageFiles.length > 0 && (
+        <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+            <DialogHeader className="p-6 pb-2">
+              <DialogTitle>
+                Image {currentImageIndex + 1} of {imageFiles.length} - {imageFiles[currentImageIndex]?.file.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="relative flex items-center justify-center p-6 pt-2">
+              {imageFiles.length > 1 && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10"
+                  onClick={() => navigateImage('prev')}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              )}
+              
+              <img
+                src={imageFiles[currentImageIndex]?.preview}
+                alt={imageFiles[currentImageIndex]?.file.name}
+                className="max-w-full max-h-[60vh] object-contain rounded"
+              />
+              
+              {imageFiles.length > 1 && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10"
+                  onClick={() => navigateImage('next')}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            
+            {imageFiles.length > 1 && (
+              <div className="px-6 pb-6">
+                <div className="flex gap-2 justify-center overflow-x-auto">
+                  {imageFiles.map((img, idx) => (
+                    <img
+                      key={img.id}
+                      src={img.preview}
+                      alt={img.file.name}
+                      className={`w-12 h-12 object-cover rounded cursor-pointer transition-all ${
+                        idx === currentImageIndex 
+                          ? 'ring-2 ring-primary opacity-100' 
+                          : 'opacity-60 hover:opacity-80'
+                      }`}
+                      onClick={() => setCurrentImageIndex(idx)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Tips */}
       {mediaFiles.length === 0 && (
         <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
@@ -594,6 +680,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
             <li>• Images and videos will be optimized for best performance</li>
             <li>• You can reorder files by dragging them</li>
             <li>• Files are uploaded immediately and can be removed before posting</li>
+            <li>• Click on image thumbnails to view them full-size</li>
           </ul>
         </div>
       )}
