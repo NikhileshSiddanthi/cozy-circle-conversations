@@ -106,7 +106,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
     return null;
   };
 
-  const uploadFile = async (mediaFile: MediaFile): Promise<void> => {
+  const uploadFile = useCallback(async (mediaFile: MediaFile): Promise<void> => {
     console.log(`🎬 uploadFile started for: ${mediaFile.file.name} (${mediaFile.id})`);
     
     try {
@@ -131,7 +131,6 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
       });
 
       console.log('MediaUpload: Initiating upload for:', mediaFile.file.name, 'draftId:', draftId);
-      console.log('MediaUpload: Current file count:', mediaFiles.length);
 
       // Step 1: Initialize upload
       const { data: initData, error: initError } = await supabase.functions.invoke('uploads', {
@@ -263,7 +262,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         variant: "destructive"
       });
     }
-  };
+  }, [draftId, files, onFilesChange, toast, checkUploadStatus]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     console.log('🎯 MediaUpload onDrop called with files:', acceptedFiles.length, acceptedFiles.map(f => f.name));
