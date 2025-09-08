@@ -121,7 +121,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         return updated;
       });
 
-      console.log('Initiating upload for:', mediaFile.file.name, 'draftId:', draftId);
+      console.log('MediaUpload: Initiating upload for:', mediaFile.file.name, 'draftId:', draftId);
+      console.log('MediaUpload: Current file count:', mediaFiles.length);
 
       // Step 1: Initialize upload
       const { data: initData, error: initError } = await supabase.functions.invoke('uploads', {
@@ -253,8 +254,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
     
     if (!draftId) {
       toast({
-        title: "No Draft Available",
-        description: "Please start writing your post before uploading files.",
+        title: "Draft Initializing",
+        description: "Please wait for the draft to be created before uploading files.",
         variant: "destructive"
       });
       return;
@@ -390,8 +391,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
 
   return (
     <div className="space-y-4">
-          {/* Upload Area */}
-          {canAddMore && draftId && (
+      {/* Upload Area */}
+      {canAddMore && (
         <Card>
           <CardContent className="p-6">
             <div
@@ -399,15 +400,27 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
               className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                 isDragActive 
                   ? 'border-primary bg-primary/5' 
-                  : disabled || !draftId
+                  : disabled
                   ? 'border-muted-foreground/20 bg-muted/20 cursor-not-allowed'
+                  : !draftId
+                  ? 'border-orange-300 bg-orange-50'
                   : 'border-border hover:border-primary/50 hover:bg-muted/30'
               }`}
             >
-              <input {...getInputProps()} />
+              <input {...getInputProps()} disabled={!draftId} />
               <Upload className={`h-8 w-8 mx-auto mb-4 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
               
-              {isDragActive ? (
+              {!draftId ? (
+                <>
+                  <p className="text-lg font-medium text-orange-600 mb-2">
+                    <Loader2 className="h-4 w-4 inline animate-spin mr-2" />
+                    Initializing draft...
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Please wait while we prepare your post
+                  </p>
+                </>
+              ) : isDragActive ? (
                 <p className="text-lg font-medium text-primary mb-2">
                   Drop your files here...
                 </p>

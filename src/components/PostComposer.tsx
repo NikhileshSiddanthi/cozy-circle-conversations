@@ -77,7 +77,8 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
 
       if (error) throw error;
       setDraftId(draft.id);
-      console.log('Created draft:', draft.id);
+  // Add debugging console.log
+  console.log('PostComposer debugging enabled for multi-image upload testing');
     } catch (error) {
       console.error('Failed to create draft:', error);
       toast({
