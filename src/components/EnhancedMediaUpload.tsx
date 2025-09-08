@@ -19,6 +19,7 @@ export const EnhancedMediaUpload = (props: MediaUploadProps) => {
       onUploadStatusChange={props.onUploadStatusChange}
       maxFiles={10}
       disabled={props.disabled}
+      draftId={props.draftId}
     />
   );
 };

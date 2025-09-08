@@ -22,6 +22,8 @@ import { CommentSection } from "./CommentSection";
 import { PostActionsMenu } from "./PostActionsMenu";
 import { ViewCounter } from "./ViewCounter";
 import { EditPostModal } from "./EditPostModal";
+import { MultiImageCarousel, CarouselImage } from "./MultiImageCarousel";
+import { ImageLightbox } from "./ImageLightbox";
 import { useUserRole } from "@/hooks/useUserRole";
 
 interface Post {
@@ -43,6 +45,14 @@ interface Post {
   profiles: {
     display_name: string | null;
   } | null;
+  post_media?: Array<{
+    id: string;
+    url: string;
+    thumbnail_url?: string;
+    caption?: string;
+    alt?: string;
+    order_index: number;
+  }>;
 }
 
 interface PostCardProps {
@@ -60,6 +70,9 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   const [pollResults, setPollResults] = useState<number[]>([]);
   const [showComments, setShowComments] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<CarouselImage[]>([]);
+  const [lightboxInitialIndex, setLightboxInitialIndex] = useState(0);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
 
   useEffect(() => {
@@ -206,30 +219,88 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
 
     // Handle image media type (could be single or multiple)
     if (post.media_type === "image") {
-      // Check if media_url is a JSON array (multiple images)
       let mediaUrls: string[] = [];
+      let postMediaData: any[] = [];
+      
       try {
         const parsed = JSON.parse(post.media_url);
         if (Array.isArray(parsed)) {
           mediaUrls = parsed;
+          // If we have post_media data, use it for richer carousel
+          if (post.post_media && Array.isArray(post.post_media)) {
+            postMediaData = post.post_media.sort((a: any, b: any) => (a.order_index || 0) - (b.order_index || 0));
+          } else {
+            // Create basic carousel data from URLs
+            postMediaData = parsed.map((url: string, index: number) => ({
+              id: `${post.id}-${index}`,
+              url,
+              order_index: index
+            }));
+          }
         } else {
           mediaUrls = [post.media_url];
+          postMediaData = [{
+            id: `${post.id}-0`,
+            url: post.media_url,
+            order_index: 0
+          }];
         }
       } catch {
         // Not JSON, treat as single URL
         mediaUrls = [post.media_url];
+        postMediaData = [{
+          id: `${post.id}-0`,
+          url: post.media_url,
+          order_index: 0
+        }];
       }
 
-      return (
-        <div className="space-y-3">
-          {mediaUrls.map((url, index) => (
+      // Convert to carousel format
+      const carouselImages = postMediaData.map((media: any) => ({
+        id: media.id || `${post.id}-${media.order_index || 0}`,
+        url: media.url,
+        thumbnailUrl: media.thumbnail_url,
+        caption: media.caption,
+        alt: media.alt,
+        orderIndex: media.order_index || 0
+      }));
+
+      // Set up lightbox data
+      const handleImageClick = () => {
+        setLightboxImages(carouselImages);
+        setLightboxInitialIndex(0);
+        setLightboxOpen(true);
+      };
+
+      // If single image, show simple display
+      if (carouselImages.length === 1) {
+        return (
+          <div 
+            className="cursor-pointer"
+            onClick={handleImageClick}
+          >
             <img
-              key={index}
-              src={url}
-              alt={`Post media ${index + 1}`}
+              src={carouselImages[0].url}
+              alt={carouselImages[0].alt || "Post image"}
               className="w-full max-h-96 object-cover rounded-lg"
             />
-          ))}
+            {carouselImages[0].caption && (
+              <p className="mt-2 text-sm text-muted-foreground">{carouselImages[0].caption}</p>
+            )}
+          </div>
+        );
+      }
+
+      // Multiple images - show carousel
+      return (
+        <div onClick={handleImageClick}>
+          <MultiImageCarousel
+            images={carouselImages}
+            editable={false}
+            showThumbnails={true}
+            showPageIndicator={true}
+            className="cursor-pointer"
+          />
         </div>
       );
     }
@@ -459,6 +530,15 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
           setShowEditModal(false);
           onUpdate?.();
         }}
+      />
+
+      <ImageLightbox
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        images={lightboxImages}
+        initialIndex={lightboxInitialIndex}
+        showDownloadButton={true}
+        showShareButton={true}
       />
     </Card>
   );

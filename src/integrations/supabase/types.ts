@@ -103,6 +103,8 @@ export type Database = {
       }
       draft_media: {
         Row: {
+          alt: string | null
+          caption: string | null
           created_at: string
           draft_id: string
           file_id: string
@@ -117,6 +119,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          alt?: string | null
+          caption?: string | null
           created_at?: string
           draft_id: string
           file_id: string
@@ -131,6 +135,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          alt?: string | null
+          caption?: string | null
           created_at?: string
           draft_id?: string
           file_id?: string
@@ -488,6 +494,8 @@ export type Database = {
       }
       post_media: {
         Row: {
+          alt: string | null
+          caption: string | null
           created_at: string
           file_id: string
           file_size: number | null
@@ -502,6 +510,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          alt?: string | null
+          caption?: string | null
           created_at?: string
           file_id: string
           file_size?: number | null
@@ -516,6 +526,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          alt?: string | null
+          caption?: string | null
           created_at?: string
           file_id?: string
           file_size?: number | null
