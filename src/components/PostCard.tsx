@@ -204,56 +204,38 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   const renderMedia = () => {
     if (!post.media_url || !post.media_type) return null;
 
-    // Handle multiple media files
-    if (post.media_type === "multiple") {
+    // Handle image media type (could be single or multiple)
+    if (post.media_type === "image") {
+      // Check if media_url is a JSON array (multiple images)
       let mediaUrls: string[] = [];
       try {
-        mediaUrls = JSON.parse(post.media_url);
+        const parsed = JSON.parse(post.media_url);
+        if (Array.isArray(parsed)) {
+          mediaUrls = parsed;
+        } else {
+          mediaUrls = [post.media_url];
+        }
       } catch {
-        mediaUrls = [post.media_url]; // Fallback to single URL
+        // Not JSON, treat as single URL
+        mediaUrls = [post.media_url];
       }
 
       return (
         <div className="space-y-3">
-          {mediaUrls.map((url, index) => {
-            const isImage = url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i);
-            const isVideo = url.match(/\.(mp4|webm|mov)(\?|$)/i);
-
-            if (isImage) {
-              return (
-                <img
-                  key={index}
-                  src={url}
-                  alt={`Post media ${index + 1}`}
-                  className="w-full max-h-96 object-cover rounded-lg"
-                />
-              );
-            } else if (isVideo) {
-              return (
-                <video
-                  key={index}
-                  src={url}
-                  controls
-                  className="w-full max-h-96 rounded-lg"
-                />
-              );
-            }
-            return null;
-          })}
+          {mediaUrls.map((url, index) => (
+            <img
+              key={index}
+              src={url}
+              alt={`Post media ${index + 1}`}
+              className="w-full max-h-96 object-cover rounded-lg"
+            />
+          ))}
         </div>
       );
     }
 
-    // Handle single media files (legacy)
+    // Handle other media types
     switch (post.media_type) {
-      case "image":
-        return (
-          <img
-            src={post.media_url}
-            alt="Post media"
-            className="w-full max-h-96 object-cover rounded-lg"
-          />
-        );
 
       case "video":
         return (
