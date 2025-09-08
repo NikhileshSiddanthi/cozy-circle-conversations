@@ -153,9 +153,9 @@ Deno.serve(async (req) => {
       .insert({
         user_id: user.id,
         group_id: draft.group_id,
-        title: draft.title || 'Untitled Post',
+        title: draft.title && draft.title.trim() ? draft.title.trim() : null,
         content: draft.content || '',
-        media_type: draftMedia && draftMedia.length > 0 ? (draftMedia.length > 1 ? 'multiple' : 'image') : null,
+        media_type: draftMedia && draftMedia.length > 0 ? 'image' : null,
         media_url: draftMedia && draftMedia.length > 0 ? draftMedia[0].url : null,
         media_thumbnail: draftMedia && draftMedia.length > 0 ? draftMedia[0].thumbnail_url : null,
         metadata: { 

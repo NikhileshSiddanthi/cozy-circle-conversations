@@ -32,6 +32,7 @@ interface MediaUploadProps {
   onUploadStatusChange?: (uploading: boolean) => void;
   maxFiles?: number;
   disabled?: boolean;
+  draftId?: string | null;
 }
 
 export const MediaUpload: React.FC<MediaUploadProps> = ({
@@ -39,7 +40,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
   onFilesChange,
   onUploadStatusChange,
   maxFiles = 10,
-  disabled = false
+  disabled = false,
+  draftId
 }) => {
   const { toast } = useToast();
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
@@ -101,12 +103,12 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
 
   const uploadFile = async (mediaFile: MediaFile): Promise<void> => {
     try {
+      if (!draftId) {
+        throw new Error('No draft ID available for upload');
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
-
-      const fileExt = mediaFile.file.name.split('.').pop();
-      const fileName = `${user.id}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${user.id}/${fileName}`;
 
       // Update progress
       setMediaFiles(prev => {
@@ -119,20 +121,75 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         return updated;
       });
 
-      // Upload to storage
-      const { data, error } = await supabase.storage
-        .from('post-files')
-        .upload(filePath, mediaFile.file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      console.log('Initiating upload for:', mediaFile.file.name, 'draftId:', draftId);
 
-      if (error) throw error;
+      // Step 1: Initialize upload
+      const { data: initData, error: initError } = await supabase.functions.invoke('uploads', {
+        body: {
+          filename: mediaFile.file.name,
+          mimeType: mediaFile.file.type,
+          size: mediaFile.file.size,
+          draftId: draftId
+        }
+      });
 
-      // Get public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('post-files')
-        .getPublicUrl(filePath);
+      if (initError) {
+        console.error('Upload init error:', initError);
+        throw new Error(initError.message || 'Failed to initialize upload');
+      }
+
+      console.log('Upload initialized:', initData);
+
+      // Update progress
+      setMediaFiles(prev => {
+        const updated = prev.map(f => 
+          f.id === mediaFile.id 
+            ? { ...f, progress: 25 }
+            : f
+        );
+        checkUploadStatus(updated);
+        return updated;
+      });
+
+      // Step 2: Upload file to signed URL
+      const uploadResponse = await fetch(initData.uploadUrl, {
+        method: 'PUT',
+        body: mediaFile.file,
+        headers: {
+          'Content-Type': mediaFile.file.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+      }
+
+      console.log('File uploaded to storage successfully');
+
+      // Update progress
+      setMediaFiles(prev => {
+        const updated = prev.map(f => 
+          f.id === mediaFile.id 
+            ? { ...f, progress: 75 }
+            : f
+        );
+        checkUploadStatus(updated);
+        return updated;
+      });
+
+      // Step 3: Complete upload
+      const { data: completeData, error: completeError } = await supabase.functions.invoke('uploads', {
+        body: {
+          uploadId: initData.uploadId
+        }
+      });
+
+      if (completeError) {
+        console.error('Upload complete error:', completeError);
+        throw new Error(completeError.message || 'Failed to complete upload');
+      }
+
+      console.log('Upload completed:', completeData);
 
       // Update to completed
       setMediaFiles(prev => {
@@ -142,8 +199,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
                 ...f, 
                 progress: 100, 
                 status: 'completed' as const, 
-                url: publicUrlData.publicUrl,
-                preview: publicUrlData.publicUrl
+                url: completeData.url,
+                preview: completeData.url
               }
             : f
         );
@@ -157,8 +214,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
       }
 
       // Update parent with new file
-      if (!files.includes(publicUrlData.publicUrl)) {
-        onFilesChange([...files, publicUrlData.publicUrl]);
+      if (!files.includes(completeData.url)) {
+        onFilesChange([...files, completeData.url]);
       }
 
       toast({
@@ -185,7 +242,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
 
       toast({
         title: "Upload Failed",
-        description: `Failed to upload ${mediaFile.file.name}. Please try again.`,
+        description: `Failed to upload ${mediaFile.file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     }
@@ -193,6 +250,15 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (disabled) return;
+    
+    if (!draftId) {
+      toast({
+        title: "No Draft Available",
+        description: "Please start writing your post before uploading files.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     const currentFileCount = mediaFiles.filter(f => f.status !== 'error').length;
     const totalAfterUpload = currentFileCount + acceptedFiles.length;
@@ -247,7 +313,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
       uploadFile(mediaFile);
     });
 
-  }, [mediaFiles.length, files, maxFiles, disabled, toast, onFilesChange, checkUploadStatus]);
+  }, [mediaFiles.length, files, maxFiles, disabled, draftId, toast, onFilesChange, checkUploadStatus, uploadFile]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -260,18 +326,20 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
   const removeFile = async (fileId: string) => {
     const fileToRemove = mediaFiles.find(f => f.id === fileId);
     
-    if (fileToRemove?.url && !fileToRemove.id.startsWith('existing-')) {
+    if (fileToRemove?.url && !fileToRemove.id.startsWith('existing-') && draftId) {
       try {
-        // Extract file path from URL for storage deletion
-        const urlParts = fileToRemove.url.split('/');
-        const fileName = urlParts[urlParts.length - 1];
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const filePath = `${user.id}/${fileName}`;
-          await supabase.storage.from('post-files').remove([filePath]);
+        // Delete from draft_media
+        const { error } = await supabase
+          .from('draft_media')
+          .delete()
+          .eq('draft_id', draftId)
+          .eq('url', fileToRemove.url);
+          
+        if (error) {
+          console.warn('Failed to remove file from draft_media:', error);
         }
       } catch (error) {
-        console.warn('Failed to remove file from storage:', error);
+        console.warn('Failed to remove file from database:', error);
       }
     }
     
@@ -322,8 +390,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Upload Area */}
-      {canAddMore && (
+          {/* Upload Area */}
+          {canAddMore && draftId && (
         <Card>
           <CardContent className="p-6">
             <div
@@ -331,7 +399,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
               className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                 isDragActive 
                   ? 'border-primary bg-primary/5' 
-                  : disabled
+                  : disabled || !draftId
                   ? 'border-muted-foreground/20 bg-muted/20 cursor-not-allowed'
                   : 'border-border hover:border-primary/50 hover:bg-muted/30'
               }`}

@@ -45,6 +45,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mediaUploading, setMediaUploading] = useState(false);
   
+  const [draftId, setDraftId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: editPost?.title || "",
     content: editPost?.content || "",
@@ -57,6 +58,36 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
   const characterCount = formData.content.length;
   const isOverLimit = characterCount > MAX_CHARACTERS;
 
+  // Create or get draft when expanding
+  const createDraft = useCallback(async () => {
+    if (editPost || draftId) return;
+    
+    try {
+      const { data: draft, error } = await supabase
+        .from('post_drafts')
+        .insert({
+          user_id: user!.id,
+          group_id: formData.groupId || selectedGroupId || "",
+          title: "",
+          content: "",
+          status: 'editing'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setDraftId(draft.id);
+      console.log('Created draft:', draft.id);
+    } catch (error) {
+      console.error('Failed to create draft:', error);
+      toast({
+        title: "Error",
+        description: "Failed to initialize post. Please try again.",
+        variant: "destructive"
+      });
+    }
+  }, [editPost, draftId, user, formData.groupId, selectedGroupId, toast]);
+
   const resetForm = useCallback(() => {
     setFormData({
       title: "",
@@ -65,9 +96,41 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
       mediaFiles: [],
       linkPreview: ""
     });
+    setDraftId(null);
     setIsExpanded(false);
     setCurrentTab("text");
   }, [selectedGroupId]);
+
+  // Save draft periodically
+  const saveDraft = useCallback(async () => {
+    if (!draftId || editPost) return;
+
+    try {
+      const { error } = await supabase
+        .from('post_drafts')
+        .update({
+          title: formData.title.trim() || null,
+          content: formData.content.trim() || null,
+          group_id: formData.groupId || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', draftId);
+
+      if (error) {
+        console.error('Failed to save draft:', error);
+      }
+    } catch (error) {
+      console.error('Draft save error:', error);
+    }
+  }, [draftId, formData, editPost]);
+
+  // Auto-save draft when content changes
+  useEffect(() => {
+    if (!draftId || editPost) return;
+    
+    const timer = setTimeout(saveDraft, 2000);
+    return () => clearTimeout(timer);
+  }, [formData.title, formData.content, formData.groupId, saveDraft, draftId, editPost]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,19 +144,15 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
       return;
     }
 
-    if (!formData.title.trim()) {
-      toast({
-        title: "Title Required",
-        description: "Please add a title to your post.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Validate content (allow text-only posts)
+    const hasTitle = formData.title.trim().length > 0;
+    const hasContent = formData.content.trim().length > 0;
+    const hasMedia = formData.mediaFiles.length > 0;
 
-    if (!formData.content.trim() && !formData.mediaFiles.length) {
+    if (!hasTitle && !hasContent && !hasMedia) {
       toast({
         title: "Content Required",
-        description: "Please add content or media to your post.",
+        description: "Please add a title, content, or media to your post.",
         variant: "destructive",
       });
       return;
@@ -129,45 +188,32 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
           description: "Your post has been successfully updated!"
         });
       } else {
-        // Handle create mode
-        const postData = {
-          user_id: user!.id,
-          group_id: formData.groupId,
-          title: formData.title.trim(),
-          content: formData.content.trim() || "",
-          media_type: formData.mediaFiles.length > 0 ? 'image' : null,
-          media_url: formData.mediaFiles.length > 0 ? formData.mediaFiles[0] : null
-        };
-
-        const { data: post, error: postError } = await supabase
-          .from('posts')
-          .insert(postData)
-          .select()
-          .single();
-
-        if (postError) throw postError;
-
-        // Insert media files
-        if (formData.mediaFiles.length > 0) {
-          const mediaInserts = formData.mediaFiles.map((url, index) => ({
-            post_id: post.id,
-            user_id: user!.id,
-            file_id: `media_${post.id}_${index}`,
-            url: url,
-            mime_type: 'image/jpeg',
-            order_index: index,
-            status: 'attached'
-          }));
-
-          const { error: mediaError } = await supabase
-            .from('post_media')
-            .insert(mediaInserts);
-
-          if (mediaError) {
-            await supabase.from('posts').delete().eq('id', post.id);
-            throw mediaError;
-          }
+        // Save final draft state first
+        if (draftId) {
+          await saveDraft();
         }
+
+        // Use publish-post function
+        const currentDraftId = draftId;
+        if (!currentDraftId) {
+          throw new Error('No draft to publish');
+        }
+
+        console.log('Publishing draft:', currentDraftId);
+        
+        const { data, error } = await supabase.functions.invoke('publish-post', {
+          body: {
+            draftId: currentDraftId,
+            visibility: 'public'
+          }
+        });
+
+        if (error) {
+          console.error('Publish error:', error);
+          throw error;
+        }
+
+        console.log('Publish response:', data);
 
         toast({
           title: "Post Published",
@@ -213,16 +259,27 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
             </Avatar>
             <div 
               className="flex-1 p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors"
-              onClick={() => setIsExpanded(true)}
+              onClick={() => {
+                setIsExpanded(true);
+                createDraft();
+              }}
               data-testid="create-post-button"
             >
               <p className="text-muted-foreground">What's on your mind?</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => { setIsExpanded(true); setCurrentTab("media"); }}>
+              <Button variant="ghost" size="sm" onClick={() => { 
+                setIsExpanded(true); 
+                setCurrentTab("media");
+                createDraft();
+              }}>
                 <Image className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => { setIsExpanded(true); setCurrentTab("link"); }}>
+              <Button variant="ghost" size="sm" onClick={() => { 
+                setIsExpanded(true); 
+                setCurrentTab("link");
+                createDraft();
+              }}>
                 <LinkIcon className="h-4 w-4" />
               </Button>
             </div>
@@ -304,6 +361,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
                   onFilesChange={(files) => setFormData(prev => ({ ...prev, mediaFiles: files }))}
                   onUploadStatusChange={setMediaUploading}
                   maxFiles={10}
+                  draftId={draftId || (editPost ? 'edit-mode' : null)}
                 />
               </TabsContent>
               
