@@ -36,7 +36,7 @@ export const AdminBreadcrumbs: React.FC = () => {
     <Breadcrumb>
       <BreadcrumbList>
         {breadcrumbs.map((crumb, index) => (
-          <React.Fragment key={index}>
+          <React.Fragment key={`breadcrumb-${index}`}>
             <BreadcrumbItem>
               {crumb.href ? (
                 <BreadcrumbLink asChild>
