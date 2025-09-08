@@ -147,6 +147,23 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Prepare media data for post
+    let mediaType = null;
+    let mediaUrl = null;
+    let mediaThumbnail = null;
+    
+    if (draftMedia && draftMedia.length > 0) {
+      if (draftMedia.length === 1) {
+        mediaType = 'image';
+        mediaUrl = draftMedia[0].url;
+        mediaThumbnail = draftMedia[0].thumbnail_url;
+      } else {
+        mediaType = 'multiple';
+        mediaUrl = JSON.stringify(draftMedia.map(media => media.url));
+        mediaThumbnail = draftMedia[0].thumbnail_url; // Use first image as thumbnail
+      }
+    }
+
     // Begin atomic transaction to create post and attach media
     const { data: postData, error: postError } = await supabaseClient
       .from('posts')
@@ -155,9 +172,9 @@ Deno.serve(async (req) => {
         group_id: draft.group_id,
         title: draft.title && draft.title.trim() ? draft.title.trim() : null,
         content: draft.content || '',
-        media_type: draftMedia && draftMedia.length > 0 ? 'image' : null,
-        media_url: draftMedia && draftMedia.length > 0 ? draftMedia[0].url : null,
-        media_thumbnail: draftMedia && draftMedia.length > 0 ? draftMedia[0].thumbnail_url : null,
+        media_type: mediaType,
+        media_url: mediaUrl,
+        media_thumbnail: mediaThumbnail,
         metadata: { 
           draft_id: draftId,
           visibility,
