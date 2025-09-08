@@ -153,12 +153,12 @@ Deno.serve(async (req) => {
     let mediaThumbnail = null;
     
     if (draftMedia && draftMedia.length > 0) {
+      mediaType = 'image'; // Use 'image' for both single and multiple images
       if (draftMedia.length === 1) {
-        mediaType = 'image';
         mediaUrl = draftMedia[0].url;
         mediaThumbnail = draftMedia[0].thumbnail_url;
       } else {
-        mediaType = 'multiple';
+        // Store multiple image URLs as JSON array
         mediaUrl = JSON.stringify(draftMedia.map(media => media.url));
         mediaThumbnail = draftMedia[0].thumbnail_url; // Use first image as thumbnail
       }
