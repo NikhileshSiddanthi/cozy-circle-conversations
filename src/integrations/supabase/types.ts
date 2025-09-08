@@ -726,6 +726,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_posts_by_user: {
+        Args: { _user_id: string }
+        Returns: {
+          deleted_comments: number
+          deleted_drafts: number
+          deleted_post_media: number
+          deleted_posts: number
+          deleted_reactions: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

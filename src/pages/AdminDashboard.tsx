@@ -13,6 +13,7 @@ import { AdminBreadcrumbs } from '@/components/AdminBreadcrumbs';
 import { MemberRequestsTab } from '@/components/admin/MemberRequestsTab';
 import { CategoryManagementTab } from '@/components/admin/CategoryManagementTab';
 import { GroupManagementTab } from '@/components/admin/GroupManagementTab';
+import { DataCleanupTab } from '@/components/admin/DataCleanupTab';
 
 // Type definitions
 
@@ -513,7 +514,7 @@ const AdminDashboard = () => {
 
         {/* Admin Tabs */}
         <Tabs defaultValue="members" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="members" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Member Requests
@@ -525,6 +526,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="groups" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Groups
+            </TabsTrigger>
+            <TabsTrigger value="cleanup" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Cleanup
             </TabsTrigger>
           </TabsList>
 
@@ -551,6 +556,10 @@ const AdminDashboard = () => {
               onApproveGroup={handleApproveGroup}
               onRejectGroup={handleRejectGroup}
             />
+          </TabsContent>
+
+          <TabsContent value="cleanup">
+            <DataCleanupTab />
           </TabsContent>
         </Tabs>
       </div>
