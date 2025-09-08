@@ -22,9 +22,9 @@ export const Header = () => {
   const { isAdmin } = useUserRole();
 
   const navItems = [
-    { icon: Home, label: 'Home', path: '/' },
-    { icon: Grid3X3, label: 'Categories', path: '/' },
-    { icon: Newspaper, label: 'News', path: '/news' },
+    { icon: Home, label: 'Home', path: '/', key: 'home' },
+    { icon: Grid3X3, label: 'Categories', path: '/', key: 'categories' },
+    { icon: Newspaper, label: 'News', path: '/news', key: 'news' },
   ];
 
   const isActive = (path: string) => {
@@ -57,7 +57,7 @@ export const Header = () => {
         <div className="hidden md:flex items-center gap-1">
           {navItems.map((item) => (
             <Button
-              key={item.path}
+              key={item.key}
               variant={isActive(item.path) ? 'default' : 'ghost'}
               size="sm"
               onClick={() => navigate(item.path)}

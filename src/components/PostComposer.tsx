@@ -60,23 +60,42 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
 
   // Create or get draft when expanding
   const createDraft = useCallback(async () => {
-    if (editPost || draftId) return;
+    if (draftId) return;
     
     try {
-      const { data: draft, error } = await supabase
-        .from('post_drafts')
-        .insert({
-          user_id: user!.id,
-          group_id: formData.groupId || selectedGroupId || "",
-          title: "",
-          content: "",
-          status: 'editing'
-        })
-        .select()
-        .single();
+      if (editPost) {
+        // For edit posts, create a temporary draft to handle media uploads
+        const { data: draft, error } = await supabase
+          .from('post_drafts')
+          .insert({
+            user_id: user!.id,
+            group_id: formData.groupId || selectedGroupId || "",
+            title: editPost.title,
+            content: editPost.content,
+            status: 'editing',
+            metadata: { editPostId: editPost.id }
+          })
+          .select()
+          .single();
 
-      if (error) throw error;
-      setDraftId(draft.id);
+        if (error) throw error;
+        setDraftId(draft.id);
+      } else {
+        const { data: draft, error } = await supabase
+          .from('post_drafts')
+          .insert({
+            user_id: user!.id,
+            group_id: formData.groupId || selectedGroupId || "",
+            title: "",
+            content: "",
+            status: 'editing'
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        setDraftId(draft.id);
+      }
   // Add debugging console.log
   console.log('PostComposer debugging enabled for multi-image upload testing');
     } catch (error) {
@@ -362,7 +381,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
                   onFilesChange={(files) => setFormData(prev => ({ ...prev, mediaFiles: files }))}
                   onUploadStatusChange={setMediaUploading}
                   maxFiles={10}
-                  draftId={draftId || (editPost ? 'edit-mode' : null)}
+                  draftId={draftId}
                 />
               </TabsContent>
               
