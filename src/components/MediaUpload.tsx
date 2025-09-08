@@ -102,6 +102,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
   };
 
   const uploadFile = async (mediaFile: MediaFile): Promise<void> => {
+    console.log(`🎬 uploadFile started for: ${mediaFile.file.name} (${mediaFile.id})`);
+    
     try {
       if (!draftId) {
         throw new Error('No draft ID available for upload');
@@ -109,6 +111,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
+
+      console.log(`📤 Step 1 - Initializing upload for: ${mediaFile.file.name}`);
 
       // Update progress
       setMediaFiles(prev => {
@@ -135,11 +139,11 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
       });
 
       if (initError) {
-        console.error('Upload init error:', initError);
+        console.error(`❌ Upload init error for ${mediaFile.file.name}:`, initError);
         throw new Error(initError.message || 'Failed to initialize upload');
       }
 
-      console.log('Upload initialized:', initData);
+      console.log(`✅ Step 1 complete - Upload initialized for ${mediaFile.file.name}:`, initData);
 
       // Update progress
       setMediaFiles(prev => {
@@ -151,6 +155,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         checkUploadStatus(updated);
         return updated;
       });
+
+      console.log(`📤 Step 2 - Uploading file to storage: ${mediaFile.file.name}`);
 
       // Step 2: Upload file to signed URL
       const uploadResponse = await fetch(initData.uploadUrl, {
@@ -165,7 +171,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         throw new Error(`Upload failed: ${uploadResponse.statusText}`);
       }
 
-      console.log('File uploaded to storage successfully');
+      console.log(`✅ Step 2 complete - File uploaded to storage successfully: ${mediaFile.file.name}`);
 
       // Update progress
       setMediaFiles(prev => {
@@ -178,6 +184,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         return updated;
       });
 
+      console.log(`📤 Step 3 - Completing upload: ${mediaFile.file.name}`);
+
       // Step 3: Complete upload
       const { data: completeData, error: completeError } = await supabase.functions.invoke('uploads', {
         body: {
@@ -186,11 +194,11 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
       });
 
       if (completeError) {
-        console.error('Upload complete error:', completeError);
+        console.error(`❌ Upload complete error for ${mediaFile.file.name}:`, completeError);
         throw new Error(completeError.message || 'Failed to complete upload');
       }
 
-      console.log('Upload completed:', completeData);
+      console.log(`✅ Step 3 complete - Upload completed for ${mediaFile.file.name}:`, completeData);
 
       // Update to completed
       setMediaFiles(prev => {
@@ -216,6 +224,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
 
       // Update parent with new file
       if (!files.includes(completeData.url)) {
+        console.log(`📋 Adding ${mediaFile.file.name} to parent files list`);
         onFilesChange([...files, completeData.url]);
       }
 
@@ -224,8 +233,10 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         description: `${mediaFile.file.name} has been uploaded.`,
       });
 
+      console.log(`🎉 Upload workflow complete for: ${mediaFile.file.name}`);
+
     } catch (error) {
-      console.error('Upload failed:', error);
+      console.error(`❌ Upload failed for ${mediaFile.file.name}:`, error);
       
       setMediaFiles(prev => {
         const updated = prev.map(f => 
@@ -250,9 +261,15 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
   };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (disabled) return;
+    console.log('🎯 MediaUpload onDrop called with files:', acceptedFiles.length, acceptedFiles.map(f => f.name));
+    
+    if (disabled) {
+      console.log('❌ Upload disabled, ignoring drop');
+      return;
+    }
     
     if (!draftId) {
+      console.log('❌ No draftId available');
       toast({
         title: "Draft Initializing",
         description: "Please wait for the draft to be created before uploading files.",
@@ -261,8 +278,11 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
       return;
     }
     
+    console.log('📊 Current mediaFiles count:', mediaFiles.length);
     const currentFileCount = mediaFiles.filter(f => f.status !== 'error').length;
     const totalAfterUpload = currentFileCount + acceptedFiles.length;
+    
+    console.log('📈 Files after upload would be:', totalAfterUpload, 'max allowed:', maxFiles);
     
     if (totalAfterUpload > maxFiles) {
       toast({
@@ -276,7 +296,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
     const validFiles: File[] = [];
     const errors: string[] = [];
 
-    acceptedFiles.forEach(file => {
+    acceptedFiles.forEach((file, index) => {
+      console.log(`🔍 Validating file ${index + 1}:`, file.name, file.type, file.size);
       const error = validateFile(file);
       if (error) {
         errors.push(error);
@@ -284,6 +305,8 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
         validFiles.push(file);
       }
     });
+
+    console.log('✅ Valid files:', validFiles.length, '❌ Invalid files:', errors.length);
 
     if (errors.length > 0) {
       toast({
@@ -293,35 +316,56 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
       });
     }
 
-    if (validFiles.length === 0) return;
+    if (validFiles.length === 0) {
+      console.log('❌ No valid files to upload');
+      return;
+    }
 
-    const newMediaFiles: MediaFile[] = validFiles.map(file => ({
-      id: Math.random().toString(36).substring(2),
-      file,
-      preview: URL.createObjectURL(file),
-      status: 'uploading' as const,
-      progress: 0
-    }));
+    const newMediaFiles: MediaFile[] = validFiles.map((file, index) => {
+      const mediaFile = {
+        id: `${Date.now()}-${index}-${Math.random().toString(36).substring(2)}`,
+        file,
+        preview: URL.createObjectURL(file),
+        status: 'uploading' as const,
+        progress: 0
+      };
+      console.log('📦 Created MediaFile:', mediaFile.id, 'for', file.name);
+      return mediaFile;
+    });
 
+    console.log('🚀 Adding', newMediaFiles.length, 'new files to state');
+    
     setMediaFiles(prev => {
       const updated = [...prev, ...newMediaFiles];
+      console.log('📝 Updated mediaFiles state:', updated.length, 'total files');
       checkUploadStatus(updated);
       return updated;
     });
 
-    // Start uploads
-    newMediaFiles.forEach(mediaFile => {
+    // Start uploads for each file
+    console.log('⬆️ Starting uploads for', newMediaFiles.length, 'files');
+    newMediaFiles.forEach((mediaFile, index) => {
+      console.log(`🎬 Starting upload ${index + 1}/${newMediaFiles.length} for:`, mediaFile.file.name);
       uploadFile(mediaFile);
     });
 
-  }, [mediaFiles.length, files, maxFiles, disabled, draftId, toast, onFilesChange, checkUploadStatus, uploadFile]);
+  }, [mediaFiles, files, maxFiles, disabled, draftId, toast, onFilesChange, checkUploadStatus, uploadFile]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: ACCEPTED_TYPES,
     maxFiles: maxFiles,
     multiple: true,
-    disabled
+    disabled: disabled || !draftId,
+    onDropAccepted: (files) => {
+      console.log('✅ Dropzone onDropAccepted:', files.length, 'files accepted');
+    },
+    onDropRejected: (fileRejections) => {
+      console.log('❌ Dropzone onDropRejected:', fileRejections.length, 'files rejected');
+      fileRejections.forEach((rejection, index) => {
+        console.log(`Rejection ${index + 1}:`, rejection.file.name, rejection.errors.map(e => e.message));
+      });
+    }
   });
 
   const removeFile = async (fileId: string) => {
@@ -407,7 +451,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
                   : 'border-border hover:border-primary/50 hover:bg-muted/30'
               }`}
             >
-              <input {...getInputProps()} disabled={!draftId} />
+              <input {...getInputProps()} disabled={!draftId} data-testid="media-file-input" />
               <Upload className={`h-8 w-8 mx-auto mb-4 ${disabled ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
               
               {!draftId ? (
@@ -430,7 +474,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
                     Upload your media files
                   </p>
                   <p className={`text-sm text-muted-foreground mb-4 ${disabled ? 'opacity-50' : ''}`}>
-                    Drag & drop files here, or click to select files
+                    Drag & drop files here, or click to select <strong>multiple files</strong>
                   </p>
                 </>
               )}
