@@ -224,7 +224,12 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
         const { data, error } = await supabase.functions.invoke('publish-post', {
           body: {
             draftId: currentDraftId,
-            visibility: 'public'
+            visibility: 'public',
+            linkPreview: formData.linkPreview ? {
+              url: formData.linkPreview,
+              title: `Link to ${new URL(formData.linkPreview).hostname}`,
+              description: `Visit ${formData.linkPreview}`
+            } : null
           }
         });
 

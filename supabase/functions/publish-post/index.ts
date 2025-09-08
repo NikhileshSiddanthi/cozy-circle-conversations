@@ -11,6 +11,11 @@ interface PublishPostRequest {
   publishOptions?: {
     notifyMembers?: boolean;
   };
+  linkPreview?: {
+    url: string;
+    title?: string;
+    description?: string;
+  } | null;
 }
 
 interface PublishPostResponse {
@@ -58,7 +63,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { draftId, visibility = 'public', publishOptions = {} }: PublishPostRequest = await req.json();
+    const { draftId, visibility = 'public', publishOptions = {}, linkPreview }: PublishPostRequest = await req.json();
 
     if (!draftId) {
       return new Response(
@@ -152,7 +157,10 @@ Deno.serve(async (req) => {
     let mediaUrl = null;
     let mediaThumbnail = null;
     
-    if (draftMedia && draftMedia.length > 0) {
+    if (linkPreview) {
+      mediaType = 'link';
+      mediaUrl = linkPreview.url;
+    } else if (draftMedia && draftMedia.length > 0) {
       mediaType = 'image'; // Use 'image' for both single and multiple images
       if (draftMedia.length === 1) {
         mediaUrl = draftMedia[0].url;
