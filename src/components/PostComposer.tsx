@@ -111,50 +111,69 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
     setIsSubmitting(true);
 
     try {
-      const postData = {
-        user_id: user!.id,
-        group_id: formData.groupId,
-        title: formData.title.trim(),
-        content: formData.content.trim() || "",
-        media_type: formData.mediaFiles.length > 1 ? 'multiple' : 
-                   formData.mediaFiles.length === 1 ? 'image' : null,
-        media_url: formData.mediaFiles.length > 0 ? formData.mediaFiles[0] : null
-      };
+      if (editPost) {
+        // Handle edit mode
+        const { error } = await supabase.functions.invoke('edit-post', {
+          body: {
+            postId: editPost.id,
+            title: formData.title.trim(),
+            content: formData.content.trim() || "",
+            media_urls: formData.mediaFiles
+          }
+        });
 
-      const { data: post, error: postError } = await supabase
-        .from('posts')
-        .insert(postData)
-        .select()
-        .single();
+        if (error) throw error;
 
-      if (postError) throw postError;
-
-      // Insert media files
-      if (formData.mediaFiles.length > 0) {
-        const mediaInserts = formData.mediaFiles.map((url, index) => ({
-          post_id: post.id,
+        toast({
+          title: "Post Updated",
+          description: "Your post has been successfully updated!"
+        });
+      } else {
+        // Handle create mode
+        const postData = {
           user_id: user!.id,
-          file_id: `media_${post.id}_${index}`,
-          url: url,
-          mime_type: 'image/jpeg',
-          order_index: index,
-          status: 'attached'
-        }));
+          group_id: formData.groupId,
+          title: formData.title.trim(),
+          content: formData.content.trim() || "",
+          media_type: formData.mediaFiles.length > 0 ? 'image' : null,
+          media_url: formData.mediaFiles.length > 0 ? formData.mediaFiles[0] : null
+        };
 
-        const { error: mediaError } = await supabase
-          .from('post_media')
-          .insert(mediaInserts);
+        const { data: post, error: postError } = await supabase
+          .from('posts')
+          .insert(postData)
+          .select()
+          .single();
 
-        if (mediaError) {
-          await supabase.from('posts').delete().eq('id', post.id);
-          throw mediaError;
+        if (postError) throw postError;
+
+        // Insert media files
+        if (formData.mediaFiles.length > 0) {
+          const mediaInserts = formData.mediaFiles.map((url, index) => ({
+            post_id: post.id,
+            user_id: user!.id,
+            file_id: `media_${post.id}_${index}`,
+            url: url,
+            mime_type: 'image/jpeg',
+            order_index: index,
+            status: 'attached'
+          }));
+
+          const { error: mediaError } = await supabase
+            .from('post_media')
+            .insert(mediaInserts);
+
+          if (mediaError) {
+            await supabase.from('posts').delete().eq('id', post.id);
+            throw mediaError;
+          }
         }
-      }
 
-      toast({
-        title: "Post Published",
-        description: "Your post has been successfully published!"
-      });
+        toast({
+          title: "Post Published",
+          description: "Your post has been successfully published!"
+        });
+      }
 
       resetForm();
       onSuccess();
