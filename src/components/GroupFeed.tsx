@@ -8,7 +8,7 @@ import { Users, MessageCircle, TrendingUp, Share2 } from "lucide-react";
 import { PostCard } from "./PostCard";
 import { PostComposer } from "./PostComposer";
 import { EmptyGroupState } from "./EmptyGroupState";
-import { CreatePostModal } from "./CreatePostModal";
+
 
 interface Group {
   id: string;
@@ -50,7 +50,7 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isMember, setIsMember] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  
 
   useEffect(() => {
     fetchGroupData();
@@ -252,7 +252,12 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
         {posts.length === 0 ? (
           <EmptyGroupState 
             isMember={isMember}
-            onCreatePost={() => setShowCreateModal(true)}
+            onCreatePost={() => {
+              // Scroll to the PostComposer above
+              const composer = document.querySelector('[data-testid="create-post-button"]');
+              composer?.scrollIntoView({ behavior: 'smooth' });
+              (composer as HTMLElement)?.click();
+            }}
           />
         ) : (
           posts.map((post) => (
@@ -264,20 +269,6 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
           ))
         )}
       </div>
-
-      {/* Modal for Empty State Create Post */}
-      {showCreateModal && group && (
-        <CreatePostModal
-          open={showCreateModal}
-          onOpenChange={setShowCreateModal}
-          groups={[{ id: group.id, name: group.name, is_public: group.is_public }]}
-          selectedGroupId={groupId}
-          onSuccess={() => {
-            setShowCreateModal(false);
-            fetchPosts();
-          }}
-        />
-      )}
     </div>
   );
 };

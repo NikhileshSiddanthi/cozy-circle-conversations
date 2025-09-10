@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { CreatePostModal } from "./CreatePostModal";
+import { PostComposer } from "./PostComposer";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface Group {
   id: string;
@@ -53,19 +54,22 @@ export const CreatePostWithValidation = ({ userGroups }: CreatePostWithValidatio
 
   return (
     <>
-      {!showModal ? (
-        <Button onClick={handleCreatePostClick} className="w-full">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Post
-        </Button>
-      ) : (
-        <CreatePostModal 
-          open={showModal}
-          onOpenChange={setShowModal}
-          groups={userGroups} 
-          onSuccess={() => setShowModal(false)}
-        />
-      )}
+      <Button onClick={handleCreatePostClick} className="w-full">
+        <Plus className="h-4 w-4 mr-2" />
+        Create Post
+      </Button>
+      
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Post</DialogTitle>
+          </DialogHeader>
+          <PostComposer
+            groups={userGroups}
+            onSuccess={() => setShowModal(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
