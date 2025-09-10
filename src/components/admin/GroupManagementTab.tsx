@@ -6,6 +6,7 @@ import { Users, CheckCircle, XCircle, CheckCircle2, Clock, Eye } from 'lucide-re
 import { AdminEmptyState } from './AdminEmptyState';
 import { ConfirmationModal } from './ConfirmationModal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Group {
   id: string;
@@ -107,7 +108,7 @@ export const GroupManagementTab: React.FC<GroupManagementTabProps> = ({
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      Suggested: {new Date(group.created_at).toLocaleDateString()}
+                      Suggested: {formatDistanceToNow(new Date(group.created_at), { addSuffix: true })}
                     </div>
                     <div className="flex items-center gap-1">
                       <Badge variant="outline" className="text-xs">

@@ -8,6 +8,7 @@ import { useTrendingGroups } from '@/hooks/useTrendingGroups';
 import { useTrendingTopics } from '@/hooks/useTrendingTopics';
 import { useLatestGroups } from '@/hooks/useLatestGroups';
 import { useRelatedNews } from '@/hooks/useRelatedNews';
+import { formatDistanceToNow } from 'date-fns';
 import { 
   TrendingUp, 
   ArrowUp, 
@@ -143,7 +144,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                             {group.member_count.toLocaleString()} members
                           </Badge>
                           <Badge variant="secondary" className="text-xs">
-                            {new Date(group.created_at).toLocaleDateString()}
+                            {formatDistanceToNow(new Date(group.created_at), { addSuffix: true })}
                           </Badge>
                         </div>
                       </div>
