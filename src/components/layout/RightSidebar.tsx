@@ -249,9 +249,9 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>{article.source.name}</span>
                           {article.published_at && (
-                            <span>
-                              {new Date(article.published_at).toLocaleDateString()}
-                            </span>
+                             <span>
+                               {formatDistanceToNow(new Date(article.published_at), { addSuffix: true })}
+                             </span>
                           )}
                         </div>
                       </div>

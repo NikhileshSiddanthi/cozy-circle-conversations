@@ -10,6 +10,7 @@ import {
   Edit3,
   Calendar
 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Draft {
   id: string;
@@ -81,7 +82,7 @@ export const DraftManager: React.FC<DraftManagerProps> = ({
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays < 7) return `${diffDays}d ago`;
     
-    return date.toLocaleDateString();
+    return formatDistanceToNow(date, { addSuffix: true });
   };
 
   const getContentPreview = (content: string) => {

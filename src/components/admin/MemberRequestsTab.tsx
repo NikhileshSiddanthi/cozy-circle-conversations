@@ -6,6 +6,7 @@ import { Users, CheckCircle, XCircle, CheckCircle2 } from 'lucide-react';
 import { AdminEmptyState } from './AdminEmptyState';
 import { ConfirmationModal } from './ConfirmationModal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatDistanceToNow } from 'date-fns';
 
 interface PendingMember {
   id: string;
@@ -81,7 +82,7 @@ export const MemberRequestsTab: React.FC<MemberRequestsTabProps> = ({
                     Wants to join: {member.groups?.name || 'Unknown Group'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Requested: {new Date(member.joined_at).toLocaleDateString()}
+                    Requested: {formatDistanceToNow(new Date(member.joined_at), { addSuffix: true })}
                   </p>
                 </div>
                 <div className="flex gap-2">
