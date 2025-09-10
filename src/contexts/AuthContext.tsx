@@ -36,30 +36,101 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state change:', event, session?.user?.id);
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-
-        // Handle token refresh failures
-        if (event === 'TOKEN_REFRESHED' && !session) {
-          console.log('Token refresh failed, signing out');
-          supabase.auth.signOut();
+        
+        // Handle different auth events
+        if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+          console.log('User signed out or token refresh failed');
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
         }
+
+        if (event === 'SIGNED_IN' && session) {
+          console.log('User signed in successfully');
+        }
+
+        // Check if session is expired
+        if (session && session.expires_at) {
+          const now = Math.floor(Date.now() / 1000);
+          const expiresAt = session.expires_at;
+          
+          if (now >= expiresAt) {
+            console.log('Session expired, attempting refresh...');
+            const { data: { session: refreshedSession }, error } = await supabase.auth.refreshSession();
+            
+            if (error || !refreshedSession) {
+              console.log('Session refresh failed, signing out:', error);
+              await supabase.auth.signOut();
+              return;
+            }
+            
+            setSession(refreshedSession);
+            setUser(refreshedSession.user);
+          } else {
+            setSession(session);
+            setUser(session?.user ?? null);
+          }
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+        
+        setLoading(false);
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        console.log('Session error:', error);
-        supabase.auth.signOut();
+    // Check for existing session with expiration validation
+    const checkSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.log('Session error:', error);
+          await supabase.auth.signOut();
+          return;
+        }
+
+        if (session && session.expires_at) {
+          const now = Math.floor(Date.now() / 1000);
+          const expiresAt = session.expires_at;
+          
+          if (now >= expiresAt) {
+            console.log('Initial session expired, attempting refresh...');
+            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (refreshError || !refreshedSession) {
+              console.log('Initial session refresh failed, signing out:', refreshError);
+              await supabase.auth.signOut();
+              setSession(null);
+              setUser(null);
+              setLoading(false);
+              return;
+            }
+            
+            setSession(refreshedSession);
+            setUser(refreshedSession.user);
+          } else {
+            setSession(session);
+            setUser(session?.user ?? null);
+          }
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error checking session:', error);
+        setSession(null);
+        setUser(null);
+        setLoading(false);
       }
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    };
+
+    checkSession();
 
     return () => subscription.unsubscribe();
   }, []);
