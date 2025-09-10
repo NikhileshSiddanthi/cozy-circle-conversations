@@ -107,6 +107,7 @@ export const CreatePostButton = () => {
           {userGroups.length > 0 && (
             <PostComposer
               groups={userGroups}
+              startExpanded={true}
               onSuccess={() => {
                 setShowDialog(false);
                 fetchUserGroups();
