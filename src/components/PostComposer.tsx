@@ -86,7 +86,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
           .from('post_drafts')
           .insert({
             user_id: user!.id,
-            group_id: formData.groupId || selectedGroupId || "",
+            group_id: formData.groupId || selectedGroupId || null,
             title: "",
             content: "",
             status: 'editing'
