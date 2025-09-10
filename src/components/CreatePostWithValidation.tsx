@@ -66,6 +66,7 @@ export const CreatePostWithValidation = ({ userGroups }: CreatePostWithValidatio
           </DialogHeader>
           <PostComposer
             groups={userGroups}
+            startExpanded={true}
             onSuccess={() => setShowModal(false)}
           />
         </DialogContent>

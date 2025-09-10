@@ -29,6 +29,7 @@ interface PostComposerProps {
   groups: Group[];
   selectedGroupId?: string;
   onSuccess: () => void;
+  startExpanded?: boolean;
   editPost?: {
     id: string;
     title: string;
@@ -37,10 +38,10 @@ interface PostComposerProps {
   };
 }
 
-export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: PostComposerProps) => {
+export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded = false, editPost }: PostComposerProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isExpanded, setIsExpanded] = useState(!!editPost);
+  const [isExpanded, setIsExpanded] = useState(!!editPost || startExpanded);
   const [currentTab, setCurrentTab] = useState("text");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mediaUploading, setMediaUploading] = useState(false);
@@ -107,6 +108,13 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, editPost }: P
       });
     }
   }, [editPost, draftId, user, formData.groupId, selectedGroupId, toast]);
+
+  // Auto-create draft when starting expanded (like in modals)
+  useEffect(() => {
+    if ((startExpanded || editPost) && !draftId) {
+      createDraft();
+    }
+  }, [startExpanded, editPost, draftId, createDraft]);
 
   const resetForm = useCallback(() => {
     setFormData({
