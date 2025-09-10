@@ -97,8 +97,8 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
         if (error) throw error;
         setDraftId(draft.id);
       }
-  // Add debugging console.log
-  console.log('PostComposer debugging enabled for multi-image upload testing');
+  // Deployment sync test - force fresh deployment
+  console.log('PostComposer - latest version with Text/Media/Link tabs');
     } catch (error) {
       console.error('Failed to create draft:', error);
       toast({
