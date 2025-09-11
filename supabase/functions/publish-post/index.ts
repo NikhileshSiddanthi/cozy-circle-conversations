@@ -172,28 +172,37 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Prepare post data for insertion
+    const postDataToInsert = {
+      user_id: user.id,
+      group_id: draft.group_id,
+      title: draft.title && draft.title.trim() ? draft.title.trim() : null,
+      content: draft.content || '',
+      media_type: mediaType,
+      media_url: mediaUrl,
+      media_thumbnail: mediaThumbnail,
+      metadata: { 
+        draft_id: draftId,
+        visibility,
+        publish_options: publishOptions,
+        link_preview: linkPreview || undefined
+      }
+    };
+
+    console.log('INSERT DATA:', JSON.stringify(postDataToInsert, null, 2));
+
     // Begin atomic transaction to create post and attach media
     const { data: postData, error: postError } = await supabaseClient
       .from('posts')
-      .insert({
-        user_id: user.id,
-        group_id: draft.group_id,
-        title: draft.title && draft.title.trim() ? draft.title.trim() : null,
-        content: draft.content || '',
-        media_type: mediaType,
-        media_url: mediaUrl,
-        media_thumbnail: mediaThumbnail,
-        metadata: { 
-          draft_id: draftId,
-          visibility,
-          publish_options: publishOptions,
-          link_preview: linkPreview || undefined
-        }
-      })
+      .insert(postDataToInsert)
       .select()
       .single();
 
     if (postError) {
+      console.log('POST INSERT ERROR DETAILS:');
+      console.log('Error code:', postError.code);
+      console.log('Error message:', postError.message);
+      console.log('Error details:', JSON.stringify(postError, null, 2));
       console.log('Failed to create post:', postError);
       return new Response(
         JSON.stringify({ 
