@@ -28,6 +28,9 @@ interface Post {
   profiles: {
     display_name: string | null;
   } | null;
+  metadata?: {
+    link_preview?: any;
+  };
 }
 
 const PostDetailPage = () => {
@@ -53,7 +56,15 @@ const PostDetailPage = () => {
       const { data, error } = await supabase
         .from('posts')
         .select(`
-          *
+          *,
+          post_media (
+            id,
+            url,
+            thumbnail_url,
+            caption,
+            alt,
+            order_index
+          )
         `)
         .eq('id', postId)
         .single();

@@ -25,6 +25,7 @@ import { ViewCounter } from "./ViewCounter";
 import { EditPostModal } from "./EditPostModal";
 import { MultiImageCarousel, CarouselImage } from "./MultiImageCarousel";
 import { ImageLightbox } from "./ImageLightbox";
+import { ClickableContent } from "./ClickableContent";
 import { useUserRole } from "@/hooks/useUserRole";
 
 interface Post {
@@ -467,7 +468,10 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
                 )}
               </h3>
               {post.content && (
-                <p className="text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+                <ClickableContent 
+                  content={post.content}
+                  className="text-muted-foreground whitespace-pre-wrap"
+                />
               )}
             </div>
             {user && (user.id === post.user_id || userRole === 'admin') && (

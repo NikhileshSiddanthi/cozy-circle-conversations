@@ -59,6 +59,15 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
   });
 
   const MAX_CHARACTERS = 5000;
+
+  // Auto-process content for link previews
+  useEffect(() => {
+    if (formData.content) {
+      processText(formData.content);
+    } else {
+      clearAllPreviews();
+    }
+  }, [formData.content, processText, clearAllPreviews]);
   const characterCount = formData.content.length;
   const isOverLimit = characterCount > MAX_CHARACTERS;
 

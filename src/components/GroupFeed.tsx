@@ -37,6 +37,9 @@ interface Post {
   profiles: {
     display_name: string | null;
   } | null;
+  metadata?: {
+    link_preview?: any;
+  };
 }
 
 interface GroupFeedProps {
