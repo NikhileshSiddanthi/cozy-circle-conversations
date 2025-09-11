@@ -22,7 +22,7 @@ interface LinkPreview {
   embed_html?: string;
   content_type?: string;
   favicon_url?: string;
-  fetched_at: string;
+  fetched_at?: string;
   fetch_error?: string;
 }
 
@@ -44,6 +44,12 @@ export const LinkPreviewCard = ({
 
   const isVideo = preview.content_type === 'video' || preview.provider === 'youtube';
   const domain = new URL(preview.url).hostname;
+  
+  // Handle cases where preview data might be incomplete (from database)
+  const safePreview = {
+    ...preview,
+    fetched_at: preview.fetched_at || new Date().toISOString()
+  };
 
   const handleExpand = () => {
     if (preview.embed_html) {
