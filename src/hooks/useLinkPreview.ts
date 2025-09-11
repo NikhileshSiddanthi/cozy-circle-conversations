@@ -46,7 +46,7 @@ export function useLinkPreview(): UseLinkPreviewReturn {
     setError(null);
 
     try {
-      const { data, error: functionError } = await supabase.functions.invoke('fetch-link-preview', {
+      const { data, error: functionError } = await supabase.functions.invoke('fetch-url-metadata', {
         body: { url: url.trim() }
       });
 
