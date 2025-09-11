@@ -626,6 +626,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          view_count: number | null
         }
         Insert: {
           comment_count?: number | null
@@ -647,6 +648,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          view_count?: number | null
         }
         Update: {
           comment_count?: number | null
@@ -668,6 +670,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          view_count?: number | null
         }
         Relationships: [
           {
