@@ -47,6 +47,11 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
   const [mediaUploading, setMediaUploading] = useState(false);
   
   const [draftId, setDraftId] = useState<string | null>(null);
+  // Memoized callback to prevent infinite re-renders in LinkPreviewTab
+  const handleLinkPreviewChange = useCallback((preview: any) => {
+    setFormData(prev => ({ ...prev, linkPreview: preview }));
+  }, []);
+
   const [formData, setFormData] = useState({
     title: editPost?.title || "",
     content: editPost?.content || "",
@@ -397,7 +402,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
               <TabsContent value="link" className="mt-4">
                 <LinkPreviewTab
                   preview={formData.linkPreview}
-                  onPreviewChange={(preview) => setFormData(prev => ({ ...prev, linkPreview: preview }))}
+                  onPreviewChange={handleLinkPreviewChange}
                 />
               </TabsContent>
             </Tabs>
