@@ -37,15 +37,82 @@ Deno.serve(async (req) => {
   );
 
   try {
-    // Get user from JWT
-    const authHeader = req.headers.get('Authorization')!;
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-
-    if (authError || !user) {
-      console.log('Auth error:', authError);
+    // Get user from JWT - with better error handling
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.log('No authorization header provided');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized', code: 'INVALID_TOKEN' }),
+        JSON.stringify({ error: 'Authorization required', code: 'NO_AUTH_HEADER' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Try to get user with better error handling
+    let user;
+    try {
+      const { data: userData, error: authError } = await supabaseClient.auth.getUser(token);
+      
+      if (authError) {
+        console.log('Auth error details:', {
+          message: authError.message,
+          status: authError.status,
+          code: authError.code || 'UNKNOWN_AUTH_ERROR'
+        });
+        
+        // Handle different auth error types
+        if (authError.code === 'session_not_found' || authError.message?.includes('session')) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Session expired. Please sign in again.', 
+              code: 'SESSION_EXPIRED',
+              details: 'Your session has expired. Please refresh the page and sign in again.' 
+            }),
+            { 
+              status: 401, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            error: 'Authentication failed', 
+            code: authError.code || 'AUTH_FAILED',
+            details: authError.message 
+          }),
+          { 
+            status: 401, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      
+      user = userData.user;
+      
+    } catch (authException) {
+      console.log('Auth exception:', authException);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Authentication system error', 
+          code: 'AUTH_SYSTEM_ERROR',
+          details: authException instanceof Error ? authException.message : 'Unknown authentication error'
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    if (!user) {
+      console.log('No user found in JWT');
+      return new Response(
+        JSON.stringify({ error: 'User not found', code: 'USER_NOT_FOUND' }),
         { 
           status: 401, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
