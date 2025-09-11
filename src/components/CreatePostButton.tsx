@@ -16,41 +16,31 @@ interface Group {
 export const CreatePostButton = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [userGroups, setUserGroups] = useState<Group[]>([]);
+  const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
 
   useEffect(() => {
     if (user) {
-      fetchUserGroups();
+      fetchAvailableGroups();
     }
   }, [user]);
 
-  const fetchUserGroups = async () => {
+  const fetchAvailableGroups = async () => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
-        .from('group_members')
-        .select(`
-          group_id,
-          groups!inner(id, name, is_public, is_approved)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'approved')
-        .eq('groups.is_approved', true);
+        .from('groups')
+        .select('id, name, is_public')
+        .eq('is_approved', true)
+        .order('name');
 
       if (error) throw error;
 
-      const groups = data?.map(item => ({
-        id: item.groups.id,
-        name: item.groups.name,
-        is_public: item.groups.is_public
-      })) || [];
-
-      setUserGroups(groups);
+      setAvailableGroups(data || []);
     } catch (error: any) {
-      console.error('Error fetching user groups:', error);
+      console.error('Error fetching available groups:', error);
     } finally {
       setLoading(false);
     }
@@ -66,10 +56,10 @@ export const CreatePostButton = () => {
       return;
     }
 
-    if (userGroups.length === 0) {
+    if (availableGroups.length === 0) {
       toast({
-        title: "Join a Group First",
-        description: "You need to join and be approved in at least one group to create posts.",
+        title: "No Groups Available",
+        description: "There are no approved groups to post in at the moment.",
         variant: "destructive", 
       });
       return;
@@ -104,13 +94,13 @@ export const CreatePostButton = () => {
             <DialogTitle>Create Post</DialogTitle>
           </DialogHeader>
           
-          {userGroups.length > 0 && (
+          {availableGroups.length > 0 && (
             <PostComposer
-              groups={userGroups}
+              groups={availableGroups}
               startExpanded={true}
               onSuccess={() => {
                 setShowDialog(false);
-                fetchUserGroups();
+                fetchAvailableGroups();
                 window.location.reload(); // Refresh to show new post
               }}
             />

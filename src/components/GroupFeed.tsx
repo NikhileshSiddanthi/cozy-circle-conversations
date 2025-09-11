@@ -134,19 +134,24 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
           group_id: groupId,
           user_id: user.id,
           role: "member",
-          status: "pending"  // Changed from "approved" to "pending"
+          status: "approved"
         });
 
       if (error) throw error;
 
+      setIsMember(true);
+      
+      // Update member count
+      setGroup(prev => prev ? { ...prev, member_count: prev.member_count + 1 } : null);
+
       toast({
-        title: "Join Request Sent",
-        description: "Your request to join the group has been sent to administrators for approval.",
+        title: "Joined Successfully!",
+        description: "You are now a member of this group.",
       });
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to send join request",
+        description: error.message || "Failed to join group",
         variant: "destructive",
       });
     }
@@ -238,8 +243,8 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
         </CardHeader>
       </Card>
 
-      {/* Post Composer */}
-      {isMember && (
+      {/* Post Composer - Now available to all authenticated users */}
+      {user && (
         <PostComposer
           groups={[{ id: group.id, name: group.name, is_public: group.is_public }]}
           selectedGroupId={groupId}
@@ -251,7 +256,7 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
       <div className="space-y-6">
         {posts.length === 0 ? (
           <EmptyGroupState 
-            isMember={isMember}
+            isMember={true} // Show "create post" option for all authenticated users
             onCreatePost={() => {
               // Scroll to the PostComposer above
               const composer = document.querySelector('[data-testid="create-post-button"]');
