@@ -11,13 +11,13 @@ import {
   Image, 
   Video, 
   Send,
-  Loader2,
-  Link as LinkIcon
+  Loader2
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MediaUpload } from "./MediaUpload";
-import { LinkPreviewTab } from "./LinkPreviewTab";
+import { LinkPreviewCard } from "./LinkPreviewCard";
+import { useAutoLinkPreview } from "@/hooks/useAutoLinkPreview";
 
 interface Group {
   id: string;
@@ -47,17 +47,15 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
   const [mediaUploading, setMediaUploading] = useState(false);
   
   const [draftId, setDraftId] = useState<string | null>(null);
-  // Memoized callback to prevent infinite re-renders in LinkPreviewTab
-  const handleLinkPreviewChange = useCallback((preview: any) => {
-    setFormData(prev => ({ ...prev, linkPreview: preview }));
-  }, []);
+  
+  // Auto link preview functionality
+  const { previews: linkPreviews, loading: linkPreviewLoading, processText, removePreview, clearAllPreviews } = useAutoLinkPreview();
 
   const [formData, setFormData] = useState({
     title: editPost?.title || "",
     content: editPost?.content || "",
     groupId: selectedGroupId || "",
-    mediaFiles: editPost?.media_urls || [],
-    linkPreview: null as any
+    mediaFiles: editPost?.media_urls || []
   });
 
   const MAX_CHARACTERS = 5000;
@@ -126,13 +124,13 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
       title: "",
       content: "",
       groupId: selectedGroupId || "",
-      mediaFiles: [],
-      linkPreview: null
+      mediaFiles: []
     });
     setDraftId(null);
     setIsExpanded(false);
     setCurrentTab("text");
-  }, [selectedGroupId]);
+    clearAllPreviews();
+  }, [selectedGroupId, clearAllPreviews]);
 
   // Save draft periodically
   const saveDraft = useCallback(async () => {
@@ -238,7 +236,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
           body: {
             draftId: currentDraftId,
             visibility: 'public',
-            linkPreview: formData.linkPreview
+            linkPreview: linkPreviews.length > 0 ? linkPreviews[0] : null
           }
         });
 
@@ -309,13 +307,6 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
               }}>
                 <Image className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => { 
-                setIsExpanded(true); 
-                setCurrentTab("link");
-                createDraft();
-              }}>
-                <LinkIcon className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         ) : (
@@ -373,20 +364,47 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
             />
 
             <Tabs value={currentTab} onValueChange={setCurrentTab}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="text">Text</TabsTrigger>
                 <TabsTrigger value="media">Media</TabsTrigger>
-                <TabsTrigger value="link">Link</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="text" className="mt-4">
+              <TabsContent value="text" className="mt-4 space-y-4">
                 <Textarea
-                  placeholder="Share your thoughts..."
+                  placeholder="Share your thoughts... (URLs will automatically show previews)"
                   value={formData.content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                  onChange={(e) => {
+                    const newContent = e.target.value;
+                    setFormData(prev => ({ ...prev, content: newContent }));
+                    processText(newContent);
+                  }}
                   className="border-0 bg-transparent resize-none min-h-[120px] placeholder:text-muted-foreground focus-visible:ring-0 px-0"
                   data-testid="content-textarea"
                 />
+                
+                {/* Auto-detected Link Previews */}
+                {linkPreviews.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium text-muted-foreground">Link Previews</h4>
+                      {linkPreviewLoading && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="h-3 w-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                          Fetching preview...
+                        </div>
+                      )}
+                    </div>
+                    {linkPreviews.map((preview) => (
+                      <LinkPreviewCard
+                        key={preview.url}
+                        preview={preview}
+                        showRemove={true}
+                        onRemove={() => removePreview(preview.url)}
+                        className="bg-muted/30"
+                      />
+                    ))}
+                  </div>
+                )}
               </TabsContent>
               
               <TabsContent value="media" className="mt-4">
@@ -399,17 +417,11 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
                 />
               </TabsContent>
               
-              <TabsContent value="link" className="mt-4">
-                <LinkPreviewTab
-                  preview={formData.linkPreview}
-                  onPreviewChange={handleLinkPreviewChange}
-                />
-              </TabsContent>
             </Tabs>
 
             <div className="flex justify-between items-center pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                Media: {formData.mediaFiles.length}/10
+                Media: {formData.mediaFiles.length}/10 • Links: {linkPreviews.length}
               </div>
               
               <div className="flex gap-2">
