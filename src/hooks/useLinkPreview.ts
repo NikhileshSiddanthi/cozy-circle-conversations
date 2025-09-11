@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface LinkPreview {
   url: string;
+  url_hash?: string;
   title?: string;
   description?: string;
   image_url?: string;
@@ -11,7 +12,7 @@ interface LinkPreview {
   embed_html?: string;
   content_type?: string;
   favicon_url?: string;
-  fetched_at: string;
+  fetched_at?: string;
   fetch_error?: string;
 }
 
@@ -47,8 +48,8 @@ export function useLinkPreview(): UseLinkPreviewReturn {
     setError(null);
 
     try {
-      console.log('📡 Calling fetch-url-metadata function...');
-      const { data, error: functionError } = await supabase.functions.invoke('fetch-url-metadata', {
+      console.log('📡 Calling fetch-link-preview function...');
+      const { data, error: functionError } = await supabase.functions.invoke('fetch-link-preview', {
         body: { url: url.trim() }
       });
 

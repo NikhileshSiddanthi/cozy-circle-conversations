@@ -36,7 +36,7 @@ export const URLPreview = ({ url, onRemove }: URLPreviewProps) => {
         }
 
         // Call our edge function to fetch real metadata
-        const { data, error: functionError } = await supabase.functions.invoke('fetch-url-metadata', {
+        const { data, error: functionError } = await supabase.functions.invoke('fetch-link-preview', {
           body: { url }
         });
 
@@ -45,12 +45,13 @@ export const URLPreview = ({ url, onRemove }: URLPreviewProps) => {
           throw functionError;
         }
 
-        if (data && !data.error) {
+        if (data && !data.fetch_error) {
           setPreview({
             title: data.title || new URL(url).hostname,
             description: data.description || `Link to ${new URL(url).hostname}`,
-            image: data.image || '',
-            siteName: data.siteName || new URL(url).hostname
+            image: data.image_url || '',
+            siteName: data.provider === 'youtube' ? 'YouTube' : (data.provider || new URL(url).hostname),
+            error: undefined
           });
         } else {
           // Fallback for when metadata extraction fails but URL is valid
@@ -59,7 +60,7 @@ export const URLPreview = ({ url, onRemove }: URLPreviewProps) => {
             description: `Link to ${new URL(url).hostname}`,
             image: '',
             siteName: new URL(url).hostname,
-            error: data?.error || 'Could not load preview'
+            error: data?.fetch_error || 'Could not load preview'
           });
         }
       } catch (err) {
@@ -112,19 +113,19 @@ export const URLPreview = ({ url, onRemove }: URLPreviewProps) => {
     <Card className="border-muted hover:border-border transition-colors">
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          {preview.image ? (
+          {preview.image && preview.image !== '' ? (
             <img 
               src={preview.image} 
               alt={preview.title}
-              className="w-16 h-16 object-cover rounded flex-shrink-0"
+              className="w-20 h-20 object-cover rounded-lg border flex-shrink-0"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
               }}
             />
           ) : (
-            <div className="w-16 h-16 bg-muted rounded flex items-center justify-center flex-shrink-0">
-              <Globe className="h-6 w-6 text-muted-foreground" />
+            <div className="w-20 h-20 bg-muted rounded-lg border flex items-center justify-center flex-shrink-0">
+              <Globe className="h-8 w-8 text-muted-foreground" />
             </div>
           )}
           

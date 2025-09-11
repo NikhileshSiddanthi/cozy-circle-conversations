@@ -76,20 +76,33 @@ async function validateUrl(url: string): Promise<boolean> {
 }
 
 function extractVideoId(url: string): string | null {
+  // Clean and normalize the URL first
+  const cleanUrl = url.replace(/\s+/g, '').trim();
+  
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-    /youtube\.com\/v\/([^&\n?#]+)/
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+    // Handle URLs with extra parameters
+    /(?:youtube\.com\/watch\?.*v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/
   ];
 
   for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
+    const match = cleanUrl.match(pattern);
+    if (match && match[1]) {
+      // YouTube video IDs are exactly 11 characters
+      const videoId = match[1].substring(0, 11);
+      if (videoId.length === 11) {
+        return videoId;
+      }
+    }
   }
   return null;
 }
 
 function isYouTubeUrl(url: string): boolean {
-  return /(?:youtube\.com|youtu\.be)/.test(url);
+  // Clean URL first and check
+  const cleanUrl = url.replace(/\s+/g, '').trim();
+  return /(?:youtube\.com|youtu\.be)/.test(cleanUrl);
 }
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 6000): Promise<Response> {
@@ -114,20 +127,27 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 }
 
 async function fetchYouTubePreview(url: string): Promise<Partial<LinkPreview>> {
-  const videoId = extractVideoId(url);
+  // Clean the URL first
+  const cleanUrl = url.replace(/\s+/g, '').trim();
+  const videoId = extractVideoId(cleanUrl);
+  
   if (!videoId) throw new Error('Invalid YouTube URL');
 
-  const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+  console.log(`Extracted YouTube video ID: ${videoId} from URL: ${cleanUrl}`);
+
+  const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`;
   
   try {
+    console.log(`Fetching YouTube oEmbed from: ${oembedUrl}`);
     const response = await fetchWithTimeout(oembedUrl);
     if (!response.ok) throw new Error(`YouTube oEmbed failed: ${response.status}`);
     
     const data = await response.json();
+    console.log('YouTube oEmbed response:', data);
     
     return {
       title: data.title,
-      description: data.author_name,
+      description: `${data.author_name} • YouTube`,
       image_url: data.thumbnail_url,
       provider: 'youtube',
       content_type: 'video',
@@ -135,7 +155,7 @@ async function fetchYouTubePreview(url: string): Promise<Partial<LinkPreview>> {
     };
   } catch (error) {
     console.error('YouTube oEmbed error:', error);
-    // Fallback to basic YouTube info
+    // Fallback to high-quality thumbnail URLs
     return {
       title: `YouTube Video`,
       description: `Watch on YouTube`,
@@ -245,16 +265,17 @@ serve(async (req) => {
       );
     }
 
-    // Validate URL
-    if (!await validateUrl(url)) {
+    // Clean and validate URL
+    const cleanUrl = url.replace(/\s+/g, '').trim();
+    if (!await validateUrl(cleanUrl)) {
       return new Response(
         JSON.stringify({ error: 'Invalid or blocked URL' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const url_hash = await sha256(url);
-    console.log(`Processing URL: ${url}, Hash: ${url_hash}`);
+    const url_hash = await sha256(cleanUrl);
+    console.log(`Processing URL: ${cleanUrl}, Hash: ${url_hash}`);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -280,17 +301,17 @@ serve(async (req) => {
     }
 
     // Fetch new preview
-    console.log(`Fetching new preview for ${url}`);
+    console.log(`Fetching new preview for ${cleanUrl}`);
     let previewData: Partial<LinkPreview>;
 
-    if (isYouTubeUrl(url)) {
-      previewData = await fetchYouTubePreview(url);
+    if (isYouTubeUrl(cleanUrl)) {
+      previewData = await fetchYouTubePreview(cleanUrl);
     } else {
-      previewData = await fetchGenericPreview(url);
+      previewData = await fetchGenericPreview(cleanUrl);
     }
 
     const preview: LinkPreview = {
-      url,
+      url: cleanUrl,
       url_hash,
       fetched_at: new Date().toISOString(),
       ...previewData
