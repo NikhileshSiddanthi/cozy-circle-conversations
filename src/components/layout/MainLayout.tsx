@@ -29,17 +29,19 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           <LeftSidebar />
           
           {/* Main Content */}
-          <main className="flex-1 min-w-0 px-6 py-6">
+          <main className="flex-1 min-w-0 px-3 py-4 md:px-6 md:py-6">
             <div className="max-w-4xl mx-auto">
               {children}
             </div>
           </main>
           
-          {/* Right Sidebar */}
-          <RightSidebar 
-            content={rightSidebarContent}
-            contextData={contextData}
-          />
+          {/* Right Sidebar - Hidden on mobile and tablets */}
+          <div className="hidden xl:block">
+            <RightSidebar 
+              content={rightSidebarContent}
+              contextData={contextData}
+            />
+          </div>
         </div>
       </div>
     </SidebarProvider>

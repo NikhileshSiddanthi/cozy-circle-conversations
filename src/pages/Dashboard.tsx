@@ -83,17 +83,17 @@ const Dashboard = () => {
   return (
     <MainLayout>
       {/* Welcome Section */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-3">Welcome to COZI</h1>
-        <p className="text-xl text-muted-foreground">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-3">Welcome to COZI</h1>
+        <p className="text-lg md:text-xl text-muted-foreground">
           Connect, discuss, and engage with political communities
         </p>
       </div>
 
       {/* Categories Grid */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-6">Political Categories</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="mb-6 md:mb-8">
+        <h2 className="text-xl md:text-2xl font-semibold mb-4 md:mb-6">Political Categories</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
           {categories.map((category) => (
             <CategoryCard
               key={category.id}
