@@ -3,3 +3,6 @@ project_id = "zsquagqhilzjumfjxusk"
 [functions.uploads]
 
 [functions.draft-media]
+
+[functions.fetch-url-metadata]
+verify_jwt = false

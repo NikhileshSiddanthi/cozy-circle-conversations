@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, ExternalLink, Loader2 } from 'lucide-react';
+import { X, ExternalLink, Loader2, Globe } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface URLPreviewProps {
   url: string;
@@ -13,6 +14,7 @@ interface PreviewData {
   description: string;
   image: string;
   siteName: string;
+  error?: string;
 }
 
 export const URLPreview = ({ url, onRemove }: URLPreviewProps) => {
@@ -33,15 +35,35 @@ export const URLPreview = ({ url, onRemove }: URLPreviewProps) => {
           return;
         }
 
-        // For demo purposes, create a mock preview
-        // In production, you'd call a backend service
-        setPreview({
-          title: 'URL Preview',
-          description: 'This would show a preview of the linked content',
-          image: '',
-          siteName: new URL(url).hostname
+        // Call our edge function to fetch real metadata
+        const { data, error: functionError } = await supabase.functions.invoke('fetch-url-metadata', {
+          body: { url }
         });
-      } catch {
+
+        if (functionError) {
+          console.error('Function error:', functionError);
+          throw functionError;
+        }
+
+        if (data && !data.error) {
+          setPreview({
+            title: data.title || new URL(url).hostname,
+            description: data.description || `Link to ${new URL(url).hostname}`,
+            image: data.image || '',
+            siteName: data.siteName || new URL(url).hostname
+          });
+        } else {
+          // Fallback for when metadata extraction fails but URL is valid
+          setPreview({
+            title: new URL(url).hostname,
+            description: `Link to ${new URL(url).hostname}`,
+            image: '',
+            siteName: new URL(url).hostname,
+            error: data?.error || 'Could not load preview'
+          });
+        }
+      } catch (err) {
+        console.error('Preview fetch error:', err);
         setError(true);
       } finally {
         setLoading(false);
@@ -88,33 +110,43 @@ export const URLPreview = ({ url, onRemove }: URLPreviewProps) => {
 
   return (
     <Card className="border-muted hover:border-border transition-colors">
-      <CardContent className="p-0">
-        <div className="flex">
-          {preview.image && (
-            <div className="w-20 h-20 flex-shrink-0">
-              <img 
-                src={preview.image} 
-                alt={preview.title}
-                className="w-full h-full object-cover rounded-l-lg"
-              />
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          {preview.image ? (
+            <img 
+              src={preview.image} 
+              alt={preview.title}
+              className="w-16 h-16 object-cover rounded flex-shrink-0"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="w-16 h-16 bg-muted rounded flex items-center justify-center flex-shrink-0">
+              <Globe className="h-6 w-6 text-muted-foreground" />
             </div>
           )}
-          <div className="flex-1 p-4">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm line-clamp-1">{preview.title}</h4>
-                <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                  {preview.description}
-                </p>
-                <span className="text-xs text-muted-foreground mt-1 block">
-                  {preview.siteName}
-                </span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={onRemove} className="ml-2">
-                <X className="h-3 w-3" />
-              </Button>
+          
+          <div className="flex-1 min-w-0">
+            <h4 className="font-medium text-sm line-clamp-2 mb-1">{preview.title}</h4>
+            <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+              {preview.description}
+            </p>
+            {preview.error && (
+              <p className="text-xs text-orange-600 mb-1">
+                {preview.error}
+              </p>
+            )}
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ExternalLink className="h-3 w-3" />
+              <span className="truncate">{preview.siteName}</span>
             </div>
           </div>
+          
+          <Button variant="ghost" size="sm" onClick={onRemove}>
+            <X className="h-3 w-3" />
+          </Button>
         </div>
       </CardContent>
     </Card>

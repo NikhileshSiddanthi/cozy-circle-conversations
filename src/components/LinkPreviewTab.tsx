@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Link2, 
   ExternalLink, 
@@ -57,62 +58,48 @@ export const LinkPreviewTab: React.FC<LinkPreviewTabProps> = ({
     setLoading(true);
     
     try {
-      // For demo purposes, we'll create a mock preview
-      // In a real app, you'd call your backend API that fetches OG metadata
-      
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call our edge function to fetch real metadata
+      const { data, error: functionError } = await supabase.functions.invoke('fetch-url-metadata', {
+        body: { url: targetUrl }
+      });
 
-      // Create a mock preview based on common sites
-      let mockPreview: LinkPreview = {
-        url: targetUrl,
-        title: 'Link Preview',
-        description: 'This is a preview of the linked content.',
-        siteName: new URL(targetUrl).hostname
-      };
-
-      // Add domain-specific mock data
-      const hostname = new URL(targetUrl).hostname.toLowerCase();
-      
-      if (hostname.includes('github')) {
-        mockPreview = {
-          ...mockPreview,
-          title: 'GitHub Repository',
-          description: 'A collaborative development platform for hosting and reviewing code.',
-          image: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
-          siteName: 'GitHub'
-        };
-      } else if (hostname.includes('youtube')) {
-        mockPreview = {
-          ...mockPreview,
-          title: 'YouTube Video',
-          description: 'Watch this amazing video content on YouTube.',
-          image: 'https://www.youtube.com/img/desktop/yt_1200.png',
-          siteName: 'YouTube'
-        };
-      } else if (hostname.includes('medium')) {
-        mockPreview = {
-          ...mockPreview,
-          title: 'Medium Article',
-          description: 'Read this insightful article on Medium.',
-          image: 'https://miro.medium.com/max/1200/1*jfdwtvU6V6g99q3G7gq7dQ.png',
-          siteName: 'Medium'
-        };
-      } else if (hostname.includes('twitter') || hostname.includes('x.com')) {
-        mockPreview = {
-          ...mockPreview,
-          title: 'Post on X',
-          description: 'Check out this interesting post on X (formerly Twitter).',
-          siteName: 'X'
-        };
+      if (functionError) {
+        console.error('Function error:', functionError);
+        throw functionError;
       }
 
-      onPreviewChange(mockPreview);
-      
-      toast({
-        title: "Link Preview Generated",
-        description: "Successfully fetched link preview.",
-      });
+      if (data && !data.error) {
+        const preview: LinkPreview = {
+          url: targetUrl,
+          title: data.title || new URL(targetUrl).hostname,
+          description: data.description || `Link to ${new URL(targetUrl).hostname}`,
+          image: data.image || '',
+          siteName: data.siteName || new URL(targetUrl).hostname
+        };
+        
+        onPreviewChange(preview);
+        
+        toast({
+          title: "Link Preview Generated",
+          description: "Successfully fetched link preview.",
+        });
+      } else {
+        // Fallback for when metadata extraction fails but URL is valid
+        const errorPreview: LinkPreview = {
+          url: targetUrl,
+          title: new URL(targetUrl).hostname,
+          description: `Link to ${new URL(targetUrl).hostname}`,
+          siteName: new URL(targetUrl).hostname,
+          error: data?.error || 'Could not fetch preview. The link will still work in your post.'
+        };
+        
+        onPreviewChange(errorPreview);
+        
+        toast({
+          title: "Preview Generated",
+          description: "Created basic preview for the link.",
+        });
+      }
 
     } catch (error) {
       console.error('Failed to fetch link preview:', error);
