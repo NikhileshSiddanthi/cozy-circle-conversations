@@ -33,21 +33,17 @@ export const LinkPreviewTab: React.FC<LinkPreviewTabProps> = ({
   const { preview, loading, fetchPreview, clearPreview } = useLinkPreview();
   const [url, setUrl] = useState(externalPreview?.url || '');
 
-  // Auto-detect URLs in the input field
+  // Sync external preview changes
   useEffect(() => {
-    if (url && url !== externalPreview?.url) {
-      const timeoutId = setTimeout(() => {
-        try {
-          new URL(url); // Validate URL format
-          fetchPreview(url);
-        } catch {
-          // Invalid URL, do nothing
-        }
-      }, 1000); // Debounce for 1 second
-
-      return () => clearTimeout(timeoutId);
+    if (externalPreview && !preview) {
+      setUrl(externalPreview.url);
     }
-  }, [url, externalPreview?.url, fetchPreview]);
+  }, [externalPreview, preview]);
+
+  // Sync internal preview changes to parent - CRITICAL FIX
+  useEffect(() => {
+    onPreviewChange(preview);
+  }, [preview, onPreviewChange]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +57,22 @@ export const LinkPreviewTab: React.FC<LinkPreviewTabProps> = ({
     clearPreview();
     onPreviewChange(undefined);
   };
+
+  // Auto-detect URLs in the input field
+  useEffect(() => {
+    if (url && url !== externalPreview?.url && !preview) {
+      const timeoutId = setTimeout(() => {
+        try {
+          new URL(url); // Validate URL format
+          fetchPreview(url);
+        } catch {
+          // Invalid URL, do nothing
+        }
+      }, 1000); // Debounce for 1 second
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [url, externalPreview?.url, preview, fetchPreview]);
 
   return (
     <div className="space-y-4">
