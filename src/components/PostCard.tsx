@@ -18,6 +18,7 @@ import {
   Edit3
 } from "lucide-react";
 import { TimestampDisplay } from '@/components/TimestampDisplay';
+import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { CommentSection } from "./CommentSection";
 import { PostActionsMenu } from "./PostActionsMenu";
 import { ViewCounter } from "./ViewCounter";
@@ -220,6 +221,16 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   };
 
   const renderMedia = () => {
+    // Check for link preview in metadata first
+    if (post.metadata?.link_preview) {
+      return (
+        <LinkPreviewCard 
+          preview={post.metadata.link_preview}
+          className="mt-3"
+        />
+      );
+    }
+
     if (!post.media_url || !post.media_type) return null;
 
     // Handle image media type (could be single or multiple)
@@ -336,6 +347,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
         ) : null;
 
       case "link":
+        // Legacy link handling - should be replaced by metadata link_preview
         return (
           <div
             onClick={() => window.open(post.media_url, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')}

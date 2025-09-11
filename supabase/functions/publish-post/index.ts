@@ -158,8 +158,8 @@ Deno.serve(async (req) => {
     let mediaThumbnail = null;
     
     if (linkPreview) {
-      mediaType = 'link';
-      mediaUrl = linkPreview.url;
+      // Store link preview in metadata, not as media
+      // This allows posts to have both link previews AND media files
     } else if (draftMedia && draftMedia.length > 0) {
       mediaType = 'image'; // Use 'image' for both single and multiple images
       if (draftMedia.length === 1) {
@@ -186,7 +186,8 @@ Deno.serve(async (req) => {
         metadata: { 
           draft_id: draftId,
           visibility,
-          publish_options: publishOptions
+          publish_options: publishOptions,
+          link_preview: linkPreview || undefined
         }
       })
       .select()

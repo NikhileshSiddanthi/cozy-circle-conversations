@@ -17,7 +17,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MediaUpload } from "./MediaUpload";
-import { URLPreview } from "./URLPreview";
+import { LinkPreviewTab } from "./LinkPreviewTab";
 
 interface Group {
   id: string;
@@ -52,7 +52,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
     content: editPost?.content || "",
     groupId: selectedGroupId || "",
     mediaFiles: editPost?.media_urls || [],
-    linkPreview: ""
+    linkPreview: null as any
   });
 
   const MAX_CHARACTERS = 5000;
@@ -122,7 +122,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
       content: "",
       groupId: selectedGroupId || "",
       mediaFiles: [],
-      linkPreview: ""
+      linkPreview: null
     });
     setDraftId(null);
     setIsExpanded(false);
@@ -233,11 +233,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
           body: {
             draftId: currentDraftId,
             visibility: 'public',
-            linkPreview: formData.linkPreview ? {
-              url: formData.linkPreview,
-              title: `Link to ${new URL(formData.linkPreview).hostname}`,
-              description: `Visit ${formData.linkPreview}`
-            } : null
+            linkPreview: formData.linkPreview
           }
         });
 
@@ -399,20 +395,10 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
               </TabsContent>
               
               <TabsContent value="link" className="mt-4">
-                <div className="space-y-4">
-                  <Input
-                    placeholder="Paste a URL to show preview"
-                    value={formData.linkPreview}
-                    onChange={(e) => setFormData(prev => ({ ...prev, linkPreview: e.target.value }))}
-                    className="w-full"
-                  />
-                  {formData.linkPreview && (
-                    <URLPreview 
-                      url={formData.linkPreview}
-                      onRemove={() => setFormData(prev => ({ ...prev, linkPreview: "" }))}
-                    />
-                  )}
-                </div>
+                <LinkPreviewTab
+                  preview={formData.linkPreview}
+                  onPreviewChange={(preview) => setFormData(prev => ({ ...prev, linkPreview: preview }))}
+                />
               </TabsContent>
             </Tabs>
 
