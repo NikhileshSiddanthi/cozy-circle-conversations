@@ -168,24 +168,44 @@ async function fetchYouTubePreview(url: string): Promise<Partial<LinkPreview>> {
 }
 
 function extractMetadata(html: string, url: string): Partial<LinkPreview> {
+  // Extract Open Graph and meta tags with better fallback logic
   const titleMatch = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"[^>]*>/i) ||
+                    html.match(/<meta[^>]*name="twitter:title"[^>]*content="([^"]*)"[^>]*>/i) ||
                     html.match(/<title[^>]*>([^<]*)<\/title>/i);
   
   const descriptionMatch = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"[^>]*>/i) ||
+                          html.match(/<meta[^>]*name="twitter:description"[^>]*content="([^"]*)"[^>]*>/i) ||
                           html.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"[^>]*>/i);
   
-  const imageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"[^>]*>/i);
+  // Try multiple image sources with priority
+  const imageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"[^>]*>/i) ||
+                    html.match(/<meta[^>]*name="twitter:image"[^>]*content="([^"]*)"[^>]*>/i) ||
+                    html.match(/<meta[^>]*property="twitter:image:src"[^>]*content="([^"]*)"[^>]*>/i);
+  
   const typeMatch = html.match(/<meta[^>]*property="og:type"[^>]*content="([^"]*)"[^>]*>/i);
   
   const urlObj = new URL(url);
+  let image_url = imageMatch?.[1]?.trim();
+  
+  // Convert relative URLs to absolute
+  if (image_url && !image_url.startsWith('http')) {
+    if (image_url.startsWith('//')) {
+      image_url = urlObj.protocol + image_url;
+    } else if (image_url.startsWith('/')) {
+      image_url = `${urlObj.protocol}//${urlObj.hostname}${image_url}`;
+    } else {
+      image_url = `${urlObj.protocol}//${urlObj.hostname}/${image_url}`;
+    }
+  }
+  
   const favicon_url = `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`;
   
   return {
     title: titleMatch?.[1]?.trim() || urlObj.hostname,
-    description: descriptionMatch?.[1]?.trim() || `Link to ${urlObj.hostname}`,
-    image_url: imageMatch?.[1]?.trim() || favicon_url,
+    description: descriptionMatch?.[1]?.trim() || `Visit ${urlObj.hostname}`,
+    image_url: image_url || favicon_url,
     provider: 'generic',
-    content_type: typeMatch?.[1]?.trim() || 'link',
+    content_type: typeMatch?.[1]?.trim() || 'website',
     favicon_url
   };
 }

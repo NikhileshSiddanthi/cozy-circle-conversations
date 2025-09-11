@@ -109,7 +109,7 @@ export const LinkPreviewCard = ({
                   <OptimizedImage 
                     src={preview.image_url}
                     alt={preview.title || 'Link preview'}
-                    className="w-16 h-16 object-cover rounded"
+                    className="w-20 h-20 object-cover rounded-lg border"
                     onError={() => setImageError(true)}
                   />
                   {isVideo && (
@@ -126,12 +126,12 @@ export const LinkPreviewCard = ({
                         }
                       }}
                     >
-                      <Play className="h-6 w-6 text-white" fill="white" />
+                      <Play className="h-8 w-8 text-white" fill="white" />
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="w-16 h-16 bg-muted rounded flex items-center justify-center">
+                <div className="w-20 h-20 bg-muted rounded-lg border flex items-center justify-center">
                   <ProviderIcon />
                 </div>
               )}
