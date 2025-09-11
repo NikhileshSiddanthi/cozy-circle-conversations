@@ -33,19 +33,21 @@ export const LinkPreviewTab: React.FC<LinkPreviewTabProps> = ({
   const { preview, loading, fetchPreview, clearPreview } = useLinkPreview();
   const [url, setUrl] = useState(externalPreview?.url || '');
 
-  // Sync external preview changes
+  // Auto-detect URLs in the input field
   useEffect(() => {
-    if (externalPreview) {
-      setUrl(externalPreview.url);
-    }
-  }, [externalPreview]);
+    if (url && url !== externalPreview?.url) {
+      const timeoutId = setTimeout(() => {
+        try {
+          new URL(url); // Validate URL format
+          fetchPreview(url);
+        } catch {
+          // Invalid URL, do nothing
+        }
+      }, 1000); // Debounce for 1 second
 
-  // Sync internal preview changes to parent
-  useEffect(() => {
-    if (preview) {
-      onPreviewChange(preview);
+      return () => clearTimeout(timeoutId);
     }
-  }, [preview, onPreviewChange]);
+  }, [url, externalPreview?.url, fetchPreview]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +72,7 @@ export const LinkPreviewTab: React.FC<LinkPreviewTabProps> = ({
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com/article"
+              placeholder="https://youtu.be/gKuO4MPibL8 or any website"
               className="w-full"
               disabled={loading}
             />
