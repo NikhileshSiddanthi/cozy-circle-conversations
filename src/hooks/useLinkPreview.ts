@@ -42,20 +42,25 @@ export function useLinkPreview(): UseLinkPreviewReturn {
       return;
     }
 
+    console.log('🔗 Starting link preview fetch for:', url);
     setLoading(true);
     setError(null);
 
     try {
+      console.log('📡 Calling fetch-url-metadata function...');
       const { data, error: functionError } = await supabase.functions.invoke('fetch-url-metadata', {
         body: { url: url.trim() }
       });
 
+      console.log('📡 Function response:', { data, error: functionError });
+
       if (functionError) {
-        console.error('Link preview function error:', functionError);
+        console.error('❌ Link preview function error:', functionError);
         throw new Error(functionError.message || 'Failed to fetch link preview');
       }
 
       if (data) {
+        console.log('✅ Setting preview data:', data);
         setPreview(data);
         
         if (data.fetch_error) {
@@ -70,9 +75,11 @@ export function useLinkPreview(): UseLinkPreviewReturn {
             description: "Successfully fetched link preview.",
           });
         }
+      } else {
+        console.warn('⚠️ No data returned from function');
       }
     } catch (err) {
-      console.error('Failed to fetch link preview:', err);
+      console.error('❌ Failed to fetch link preview:', err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
       
