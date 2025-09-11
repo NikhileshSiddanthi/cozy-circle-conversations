@@ -67,7 +67,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
     } else {
       clearAllPreviews();
     }
-  }, [formData.content, processText, clearAllPreviews]);
+  }, [formData.content]);
   const characterCount = formData.content.length;
   const isOverLimit = characterCount > MAX_CHARACTERS;
 
