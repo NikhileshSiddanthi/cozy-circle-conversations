@@ -6,3 +6,6 @@ project_id = "zsquagqhilzjumfjxusk"
 
 [functions.fetch-url-metadata]
 verify_jwt = false
+
+[functions.fetch-link-preview]
+verify_jwt = false

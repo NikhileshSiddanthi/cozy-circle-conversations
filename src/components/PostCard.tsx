@@ -17,7 +17,7 @@ import {
   Eye,
   Edit3
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { TimestampDisplay } from '@/components/TimestampDisplay';
 import { CommentSection } from "./CommentSection";
 import { PostActionsMenu } from "./PostActionsMenu";
 import { ViewCounter } from "./ViewCounter";
@@ -41,10 +41,15 @@ interface Post {
   is_pinned: boolean;
   is_edited?: boolean;
   created_at: string;
+  updated_at?: string;
+  edited_at?: string;
   user_id: string;
   profiles: {
     display_name: string | null;
   } | null;
+  metadata?: {
+    link_preview?: any;
+  };
   post_media?: Array<{
     id: string;
     url: string;
@@ -421,7 +426,11 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
               </p>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Calendar className="h-3 w-3" />
-                {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                <TimestampDisplay 
+                  timestamp={post.created_at}
+                  editedAt={post.edited_at}
+                  showEdited={post.is_edited}
+                />
               </div>
             </div>
           </div>

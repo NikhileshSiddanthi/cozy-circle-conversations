@@ -245,6 +245,60 @@ export type Database = {
           },
         ]
       }
+      link_previews: {
+        Row: {
+          checksums: Json | null
+          content_type: string | null
+          created_at: string
+          description: string | null
+          embed_html: string | null
+          favicon_url: string | null
+          fetch_error: string | null
+          fetched_at: string
+          id: string
+          image_url: string | null
+          last_refresh_attempt: string | null
+          provider: string | null
+          title: string | null
+          url: string
+          url_hash: string
+        }
+        Insert: {
+          checksums?: Json | null
+          content_type?: string | null
+          created_at?: string
+          description?: string | null
+          embed_html?: string | null
+          favicon_url?: string | null
+          fetch_error?: string | null
+          fetched_at?: string
+          id?: string
+          image_url?: string | null
+          last_refresh_attempt?: string | null
+          provider?: string | null
+          title?: string | null
+          url: string
+          url_hash: string
+        }
+        Update: {
+          checksums?: Json | null
+          content_type?: string | null
+          created_at?: string
+          description?: string | null
+          embed_html?: string | null
+          favicon_url?: string | null
+          fetch_error?: string | null
+          fetched_at?: string
+          id?: string
+          image_url?: string | null
+          last_refresh_attempt?: string | null
+          provider?: string | null
+          title?: string | null
+          url?: string
+          url_hash?: string
+        }
+        Relationships: []
+      }
       news_articles: {
         Row: {
           author: string | null
