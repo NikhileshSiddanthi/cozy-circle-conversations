@@ -57,14 +57,7 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
       return;
     }
 
-    if (!formData.categoryId) {
-      toast({
-        title: "Missing Information", 
-        description: "Please select a category.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Category is no longer required - admin will assign it
 
     setIsLoading(true);
     try {
@@ -74,7 +67,7 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
         .insert({
           name: formData.name,
           description: formData.description,
-          category_id: formData.categoryId,
+          category_id: formData.categoryId || null, // Admin will assign category
           type: formData.type,
           creator_id: user.id,
           is_approved: false,
@@ -167,14 +160,13 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
           </div>
 
           <div>
-            <label className="text-sm font-medium">Category</label>
+            <label className="text-sm font-medium">Category (Optional)</label>
             <Select
               value={formData.categoryId}
               onValueChange={(value) => setFormData({ ...formData, categoryId: value })}
-              required
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
+                <SelectValue placeholder="Admin will assign appropriate category" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((category) => (
@@ -184,6 +176,9 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Administrators will assign the most appropriate category for your group.
+            </p>
           </div>
 
           <div>

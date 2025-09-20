@@ -42,7 +42,7 @@ const Dashboard = () => {
       console.log('Categories fetched:', categoriesData?.length || 0);
       console.log('Categories data:', categoriesData);
 
-      // Fetch group counts for each category
+      // Fetch group counts and engagement metrics for each category
       const categoriesWithCounts = await Promise.all(
         (categoriesData || []).map(async (category) => {
           const { count } = await supabase
@@ -51,15 +51,57 @@ const Dashboard = () => {
             .eq('category_id', category.id)
             .eq('is_approved', true);
 
+          // Calculate engagement score (posts + comments + reactions in last 30 days)
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          
+          const { data: engagementData } = await supabase
+            .from('posts')
+            .select(`
+              id,
+              like_count,
+              comment_count,
+              created_at,
+              groups!inner(category_id)
+            `)
+            .eq('groups.category_id', category.id)
+            .gte('created_at', thirtyDaysAgo.toISOString());
+
+          let engagementScore = 0;
+          if (engagementData) {
+            engagementScore = engagementData.reduce((sum, post) => {
+              return sum + (post.like_count || 0) + (post.comment_count || 0) + 1; // +1 for the post itself
+            }, 0);
+          }
+
           return {
             ...category,
-            group_count: count || 0
+            group_count: count || 0,
+            engagement_score: engagementScore
           };
         })
       );
 
-      console.log('Categories with counts:', categoriesWithCounts);
-      setCategories(categoriesWithCounts);
+      // Sort categories by engagement, but keep Organizations and Personalities at end unless they have high engagement
+      const sortedCategories = categoriesWithCounts.sort((a, b) => {
+        const aIsSpecial = ['Organizations', 'Personalities'].includes(a.name);
+        const bIsSpecial = ['Organizations', 'Personalities'].includes(b.name);
+        
+        // If both are special or neither are special, sort by engagement
+        if (aIsSpecial === bIsSpecial) {
+          return (b.engagement_score || 0) - (a.engagement_score || 0);
+        }
+        
+        // If only one is special, check if it has significant engagement (>10)
+        if (aIsSpecial && (a.engagement_score || 0) < 10) return 1; // Move to end
+        if (bIsSpecial && (b.engagement_score || 0) < 10) return -1; // Move to end
+        
+        // Otherwise sort by engagement
+        return (b.engagement_score || 0) - (a.engagement_score || 0);
+      });
+
+      console.log('Categories with counts and engagement:', sortedCategories);
+      setCategories(sortedCategories);
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -86,7 +128,7 @@ const Dashboard = () => {
       <div className="mb-6 md:mb-8">
         <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-3">Welcome to COZI</h1>
         <p className="text-lg md:text-xl text-muted-foreground">
-          Connect, discuss, and engage with political communities
+          For a Free, Fair & Open Public Sphere
         </p>
       </div>
 
