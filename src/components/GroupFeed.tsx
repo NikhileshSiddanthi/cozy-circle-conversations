@@ -103,11 +103,20 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
       
-      const postsWithProfiles = data.map(post => ({
-        ...post,
-        poll_options: Array.isArray(post.poll_options) ? post.poll_options : [],
-        profiles: profileMap.get(post.user_id) || null
-      })) as Post[];
+      const postsWithProfiles = data.map(post => {
+        const profile = profileMap.get(post.user_id) || null;
+        // Create a fallback display name if profile exists but display_name is null
+        let displayName = profile?.display_name;
+        if (!displayName && profile) {
+          displayName = `User ${post.user_id.slice(-4)}`; // Use last 4 chars of user ID as fallback
+        }
+        
+        return {
+          ...post,
+          poll_options: Array.isArray(post.poll_options) ? post.poll_options : [],
+          profiles: profile ? { ...profile, display_name: displayName } : null
+        };
+      }) as Post[];
 
       setPosts(postsWithProfiles);
     }

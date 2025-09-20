@@ -220,7 +220,7 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm">
-              {comment.profiles?.display_name || "Anonymous"}
+              {comment.profiles?.display_name || "User"}
             </span>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />

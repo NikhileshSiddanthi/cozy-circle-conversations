@@ -435,7 +435,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
             </Avatar>
             <div>
               <p className="font-medium">
-                {post.profiles?.display_name || "Anonymous"}
+                {post.profiles?.display_name || "User"}
               </p>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Calendar className="h-3 w-3" />
