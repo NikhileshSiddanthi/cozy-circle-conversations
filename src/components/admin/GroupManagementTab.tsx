@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Users, CheckCircle, XCircle, CheckCircle2, Clock, Eye } from 'lucide-react';
 import { AdminEmptyState } from './AdminEmptyState';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -12,7 +14,7 @@ interface Group {
   id: string;
   name: string;
   description: string;
-  category_id: string;
+  category_id: string | null;
   type: string;
   is_public: boolean;
   is_approved: boolean;
@@ -20,14 +22,21 @@ interface Group {
   created_at: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface GroupManagementTabProps {
   pendingGroups: Group[];
-  onApproveGroup: (groupId: string) => void;
+  categories: Category[];
+  onApproveGroup: (groupId: string, categoryId: string) => void;
   onRejectGroup: (groupId: string) => void;
 }
 
 export const GroupManagementTab: React.FC<GroupManagementTabProps> = ({
   pendingGroups,
+  categories,
   onApproveGroup,
   onRejectGroup
 }) => {
@@ -38,13 +47,25 @@ export const GroupManagementTab: React.FC<GroupManagementTabProps> = ({
     groupName?: string;
   }>({ open: false, type: 'approve', groupId: '' });
 
+  const [approvalModal, setApprovalModal] = useState<{
+    open: boolean;
+    groupId: string;
+    groupName: string;
+    selectedCategoryId: string;
+  }>({ open: false, groupId: '', groupName: '', selectedCategoryId: '' });
+
   const handleConfirm = () => {
-    if (confirmModal.type === 'approve') {
-      onApproveGroup(confirmModal.groupId);
-    } else {
+    if (confirmModal.type === 'reject') {
       onRejectGroup(confirmModal.groupId);
     }
     setConfirmModal({ open: false, type: 'approve', groupId: '' });
+  };
+
+  const handleApproval = () => {
+    if (approvalModal.selectedCategoryId) {
+      onApproveGroup(approvalModal.groupId, approvalModal.selectedCategoryId);
+      setApprovalModal({ open: false, groupId: '', groupName: '', selectedCategoryId: '' });
+    }
   };
 
   if (pendingGroups.length === 0) {
@@ -126,11 +147,11 @@ export const GroupManagementTab: React.FC<GroupManagementTabProps> = ({
                         <Button
                           size="sm"
                           variant="default"
-                          onClick={() => setConfirmModal({
+                          onClick={() => setApprovalModal({
                             open: true,
-                            type: 'approve',
                             groupId: group.id,
-                            groupName: group.name
+                            groupName: group.name,
+                            selectedCategoryId: group.category_id || ''
                           })}
                           className="bg-green-600 hover:bg-green-700"
                         >
@@ -171,15 +192,59 @@ export const GroupManagementTab: React.FC<GroupManagementTabProps> = ({
       <ConfirmationModal
         open={confirmModal.open}
         onOpenChange={(open) => setConfirmModal(prev => ({ ...prev, open }))}
-        title={confirmModal.type === 'approve' ? 'Approve Group Suggestion' : 'Reject Group Suggestion'}
-        description={confirmModal.type === 'approve' 
-          ? `Are you sure you want to approve the group "${confirmModal.groupName}"? This will make it available for users to join.`
-          : `Are you sure you want to reject the group "${confirmModal.groupName}"? This action cannot be undone and will permanently remove the suggestion.`
+        title={confirmModal.type === 'reject' ? 'Reject Group Suggestion' : ''}
+        description={confirmModal.type === 'reject' 
+          ? `Are you sure you want to reject the group "${confirmModal.groupName}"? This action cannot be undone and will permanently remove the suggestion.`
+          : ''
         }
-        confirmLabel={confirmModal.type === 'approve' ? 'Approve Group' : 'Reject Group'}
-        variant={confirmModal.type === 'reject' ? 'destructive' : 'default'}
+        confirmLabel={'Reject Group'}
+        variant={'destructive'}
         onConfirm={handleConfirm}
       />
+
+      <Dialog open={approvalModal.open} onOpenChange={(open) => setApprovalModal(prev => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Group: {approvalModal.groupName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Assign Category</label>
+              <Select
+                value={approvalModal.selectedCategoryId}
+                onValueChange={(value) => setApprovalModal(prev => ({ ...prev, selectedCategoryId: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a category for this group" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setApprovalModal({ open: false, groupId: '', groupName: '', selectedCategoryId: '' })}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleApproval}
+                disabled={!approvalModal.selectedCategoryId}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+              >
+                Approve Group
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

@@ -287,18 +287,21 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleApproveGroup = async (groupId: string) => {
+  const handleApproveGroup = async (groupId: string, categoryId: string) => {
     try {
       const { error } = await supabase
         .from('groups')
-        .update({ is_approved: true })
+        .update({ 
+          is_approved: true,
+          category_id: categoryId
+        })
         .eq('id', groupId);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Group approved successfully",
+        description: "Group approved and category assigned successfully",
       });
       
       fetchData();
@@ -553,6 +556,7 @@ const AdminDashboard = () => {
           <TabsContent value="groups">
             <GroupManagementTab
               pendingGroups={pendingGroups}
+              categories={categories}
               onApproveGroup={handleApproveGroup}
               onRejectGroup={handleRejectGroup}
             />

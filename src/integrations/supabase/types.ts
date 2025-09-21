@@ -197,7 +197,7 @@ export type Database = {
       }
       groups: {
         Row: {
-          category_id: string
+          category_id: string | null
           created_at: string
           creator_id: string
           description: string | null
@@ -210,7 +210,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          category_id: string
+          category_id?: string | null
           created_at?: string
           creator_id: string
           description?: string | null
@@ -223,7 +223,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          category_id?: string
+          category_id?: string | null
           created_at?: string
           creator_id?: string
           description?: string | null
