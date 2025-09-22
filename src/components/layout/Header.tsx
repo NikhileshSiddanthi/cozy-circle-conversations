@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Home, Grid3X3, Newspaper, Settings, LogOut, User, Menu, Search } from 'lucide-react';
 import { useState } from 'react';
+import { VisitorCounter } from '@/components/VisitorCounter';
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -83,8 +84,12 @@ export const Header = () => {
           ))}
         </div>
 
-        {/* Right: Search + Notifications + Profile */}
+        {/* Right: Visitor Stats + Search + Notifications + Profile */}
         <div className="flex items-center gap-2 md:gap-3">
+          {/* Visitor Counter - Hidden on very small screens */}
+          <div className="hidden md:block">
+            <VisitorCounter />
+          </div>
           {/* Mobile Search Button - Shows only on mobile when search is hidden */}
           <Sheet>
             <SheetTrigger asChild>

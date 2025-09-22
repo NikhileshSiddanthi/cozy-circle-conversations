@@ -778,6 +778,30 @@ export type Database = {
         }
         Relationships: []
       }
+      visitor_stats: {
+        Row: {
+          created_at: string
+          id: string
+          total_visits: number
+          unique_visitors: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          total_visits?: number
+          unique_visitors?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          total_visits?: number
+          unique_visitors?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -799,6 +823,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_visitor_count: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       is_group_admin_or_moderator: {
         Args: { _group_id: string; _user_id: string }
