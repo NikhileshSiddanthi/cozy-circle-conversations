@@ -86,10 +86,8 @@ export const Header = () => {
 
         {/* Right: Visitor Stats + Search + Notifications + Profile */}
         <div className="flex items-center gap-2 md:gap-3">
-          {/* Visitor Counter - Hidden on very small screens */}
-          <div className="hidden md:block">
-            <VisitorCounter />
-          </div>
+          {/* Visitor Counter - Now visible on all screen sizes */}
+          <VisitorCounter />
           {/* Mobile Search Button - Shows only on mobile when search is hidden */}
           <Sheet>
             <SheetTrigger asChild>
