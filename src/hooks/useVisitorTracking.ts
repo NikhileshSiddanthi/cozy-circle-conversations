@@ -3,31 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { useRealtimeUpdates } from './useRealtimeUpdates';
 
 interface VisitorStats {
-  totalVisits: number;
-  liveUsers: number;
+  total_visits: number;
+  unique_visitors: number;
+  updated_at: string;
 }
 
 export const useVisitorTracking = () => {
   const [stats, setStats] = useState<VisitorStats>({
-    totalVisits: 0,
-    liveUsers: 0
+    total_visits: 0,
+    unique_visitors: 0,
+    updated_at: new Date().toISOString()
   });
-
-  // Track visitor count from database
-  useEffect(() => {
-    const fetchVisitorStats = async () => {
-      const { data } = await supabase
-        .from('visitor_stats')
-        .select('total_visits')
-        .single();
-      
-      if (data) {
-        setStats(prev => ({ ...prev, totalVisits: data.total_visits }));
-      }
-    };
-
-    fetchVisitorStats();
-  }, []);
+  const [liveUsers, setLiveUsers] = useState(0);
+  const [isTracked, setIsTracked] = useState(false);
 
   // Track live users using Supabase presence
   useEffect(() => {
@@ -35,56 +23,106 @@ export const useVisitorTracking = () => {
     
     channel
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const liveUserCount = Object.keys(state).length;
-        setStats(prev => ({ ...prev, liveUsers: liveUserCount }));
+        const newState = channel.presenceState();
+        const users = Object.keys(newState).length;
+        setLiveUsers(users);
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        setStats(prev => ({ ...prev, liveUsers: prev.liveUsers + newPresences.length }));
+        const newState = channel.presenceState();
+        const users = Object.keys(newState).length;
+        setLiveUsers(users);
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        setStats(prev => ({ ...prev, liveUsers: Math.max(0, prev.liveUsers - leftPresences.length) }));
+        const newState = channel.presenceState();
+        const users = Object.keys(newState).length;
+        setLiveUsers(users);
       })
-      .subscribe();
-
-    // Track this user as online
-    const trackPresence = async () => {
-      await channel.track({
-        user_id: crypto.randomUUID(),
-        online_at: new Date().toISOString(),
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          const presenceTrackStatus = await channel.track({
+            user_id: Math.random().toString(36).substring(7),
+            online_at: new Date().toISOString(),
+          });
+        }
       });
-    };
-
-    trackPresence();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
 
-  // Listen to visitor stats updates
+  // Fetch initial visitor stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('visitor_stats')
+          .select('*')
+          .single();
+
+        if (error) {
+          console.error('Error fetching visitor stats:', error);
+          return;
+        }
+
+        if (data) {
+          setStats({
+            total_visits: data.total_visits,
+            unique_visitors: data.unique_visitors,
+            updated_at: data.updated_at
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching visitor stats:', error);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  // Track visitor on mount (only once per session)
+  useEffect(() => {
+    const trackVisitor = async () => {
+      if (isTracked) return;
+
+      try {
+        const { error } = await supabase.rpc('increment_visitor_count');
+        
+        if (error) {
+          console.error('Error tracking visitor:', error);
+          return;
+        }
+
+        setIsTracked(true);
+      } catch (error) {
+        console.error('Error tracking visitor:', error);
+      }
+    };
+
+    // Delay tracking by 2 seconds to ensure real engagement
+    const timer = setTimeout(trackVisitor, 2000);
+    return () => clearTimeout(timer);
+  }, [isTracked]);
+
+  // Listen for real-time updates to visitor stats
   useRealtimeUpdates({
     table: 'visitor_stats',
     event: 'UPDATE',
     onUpdate: (payload) => {
       if (payload.new) {
-        setStats(prev => ({ ...prev, totalVisits: payload.new.total_visits }));
+        setStats({
+          total_visits: payload.new.total_visits,
+          unique_visitors: payload.new.unique_visitors,
+          updated_at: payload.new.updated_at
+        });
       }
     }
   });
 
-  // Increment visitor count on mount
-  useEffect(() => {
-    const incrementVisit = async () => {
-      try {
-        await supabase.rpc('increment_visitor_count');
-      } catch (error) {
-        console.error('Error tracking visit:', error);
-      }
-    };
-
-    incrementVisit();
-  }, []);
-
-  return stats;
+  return {
+    totalVisitors: stats.total_visits,
+    uniqueVisitors: stats.unique_visitors,
+    liveUsers,
+    lastUpdated: stats.updated_at
+  };
 };
