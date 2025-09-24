@@ -523,7 +523,10 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowEditModal(true)}
+                onClick={() => {
+                  console.log('Edit button clicked for post:', post.id);
+                  setShowEditModal(true);
+                }}
                 className="opacity-0 group-hover:opacity-100 transition-opacity ml-2"
               >
                 <Edit3 className="h-4 w-4" />
@@ -576,7 +579,10 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
               postId={post.id}
               postTitle={post.title}
               isAuthor={user?.id === post.user_id}
-              onEdit={() => setShowEditModal(true)}
+              onEdit={() => {
+                console.log('Edit from menu clicked for post:', post.id);
+                setShowEditModal(true);
+              }}
               onDelete={onUpdate}
             />
           </div>
