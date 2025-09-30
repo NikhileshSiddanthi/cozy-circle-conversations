@@ -23,6 +23,8 @@ import { Home, Grid3X3, Newspaper, Settings, LogOut, User, Menu, Search, Plus } 
 import { useState } from 'react';
 import { VisitorCounter } from '@/components/VisitorCounter';
 import { CreatePostButton } from '@/components/CreatePostButton';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { AccentColorPicker } from '@/components/AccentColorPicker';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { PostComposer } from '@/components/PostComposer';
 import { useToast } from '@/hooks/use-toast';
@@ -208,6 +210,12 @@ export const Header = () => {
                 </div>
               </SheetContent>
             </Sheet>
+
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
+            {/* Accent Color Picker */}
+            <AccentColorPicker />
 
             {/* Notifications */}
             <NotificationBell />

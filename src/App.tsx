@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/components/ToastProvider";
 import { Header } from "@/components/Header";
 import { ContextBar } from "@/components/ContextBar";
+import { ThemeInitializer } from "@/components/ThemeInitializer";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -27,6 +28,7 @@ const App = () => (
     <AuthProvider>
       <ToastProvider>
         <TooltipProvider>
+          <ThemeInitializer />
           <Toaster />
           <Sonner />
           <div className="min-h-screen bg-background">

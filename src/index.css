@@ -7,77 +7,96 @@ All colors MUST be HSL.
 */
 
 @layer base {
+  /* Smooth theme transitions */
+  * {
+    transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease;
+  }
+
   :root {
-    /* Eventually-inspired Minimal Dark theme */
-    --background: 0 0% 7%;
-    --foreground: 0 0% 95%;
+    /* Light theme - Clean & Bright */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
 
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 95%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
 
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
 
     /* Primary: Vibrant Teal Accent */
     --primary: 174 72% 56%;
-    --primary-foreground: 0 0% 10%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Subtle Gray */
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 95%;
+    /* Secondary: Light Gray */
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 10%;
 
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 40%;
 
     /* Accent: Bright Teal */
     --accent: 174 72% 56%;
-    --accent-foreground: 0 0% 10%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 63% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
     --ring: 174 72% 56%;
 
     --radius: 0.5rem;
 
-    /* Minimal gradients with dark overlays */
+    /* Light gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(174 72% 56%), hsl(180 77% 50%));
+    --gradient-overlay: linear-gradient(135deg, hsl(0 0% 100% / 0.8), hsl(0 0% 100% / 0.6));
+    --gradient-bg: linear-gradient(180deg, hsl(0 0% 98%), hsl(0 0% 95%));
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 174 72% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 94%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 88%;
+    --sidebar-ring: 174 72% 56%;
+  }
+
+  .dark,
+  [data-theme="dark"] {
+    /* Dark theme - Minimal & Elegant */
+    --background: 0 0% 7%;
+    --foreground: 0 0% 95%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 174 72% 56%;
+    --primary-foreground: 0 0% 10%;
+
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 95%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 174 72% 56%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 174 72% 56%;
+
     --gradient-primary: linear-gradient(135deg, hsl(174 72% 56%), hsl(180 77% 50%));
     --gradient-overlay: linear-gradient(135deg, hsl(0 0% 0% / 0.7), hsl(0 0% 0% / 0.5));
     --gradient-bg: linear-gradient(180deg, hsl(0 0% 7%), hsl(0 0% 10%));
 
-    --sidebar-background: 0 0% 8%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 174 72% 56%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 174 72% 56%;
-  }
-
-  .dark {
-    /* Dark mode - same as light for consistent minimal look */
-    --background: 0 0% 7%;
-    --foreground: 0 0% 95%;
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 174 72% 56%;
-    --primary-foreground: 0 0% 10%;
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 174 72% 56%;
-    --accent-foreground: 0 0% 10%;
-    --destructive: 0 63% 50%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 174 72% 56%;
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 174 72% 56%;
