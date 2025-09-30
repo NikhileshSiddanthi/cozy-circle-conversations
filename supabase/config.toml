@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.generate-icon]
 verify_jwt = false
+
+[functions.generate-category-image]
+verify_jwt = false

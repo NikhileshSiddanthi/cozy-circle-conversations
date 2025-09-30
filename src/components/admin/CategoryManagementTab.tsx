@@ -133,8 +133,8 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
   const handleRegenerateAllIcons = async () => {
     setRegeneratingIcons(true);
     toast({
-      title: "Regenerating Icons",
-      description: `Processing ${categories.length} categories...`,
+      title: "Generating Images",
+      description: `Processing ${categories.length} categories with AI...`,
     });
 
     let successCount = 0;
@@ -142,24 +142,28 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
 
     for (const category of categories) {
       try {
-        const { data, error } = await supabase.functions.invoke('generate-icon', {
-          body: { name: category.name, type: 'category' }
+        const { data, error } = await supabase.functions.invoke('generate-category-image', {
+          body: { 
+            name: category.name, 
+            description: category.description,
+            type: 'category' 
+          }
         });
 
         if (error) {
-          console.error(`Error generating icon for ${category.name}:`, error);
+          console.error(`Error generating image for ${category.name}:`, error);
           errorCount++;
           continue;
         }
 
-        if (data?.icon) {
+        if (data?.image_url) {
           const { error: updateError } = await supabase
             .from('categories')
-            .update({ icon: data.icon })
+            .update({ image_url: data.image_url })
             .eq('id', category.id);
 
           if (updateError) {
-            console.error(`Error updating icon for ${category.name}:`, updateError);
+            console.error(`Error updating image for ${category.name}:`, updateError);
             errorCount++;
           } else {
             successCount++;
@@ -175,8 +179,8 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
     
     if (successCount > 0) {
       toast({
-        title: "Icons Regenerated",
-        description: `Successfully updated ${successCount} category icons${errorCount > 0 ? `. ${errorCount} failed.` : '.'}`,
+        title: "Images Generated",
+        description: `Successfully generated ${successCount} category images${errorCount > 0 ? `. ${errorCount} failed.` : '.'}`,
       });
       // Refresh the page to show new icons
       window.location.reload();
@@ -207,7 +211,7 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
                   className="gap-2"
                 >
                   <RefreshCw className={`h-4 w-4 ${regeneratingIcons ? 'animate-spin' : ''}`} />
-                  {regeneratingIcons ? 'Regenerating...' : 'Regenerate All Icons'}
+                  {regeneratingIcons ? 'Generating...' : 'Generate All Images'}
                 </Button>
               )}
               <Button onClick={() => setShowForm(!showForm)}>

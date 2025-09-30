@@ -21,6 +21,7 @@ interface Category {
   description: string;
   icon: string;
   color_class: string;
+  image_url?: string | null;
 }
 
 interface Group {
@@ -28,6 +29,7 @@ interface Group {
   name: string;
   description: string;
   icon?: string;
+  image_url?: string | null;
   member_count: number;
   type: string;
   is_public: boolean;
@@ -76,7 +78,7 @@ const CategoryPage = () => {
       console.log('Fetching groups for category:', categoryId);
       const { data, error } = await supabase
         .from('groups')
-        .select('id, name, description, icon, member_count, type, is_public, created_at')
+        .select('id, name, description, icon, image_url, member_count, type, is_public, created_at')
         .eq('category_id', categoryId)
         .eq('is_approved', true)
         .order('created_at', { ascending: false });

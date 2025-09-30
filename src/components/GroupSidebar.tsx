@@ -8,6 +8,7 @@ import { Users, Settings, UserPlus, Eye, Lock, Calendar, MessageSquare, ChevronD
 import { useAuth } from '@/contexts/AuthContext';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { getIcon } from '@/lib/iconMap';
+import OptimizedImage from '@/components/OptimizedImage';
 
 interface GroupSidebarProps {
   groupId: string;
@@ -19,6 +20,7 @@ interface GroupInfo {
   name: string;
   description: string;
   icon?: string;
+  image_url?: string | null;
   is_public: boolean;
   member_count: number;
   created_at: string;
@@ -50,6 +52,7 @@ export const GroupSidebar = ({ groupId, className = '' }: GroupSidebarProps) => 
           name,
           description,
           icon,
+          image_url,
           is_public,
           member_count,
           created_at,
@@ -134,7 +137,15 @@ export const GroupSidebar = ({ groupId, className = '' }: GroupSidebarProps) => 
           <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
-                <GroupIcon className="h-5 w-5" />
+                {groupInfo.image_url ? (
+                  <OptimizedImage
+                    src={groupInfo.image_url}
+                    alt={groupInfo.name}
+                    className="h-5 w-5 rounded object-cover"
+                  />
+                ) : (
+                  <GroupIcon className="h-5 w-5" />
+                )}
                 {groupInfo.name}
               </CardTitle>
               <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />

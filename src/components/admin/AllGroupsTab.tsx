@@ -53,8 +53,8 @@ export const AllGroupsTab: React.FC = () => {
   const handleRegenerateAllIcons = async () => {
     setRegeneratingIcons(true);
     toast({
-      title: "Regenerating Icons",
-      description: `Processing ${groups.length} groups...`,
+      title: "Generating Images",
+      description: `Processing ${groups.length} groups with AI...`,
     });
 
     let successCount = 0;
@@ -62,20 +62,24 @@ export const AllGroupsTab: React.FC = () => {
 
     for (const group of groups) {
       try {
-        const { data, error } = await supabase.functions.invoke('generate-icon', {
-          body: { name: group.name, type: 'group' }
+        const { data, error } = await supabase.functions.invoke('generate-category-image', {
+          body: { 
+            name: group.name, 
+            description: group.description,
+            type: 'group' 
+          }
         });
 
         if (error) {
-          console.error(`Error generating icon for ${group.name}:`, error);
+          console.error(`Error generating image for ${group.name}:`, error);
           errorCount++;
           continue;
         }
 
-        if (data?.icon) {
+        if (data?.image_url) {
           await supabase
             .from('groups')
-            .update({ icon: data.icon })
+            .update({ image_url: data.image_url })
             .eq('id', group.id);
           successCount++;
         }
@@ -88,9 +92,12 @@ export const AllGroupsTab: React.FC = () => {
     setRegeneratingIcons(false);
     
     toast({
-      title: "Icons Generated",
-      description: `Successfully generated ${successCount} group icons${errorCount > 0 ? `. ${errorCount} failed.` : '.'}`,
+      title: "Images Generated",
+      description: `Successfully generated ${successCount} group images${errorCount > 0 ? `. ${errorCount} failed.` : '.'}`,
     });
+
+    // Refresh groups
+    fetchGroups();
   };
 
   const getTypeColor = (type: string) => {
@@ -134,7 +141,7 @@ export const AllGroupsTab: React.FC = () => {
             className="gap-2"
           >
             <RefreshCw className={`h-4 w-4 ${regeneratingIcons ? 'animate-spin' : ''}`} />
-            {regeneratingIcons ? 'Regenerating...' : 'Regenerate All Icons'}
+            {regeneratingIcons ? 'Generating...' : 'Generate All Images'}
           </Button>
         </div>
       </CardHeader>

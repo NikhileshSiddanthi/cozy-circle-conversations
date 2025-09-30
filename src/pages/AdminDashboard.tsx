@@ -182,11 +182,32 @@ const AdminDashboard = () => {
 
   const handleCreateCategory = async (formData: { name: string; description: string; icon: string; color_class: string }) => {
     try {
-      const { error } = await supabase
+      const { data: newCategory, error } = await supabase
         .from('categories')
-        .insert([formData]);
+        .insert([formData])
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Generate AI image in background
+      if (newCategory) {
+        supabase.functions.invoke('generate-category-image', {
+          body: { 
+            name: formData.name, 
+            description: formData.description,
+            type: 'category' 
+          }
+        }).then(({ data, error: imgError }) => {
+          if (!imgError && data?.image_url) {
+            supabase
+              .from('categories')
+              .update({ image_url: data.image_url })
+              .eq('id', newCategory.id)
+              .then(() => fetchData());
+          }
+        });
+      }
 
       toast({
         title: "Success",
@@ -290,6 +311,13 @@ const AdminDashboard = () => {
 
   const handleApproveGroup = async (groupId: string, categoryId: string) => {
     try {
+      // Get group details first
+      const { data: group } = await supabase
+        .from('groups')
+        .select('name, description')
+        .eq('id', groupId)
+        .single();
+
       const { error } = await supabase
         .from('groups')
         .update({ 
@@ -299,6 +327,25 @@ const AdminDashboard = () => {
         .eq('id', groupId);
 
       if (error) throw error;
+
+      // Generate AI image in background
+      if (group) {
+        supabase.functions.invoke('generate-category-image', {
+          body: { 
+            name: group.name, 
+            description: group.description,
+            type: 'group' 
+          }
+        }).then(({ data, error: imgError }) => {
+          if (!imgError && data?.image_url) {
+            supabase
+              .from('groups')
+              .update({ image_url: data.image_url })
+              .eq('id', groupId)
+              .then(() => fetchData());
+          }
+        });
+      }
 
       toast({
         title: "Success",

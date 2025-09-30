@@ -23,6 +23,7 @@ import { SuggestGroupModal } from '@/components/SuggestGroupModal';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getIcon } from '@/lib/iconMap';
+import OptimizedImage from '@/components/OptimizedImage';
 
 export const LeftSidebar = () => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ export const LeftSidebar = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const { open } = useSidebar();
-  const [userGroups, setUserGroups] = useState<{id: string; name: string; is_public: boolean; icon?: string}[]>([]);
+  const [userGroups, setUserGroups] = useState<{id: string; name: string; is_public: boolean; icon?: string; image_url?: string | null}[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
@@ -48,7 +49,7 @@ export const LeftSidebar = () => {
         .from('group_members')
         .select(`
           group_id,
-          groups!inner(id, name, is_public, is_approved, icon)
+          groups!inner(id, name, is_public, is_approved, icon, image_url)
         `)
         .eq('user_id', user.id)
         .eq('status', 'approved')
@@ -58,7 +59,8 @@ export const LeftSidebar = () => {
         id: item.groups.id,
         name: item.groups.name,
         is_public: item.groups.is_public,
-        icon: item.groups.icon
+        icon: item.groups.icon,
+        image_url: item.groups.image_url
       })) || [];
 
       setUserGroups(groups);
@@ -127,7 +129,15 @@ export const LeftSidebar = () => {
                         isActive={location.pathname === `/group/${group.id}`}
                         onClick={() => navigate(`/group/${group.id}`)}
                       >
-                        <GroupIcon />
+                        {group.image_url ? (
+                          <OptimizedImage
+                            src={group.image_url}
+                            alt={group.name}
+                            className="h-4 w-4 rounded object-cover"
+                          />
+                        ) : (
+                          <GroupIcon />
+                        )}
                         <span className="truncate">{group.name}</span>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Eye, Lock, Users as UsersIcon } from 'lucide-react';
 import { getIcon } from '@/lib/iconMap';
+import OptimizedImage from '@/components/OptimizedImage';
 
 // Accent colors for group cards
 const accentColors = [
@@ -20,6 +21,7 @@ interface Group {
   name: string;
   description: string;
   icon?: string;
+  image_url?: string | null;
   member_count: number;
   type: string;
   is_public: boolean;
@@ -44,11 +46,19 @@ export const GroupCard: React.FC<GroupCardProps> = ({ group, onClick }) => {
       onClick={onClick}
     >
       <CardHeader className="pb-3">
-        {/* Icon and Badges */}
+        {/* Image or Icon and Badges */}
         <div className="flex items-start justify-between mb-3">
-          <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${accentColor} transition-transform group-hover:scale-110`}>
-            <Icon className="h-6 w-6" />
-          </div>
+          {group.image_url ? (
+            <OptimizedImage
+              src={group.image_url}
+              alt={group.name}
+              className="w-12 h-12 rounded-full object-cover transition-transform group-hover:scale-110"
+            />
+          ) : (
+            <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${accentColor} transition-transform group-hover:scale-110`}>
+              <Icon className="h-6 w-6" />
+            </div>
+          )}
           <div className="flex gap-2">
             <Badge variant={group.is_public ? 'default' : 'secondary'} className="gap-1 text-xs">
               {group.is_public ? (

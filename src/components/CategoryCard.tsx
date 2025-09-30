@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { getIcon } from '@/lib/iconMap';
+import OptimizedImage from '@/components/OptimizedImage';
 
 // Modern accent colors for icon badges
 const accentColors = [
@@ -21,6 +22,7 @@ interface Category {
   icon: string;
   color_class: string;
   group_count?: number;
+  image_url?: string | null;
 }
 
 interface CategoryCardProps {
@@ -41,11 +43,19 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick })
       onClick={onClick}
     >
       <CardHeader className="pb-4 pt-6">
-        {/* Icon Badge */}
+        {/* Image or Icon Badge */}
         <div className="flex items-start justify-between mb-3">
-          <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${accentColor} transition-transform group-hover:scale-110`}>
-            <Icon className="h-6 w-6" />
-          </div>
+          {category.image_url ? (
+            <OptimizedImage
+              src={category.image_url}
+              alt={category.name}
+              className="w-12 h-12 rounded-full object-cover transition-transform group-hover:scale-110"
+            />
+          ) : (
+            <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${accentColor} transition-transform group-hover:scale-110`}>
+              <Icon className="h-6 w-6" />
+            </div>
+          )}
           {/* Group Count Badge */}
           <Badge 
             variant="outline" 
