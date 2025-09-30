@@ -201,6 +201,7 @@ export type Database = {
           created_at: string
           creator_id: string
           description: string | null
+          icon: string | null
           id: string
           is_approved: boolean
           is_public: boolean
@@ -214,6 +215,7 @@ export type Database = {
           created_at?: string
           creator_id: string
           description?: string | null
+          icon?: string | null
           id?: string
           is_approved?: boolean
           is_public?: boolean
@@ -227,6 +229,7 @@ export type Database = {
           created_at?: string
           creator_id?: string
           description?: string | null
+          icon?: string | null
           id?: string
           is_approved?: boolean
           is_public?: boolean

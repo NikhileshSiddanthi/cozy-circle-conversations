@@ -10,11 +10,12 @@ import { AdminEmptyState } from './AdminEmptyState';
 interface Group {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   type: string;
   is_public: boolean;
   is_approved: boolean;
   member_count: number;
+  icon: string;
 }
 
 export const AllGroupsTab: React.FC = () => {
@@ -31,7 +32,7 @@ export const AllGroupsTab: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('groups')
-        .select('id, name, description, type, is_public, is_approved, member_count')
+        .select('id, name, description, type, is_public, is_approved, member_count, icon')
         .eq('is_approved', true)
         .order('name');
 
@@ -72,9 +73,10 @@ export const AllGroupsTab: React.FC = () => {
         }
 
         if (data?.icon) {
-          // Note: Groups don't have an icon column in the schema yet
-          // This would need to be added via migration if we want to store icons for groups
-          console.log(`Would update ${group.name} with icon: ${data.icon}`);
+          await supabase
+            .from('groups')
+            .update({ icon: data.icon })
+            .eq('id', group.id);
           successCount++;
         }
       } catch (err) {
