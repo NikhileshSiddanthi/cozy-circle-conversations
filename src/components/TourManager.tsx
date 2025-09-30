@@ -74,20 +74,10 @@ export const TourManager: React.FC<TourManagerProps> = ({
     }
   }, [autoStart, forceStart, tourSteps.length]);
 
-  // Handle route changes during tour
+  // Track route changes (but don't pause tour during programmatic navigation)
   useEffect(() => {
     currentRoute.current = location.pathname;
-    
-    if (run && !isNavigating.current) {
-      // Check if we're on the expected route for current step
-      const currentStep = tourSteps[stepIndex];
-      if (currentStep && currentStep.route !== location.pathname) {
-        // User navigated away manually - pause tour
-        console.log('[Tour] User navigated away, pausing tour');
-        setRun(false);
-      }
-    }
-  }, [location.pathname, run, stepIndex, tourSteps]);
+  }, [location.pathname]);
 
   // Handle tour completion
   const handleComplete = useCallback(() => {
