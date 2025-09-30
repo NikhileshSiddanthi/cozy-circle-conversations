@@ -116,7 +116,7 @@ export class UsernameService {
       // Update profile (will fail if username constraint violated)
       const { error } = await supabase
         .from('profiles')
-        .update({ username })
+        .update({ username } as any)
         .eq('user_id', userId);
 
       if (error) {
