@@ -195,9 +195,9 @@ export const LinkPreviewCard = ({
 
           {/* Expanded Embed */}
           {isExpanded && preview.embed_html && (
-            <div className="w-full">
+            <div className="w-full -mx-4">
               <div 
-                className="aspect-video rounded overflow-hidden"
+                className="aspect-video rounded overflow-hidden w-full"
                 dangerouslySetInnerHTML={{ __html: preview.embed_html }}
               />
             </div>

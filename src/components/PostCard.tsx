@@ -522,7 +522,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
                 />
               )}
             </div>
-            {user && (user.id === post.user_id || userRole === 'admin') && (
+            {user && user.id === post.user_id && (
               <Button
                 variant="ghost"
                 size="sm"

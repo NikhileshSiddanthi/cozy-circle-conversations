@@ -45,7 +45,7 @@ export const EditablePost: React.FC<EditablePostProps> = ({
       ) : []
   });
 
-  const canEdit = (isAuthor || isAdmin) && user;
+  const canEdit = isAuthor && user;
   
   // Debug logging
   console.log('EditablePost Debug:', {

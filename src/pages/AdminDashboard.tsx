@@ -225,14 +225,12 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleUpdateCategory = async (formData: { name: string; description: string; icon: string; color_class: string }) => {
-    if (!editingCategory) return;
-    
+  const handleUpdateCategory = async (categoryId: string, formData: { name: string; description: string; icon: string; color_class: string }) => {
     try {
       const { error } = await supabase
         .from('categories')
         .update(formData)
-        .eq('id', editingCategory.id);
+        .eq('id', categoryId);
 
       if (error) throw error;
 
@@ -241,8 +239,6 @@ const AdminDashboard = () => {
         description: "Category updated successfully",
       });
       
-      setEditingCategory(null);
-      setCategoryForm({ name: '', description: '', icon: 'Flag', color_class: 'bg-primary' });
       fetchData();
     } catch (error) {
       console.error('Error updating category:', error);

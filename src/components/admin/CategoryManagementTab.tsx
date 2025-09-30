@@ -59,7 +59,7 @@ interface CategoryForm {
 interface CategoryManagementTabProps {
   categories: Category[];
   onCreateCategory: (form: CategoryForm) => Promise<void>;
-  onUpdateCategory: (form: CategoryForm) => Promise<void>;
+  onUpdateCategory: (categoryId: string, form: CategoryForm) => Promise<void>;
   onDeleteCategory: (categoryId: string) => Promise<void>;
 }
 
@@ -101,7 +101,7 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
 
   const handleSubmit = async () => {
     if (editingCategory) {
-      await onUpdateCategory(categoryForm);
+      await onUpdateCategory(editingCategory.id, categoryForm);
     } else {
       await onCreateCategory(categoryForm);
     }

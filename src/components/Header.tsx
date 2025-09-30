@@ -66,7 +66,7 @@ export const Header = () => {
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/', key: 'home' },
-    { icon: Grid3X3, label: 'Groups', path: '/', key: 'groups' },
+    { icon: Grid3X3, label: 'Groups', path: '/groups', key: 'groups' },
     { icon: Newspaper, label: 'News', path: '/news', key: 'news' },
   ];
 
