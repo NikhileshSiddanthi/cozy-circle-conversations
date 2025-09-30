@@ -27,6 +27,8 @@ import { MultiImageCarousel, CarouselImage } from "./MultiImageCarousel";
 import { ImageLightbox } from "./ImageLightbox";
 import { ClickableContent } from "./ClickableContent";
 import { useUserRole } from "@/hooks/useUserRole";
+import { ReportPostModal } from "./ReportPostModal";
+import { Flag } from "lucide-react";
 
 interface Post {
   id: string;
@@ -84,6 +86,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
   const [pollResults, setPollResults] = useState<number[]>([]);
   const [showComments, setShowComments] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxImages, setLightboxImages] = useState<CarouselImage[]>([]);
   const [lightboxInitialIndex, setLightboxInitialIndex] = useState(0);
@@ -575,6 +578,16 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
             <Button variant="ghost" size="sm" onClick={handleShare}>
               <Share2 className="h-4 w-4" />
             </Button>
+            {user && user.id !== post.user_id && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowReportModal(true)}
+                aria-label="Report post"
+              >
+                <Flag className="h-4 w-4" />
+              </Button>
+            )}
             <PostActionsMenu
               postId={post.id}
               postTitle={post.title}
@@ -613,6 +626,12 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
         initialIndex={lightboxInitialIndex}
         showDownloadButton={true}
         showShareButton={true}
+      />
+
+      <ReportPostModal
+        postId={post.id}
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
       />
     </Card>
   );

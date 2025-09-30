@@ -15,3 +15,9 @@ verify_jwt = false
 
 [functions.generate-category-image]
 verify_jwt = false
+
+[functions.publish-post]
+
+[functions.create-report]
+
+[functions.edit-post]

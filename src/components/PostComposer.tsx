@@ -440,8 +440,12 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
             </Tabs>
 
             <div className="flex justify-between items-center pt-4 border-t">
-              <div className="text-sm text-muted-foreground">
-                Media: {formData.mediaFiles.length}/10 • Links: {linkPreviews.length}
+              <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                <div>Media: {formData.mediaFiles.length}/10 • Links: {linkPreviews.length}</div>
+                <div className={characterCount > MAX_CHARACTERS ? 'text-destructive font-medium' : ''}>
+                  Characters: {characterCount}/{MAX_CHARACTERS}
+                  {isOverLimit && ' (Content too long)'}
+                </div>
               </div>
               
               <div className="flex gap-2">
