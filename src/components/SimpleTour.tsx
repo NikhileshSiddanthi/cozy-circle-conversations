@@ -18,40 +18,40 @@ const TOUR_STEPS: TourStep[] = [
     id: 'welcome',
     route: '/',
     title: 'Welcome to COZI!',
-    description: "Let's take a quick tour. This will show you the key features.",
+    description: "Let's take a quick tour of the key features.",
     position: 'center',
-  },
-  {
-    id: 'categories',
-    route: '/',
-    target: '[data-tour="categories-grid"]',
-    title: 'Browse Categories',
-    description: 'Categories contain groups. Click any category to explore its groups.',
-    position: 'bottom',
-  },
-  {
-    id: 'groups',
-    route: '/groups',
-    target: '[data-tour="groups-page"]',
-    title: 'All Groups',
-    description: 'Browse all groups here. Join groups to participate in discussions.',
-    position: 'top',
   },
   {
     id: 'create',
     route: '/',
     target: '[data-tour="create-post-button"]',
     title: 'Create Posts',
-    description: 'Share your thoughts by creating posts with text, images, videos, and polls.',
+    description: 'Click here to share your thoughts with text, images, videos, and polls.',
+    position: 'bottom',
+  },
+  {
+    id: 'categories',
+    route: '/',
+    target: '[data-tour="categories-grid"] > div:first-child',
+    title: 'Browse Categories',
+    description: 'Explore categories to find groups that interest you.',
+    position: 'bottom',
+  },
+  {
+    id: 'groups',
+    route: '/',
+    target: 'a[href="/groups"]',
+    title: 'All Groups',
+    description: 'View all available groups across all categories.',
     position: 'bottom',
   },
   {
     id: 'news',
-    route: '/news',
-    target: '[data-tour="news-feed"]',
+    route: '/',
+    target: 'a[href="/news"]',
     title: 'News & Updates',
-    description: 'Stay informed with curated news organized by category.',
-    position: 'top',
+    description: 'Stay informed with curated news articles.',
+    position: 'bottom',
   },
 ];
 
@@ -80,15 +80,9 @@ export const SimpleTour: React.FC<{ autoStart?: boolean; onComplete?: () => void
     const step = TOUR_STEPS[stepIndex];
     if (!step) return;
 
-    // Navigate to route
-    if (step.route !== location.pathname) {
-      navigate(step.route);
-      await new Promise(resolve => setTimeout(resolve, 800));
-    }
-
     // Find target element
     if (step.target) {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 200));
       const element = document.querySelector(step.target);
       if (element) {
         const rect = element.getBoundingClientRect();
@@ -148,13 +142,13 @@ export const SimpleTour: React.FC<{ autoStart?: boolean; onComplete?: () => void
       {/* Highlight for target element */}
       {targetPosition && (
         <div
-          className="fixed z-[9999] border-4 border-primary rounded-lg pointer-events-none"
+          className="fixed z-[9999] border-4 border-primary rounded-full pointer-events-none animate-pulse"
           style={{
-            top: targetPosition.top - 8,
-            left: targetPosition.left - 8,
-            width: targetPosition.width + 16,
-            height: 'auto',
-            minHeight: '50px',
+            top: targetPosition.top - 12,
+            left: targetPosition.left - 12,
+            width: targetPosition.width + 24,
+            height: targetPosition.width + 24,
+            boxShadow: '0 0 0 4px hsl(var(--primary) / 0.2)',
           }}
         />
       )}
