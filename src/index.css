@@ -8,44 +8,45 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Political theme colors - Blues, Reds, Whites */
-    --background: 220 15% 97%;
-    --foreground: 222.2 84% 4.9%;
+    /* Modern Professional theme - Deep Blues, Purples, Teals */
+    --background: 220 20% 98%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222 47% 11%;
 
-    /* Primary: Political Blue */
-    --primary: 215 84% 45%;
+    /* Primary: Deep Professional Blue */
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Political Red */
-    --secondary: 355 85% 55%;
+    /* Secondary: Modern Purple */
+    --secondary: 262 83% 58%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 13% 93%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    /* Accent: Patriotic Red */
-    --accent: 355 85% 55%;
+    /* Accent: Vibrant Teal */
+    --accent: 180 77% 50%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 88%;
+    --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 215 84% 45%;
+    --ring: 217 91% 60%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    /* Gradients for modern design */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(215 80% 60%));
-    --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(355 80% 65%));
-    --gradient-bg: linear-gradient(135deg, hsl(var(--background)), hsl(220 20% 98%));
+    /* Modern gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(262 83% 58%));
+    --gradient-secondary: linear-gradient(135deg, hsl(262 83% 58%), hsl(180 77% 50%));
+    --gradient-bg: linear-gradient(135deg, hsl(217 91% 60% / 0.05), hsl(262 83% 58% / 0.05));
+    --gradient-hero: linear-gradient(135deg, hsl(217 91% 60% / 0.95), hsl(262 83% 58% / 0.85));
 
     --sidebar-background: 0 0% 98%;
 
@@ -65,37 +66,37 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Dark mode political theme */
-    --background: 222.2 84% 4.9%;
+    /* Dark mode professional theme */
+    --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 13%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 13%;
     --popover-foreground: 210 40% 98%;
 
-    /* Primary: Lighter Political Blue for dark mode */
-    --primary: 215 70% 60%;
-    --primary-foreground: 222.2 84% 4.9%;
+    /* Primary: Bright Professional Blue for dark mode */
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Lighter Political Red for dark mode */
-    --secondary: 355 70% 65%;
-    --secondary-foreground: 222.2 84% 4.9%;
+    /* Secondary: Bright Purple for dark mode */
+    --secondary: 262 83% 58%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    /* Accent: Political Red for dark mode */
-    --accent: 355 70% 65%;
-    --accent-foreground: 222.2 84% 4.9%;
+    /* Accent: Bright Teal for dark mode */
+    --accent: 180 77% 50%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 217 91% 60%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

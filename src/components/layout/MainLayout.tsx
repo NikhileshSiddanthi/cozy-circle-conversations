@@ -3,6 +3,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import { Header } from './Header';
 import { LeftSidebar } from './LeftSidebar';
 import { RightSidebar } from './RightSidebar';
+import wallpaper from '@/assets/professional-wallpaper.jpg';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -21,8 +22,18 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 }) => {
   return (
     <SidebarProvider defaultOpen>
-      <div className="min-h-screen flex w-full bg-background">
-        <div className="flex w-full">
+      <div className="min-h-screen flex w-full relative">
+        {/* Professional Wallpaper Background */}
+        <div 
+          className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url(${wallpaper})`,
+          }}
+        >
+          <div className="absolute inset-0 bg-background/95 backdrop-blur-sm" />
+        </div>
+
+        <div className="flex w-full relative z-10">
           {/* Left Sidebar */}
           <LeftSidebar />
           
