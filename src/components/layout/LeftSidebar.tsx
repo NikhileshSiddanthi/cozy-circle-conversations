@@ -14,17 +14,15 @@ import {
 } from '@/components/ui/sidebar';
 import { 
   Home, 
-  Users, 
-  Settings, 
-  Plus, 
   TrendingUp,
-  Calendar,
+  Settings,
   BookOpen
 } from 'lucide-react';
 import { CreatePostButton } from '@/components/CreatePostButton';
 import { SuggestGroupModal } from '@/components/SuggestGroupModal';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getIcon } from '@/lib/iconMap';
 
 export const LeftSidebar = () => {
   const navigate = useNavigate();
@@ -32,7 +30,7 @@ export const LeftSidebar = () => {
   const { user } = useAuth();
   const { isAdmin } = useUserRole();
   const { open } = useSidebar();
-  const [userGroups, setUserGroups] = useState<{id: string; name: string; is_public: boolean}[]>([]);
+  const [userGroups, setUserGroups] = useState<{id: string; name: string; is_public: boolean; icon?: string}[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
@@ -50,7 +48,7 @@ export const LeftSidebar = () => {
         .from('group_members')
         .select(`
           group_id,
-          groups!inner(id, name, is_public, is_approved)
+          groups!inner(id, name, is_public, is_approved, icon)
         `)
         .eq('user_id', user.id)
         .eq('status', 'approved')
@@ -59,7 +57,8 @@ export const LeftSidebar = () => {
       const groups = data?.map(item => ({
         id: item.groups.id,
         name: item.groups.name,
-        is_public: item.groups.is_public
+        is_public: item.groups.is_public,
+        icon: item.groups.icon
       })) || [];
 
       setUserGroups(groups);
@@ -120,17 +119,20 @@ export const LeftSidebar = () => {
             <SidebarGroupLabel>My Groups</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {userGroups.slice(0, 5).map((group) => (
-                  <SidebarMenuItem key={group.id}>
-                    <SidebarMenuButton
-                      isActive={location.pathname === `/group/${group.id}`}
-                      onClick={() => navigate(`/group/${group.id}`)}
-                    >
-                      <Users />
-                      <span className="truncate">{group.name}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {userGroups.slice(0, 5).map((group) => {
+                  const GroupIcon = getIcon(group.icon);
+                  return (
+                    <SidebarMenuItem key={group.id}>
+                      <SidebarMenuButton
+                        isActive={location.pathname === `/group/${group.id}`}
+                        onClick={() => navigate(`/group/${group.id}`)}
+                      >
+                        <GroupIcon />
+                        <span className="truncate">{group.name}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

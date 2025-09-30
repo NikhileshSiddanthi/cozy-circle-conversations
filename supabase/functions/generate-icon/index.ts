@@ -19,9 +19,9 @@ const availableIcons = [
   "Music", "Navigation", "Package", "Palette", "Paperclip", "Pencil", "Percent",
   "Play", "Plus", "Printer", "Radio", "RefreshCw", "Repeat", "Save", "Search",
   "Send", "Server", "Share", "ShoppingCart", "Shuffle", "Sidebar", "Smartphone",
-  "Smile", "Speaker", "Square", "Sun", "Thermometer", "ThumbsUp", "Tool",
-  "Trash", "TrendingDown", "Triangle", "Tv", "Type", "Umbrella", "Upload",
-  "Video", "Volume", "Watch", "Wifi", "Wind", "XCircle", "Youtube"
+  "Smile", "Speaker", "Square", "Sun", "Thermometer", "ThumbsUp", "Trash",
+  "TrendingDown", "Triangle", "Tv", "Type", "Umbrella", "Upload", "Video",
+  "Volume", "Watch", "Wifi", "Wind", "XCircle", "Youtube", "Vote", "Gavel"
 ];
 
 serve(async (req) => {
@@ -39,62 +39,60 @@ serve(async (req) => {
       );
     }
 
-    const HF_TOKEN = Deno.env.get("HUGGING_FACE_ACCESS_TOKEN");
-    if (!HF_TOKEN) {
-      console.error("HUGGING_FACE_ACCESS_TOKEN not configured");
-      return new Response(
-        JSON.stringify({ error: "AI service not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Call Hugging Face Inference API with Mistral
-    const response = await fetch("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${HF_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        inputs: `You are an icon suggestion assistant. Given a ${type} name, suggest the most relevant icon from this list. Respond ONLY with the icon name, nothing else.
-
-Available icons: ${availableIcons.join(", ")}
-
-${type} name: "${name}"
-
-Best matching icon:`,
-        parameters: {
-          max_new_tokens: 20,
-          temperature: 0.3,
-          return_full_text: false
-        }
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI API error:", response.status, errorText);
-      
-      // Return a default icon on error
-      return new Response(
-        JSON.stringify({ icon: type === "category" ? "Flag" : "Users" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const data = await response.json();
-    // Hugging Face returns array with generated_text
-    const generatedText = Array.isArray(data) ? data[0]?.generated_text : data.generated_text;
-    const suggestedIcon = generatedText?.trim().split(/[\s\n,]/)[0] || "";
+    // Simple keyword matching for icon selection (reliable and fast)
+    const nameLower = name.toLowerCase();
+    let suggestedIcon = type === "category" ? "Flag" : "Users";
     
-    console.log(`AI suggested: "${suggestedIcon}" for "${name}"`);
+    // Category/Group keyword to icon mapping
+    const keywordMap: Record<string, string> = {
+      // Politics & Government
+      'politic': 'Vote', 'government': 'Building', 'constitution': 'Gavel',
+      'law': 'Scale', 'justice': 'Gavel', 'parliament': 'Building',
+      // Organizations
+      'organization': 'Building', 'institution': 'Building', 'party': 'Users',
+      'committee': 'Users', 'association': 'Users',
+      // International
+      'international': 'Globe', 'global': 'Globe', 'world': 'Globe',
+      'foreign': 'Globe', 'diplomatic': 'Globe',
+      // Economy
+      'economy': 'TrendingUp', 'business': 'Briefcase', 'finance': 'TrendingUp',
+      'trade': 'TrendingUp', 'market': 'BarChart',
+      // Social
+      'social': 'Heart', 'community': 'Users', 'cultural': 'Users',
+      'movement': 'TrendingUp',
+      // Technology
+      'technology': 'Cpu', 'tech': 'Cpu', 'science': 'Lightbulb',
+      'innovation': 'Lightbulb', 'digital': 'Smartphone',
+      // Education
+      'education': 'BookOpen', 'school': 'BookOpen', 'university': 'Award',
+      'academic': 'Award', 'learning': 'BookOpen',
+      // Health
+      'health': 'Heart', 'medical': 'Heart', 'healthcare': 'Heart',
+      // Media
+      'media': 'Tv', 'entertainment': 'Film', 'film': 'Film',
+      'news': 'Newspaper', 'press': 'Newspaper',
+      // Personalities
+      'leader': 'Crown', 'figure': 'Users', 'influencer': 'Star',
+      'personality': 'Star',
+      // General
+      'group': 'Users', 'team': 'Users', 'member': 'Users',
+      'public': 'Eye', 'private': 'Lock', 'security': 'Shield'
+    };
     
+    // Find matching icon based on keywords
+    for (const [keyword, icon] of Object.entries(keywordMap)) {
+      if (nameLower.includes(keyword)) {
+        suggestedIcon = icon;
+        break;
+      }
+    }
+    
+    console.log(`Matched icon for "${name}": ${suggestedIcon}`);
+
     // Validate that the suggested icon is in our list
     const icon = availableIcons.includes(suggestedIcon) 
       ? suggestedIcon 
       : (type === "category" ? "Flag" : "Users");
-
-    console.log(`Generated icon for "${name}": ${icon}`);
 
     return new Response(
       JSON.stringify({ icon }),

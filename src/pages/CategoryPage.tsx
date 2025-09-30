@@ -7,11 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { SuggestGroupModal } from '@/components/SuggestGroupModal';
 import { FloatingNavbar } from '@/components/FloatingNavbar';
+import { GroupCard } from '@/components/GroupCard';
 import { 
   ArrowLeft,
   Users, 
   MessageCircle,
-  TrendingUp,
   Vote
 } from 'lucide-react';
 
@@ -27,6 +27,7 @@ interface Group {
   id: string;
   name: string;
   description: string;
+  icon?: string;
   member_count: number;
   type: string;
   is_public: boolean;
@@ -75,7 +76,7 @@ const CategoryPage = () => {
       console.log('Fetching groups for category:', categoryId);
       const { data, error } = await supabase
         .from('groups')
-        .select('*')
+        .select('id, name, description, icon, member_count, type, is_public, created_at')
         .eq('category_id', categoryId)
         .eq('is_approved', true)
         .order('created_at', { ascending: false });
@@ -197,32 +198,11 @@ const CategoryPage = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {groups.map((group) => (
-                    <Card 
-                      key={group.id} 
-                      className="hover:shadow-lg transition-shadow cursor-pointer"
+                    <GroupCard
+                      key={group.id}
+                      group={group}
                       onClick={() => handleGroupClick(group.id)}
-                    >
-                      <CardHeader>
-                        <CardTitle className="text-lg">{group.name}</CardTitle>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Users className="h-4 w-4" />
-                            {group.member_count} members
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <TrendingUp className="h-4 w-4" />
-                            {group.type.replace("-", " ")}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      {group.description && (
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground">
-                            {group.description}
-                          </p>
-                        </CardContent>
-                      )}
-                    </Card>
+                    />
                   ))}
                 </div>
               )}

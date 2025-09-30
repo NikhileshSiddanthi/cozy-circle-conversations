@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Users, Settings, UserPlus, Eye, Lock, Calendar, MessageSquare } from 'lucide-react';
+import { Users, Settings, UserPlus, Eye, Lock, Calendar, MessageSquare, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown } from 'lucide-react';
+import { getIcon } from '@/lib/iconMap';
 
 interface GroupSidebarProps {
   groupId: string;
@@ -18,6 +18,7 @@ interface GroupInfo {
   id: string;
   name: string;
   description: string;
+  icon?: string;
   is_public: boolean;
   member_count: number;
   created_at: string;
@@ -48,6 +49,7 @@ export const GroupSidebar = ({ groupId, className = '' }: GroupSidebarProps) => 
           id,
           name,
           description,
+          icon,
           is_public,
           member_count,
           created_at,
@@ -123,6 +125,8 @@ export const GroupSidebar = ({ groupId, className = '' }: GroupSidebarProps) => 
     );
   }
 
+  const GroupIcon = getIcon(groupInfo.icon);
+
   return (
     <Card className={`w-72 ${className}`}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -130,8 +134,8 @@ export const GroupSidebar = ({ groupId, className = '' }: GroupSidebarProps) => 
           <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Group Info
+                <GroupIcon className="h-5 w-5" />
+                {groupInfo.name}
               </CardTitle>
               <ChevronDown className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
@@ -140,9 +144,8 @@ export const GroupSidebar = ({ groupId, className = '' }: GroupSidebarProps) => 
         
         <CollapsibleContent>
           <CardContent className="space-y-4">
-            {/* Group Name & Privacy */}
+            {/* Group Privacy & Category */}
             <div>
-              <h3 className="font-semibold text-lg mb-2">{groupInfo.name}</h3>
               <div className="flex items-center gap-2 mb-3">
                 <Badge variant={groupInfo.is_public ? 'default' : 'secondary'} className="gap-1">
                   {groupInfo.is_public ? (

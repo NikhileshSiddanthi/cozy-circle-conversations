@@ -1,30 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Flag, 
-  Building2, 
-  Globe, 
-  Users, 
-  Crown, 
-  Briefcase,
-  TrendingUp,
-  Vote,
-  Gavel,
-  MapPin
-} from 'lucide-react';
-
-const iconMap: { [key: string]: any } = {
-  Flag,
-  Building2,
-  Globe,
-  Users,
-  Crown,
-  TrendingUp,
-  Briefcase,
-  Vote,
-  Gavel,
-  MapPin
-};
+import { getIcon } from '@/lib/iconMap';
 
 // Modern accent colors for icon badges
 const accentColors = [
@@ -53,8 +29,7 @@ interface CategoryCardProps {
 }
 
 export const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick }) => {
-  // Try to get icon from map, fallback to Flag if not found
-  const Icon = iconMap[category.icon as keyof typeof iconMap] || Flag;
+  const Icon = getIcon(category.icon);
   
   // Get consistent accent color based on category ID
   const accentColorIndex = category.id.charCodeAt(0) % accentColors.length;
