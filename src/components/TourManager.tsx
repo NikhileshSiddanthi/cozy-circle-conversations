@@ -30,16 +30,12 @@ export const TourManager: React.FC<TourManagerProps> = ({
   const currentRoute = useRef(location.pathname);
   const navigationRetries = useRef(0);
 
-  // Filter steps based on viewport and auth status
+  // Set steps (no filtering - use all steps for consistency)
   useEffect(() => {
-    const viewportWidth = window.innerWidth;
-    const isAuthenticated = !!user;
-    
-    const filteredSteps = getStepsForViewport(TOUR_STEPS, viewportWidth, isAuthenticated);
-    setTourSteps(filteredSteps);
+    setTourSteps(TOUR_STEPS);
     
     // Convert to Joyride step format
-    const joyrideSteps: Step[] = filteredSteps.map(step => ({
+    const joyrideSteps: Step[] = TOUR_STEPS.map(step => ({
       target: step.target,
       content: step.content,
       title: step.title,
@@ -54,7 +50,7 @@ export const TourManager: React.FC<TourManagerProps> = ({
     }));
     
     setSteps(joyrideSteps);
-  }, [user]);
+  }, []);
 
   // Initialize tour on mount
   useEffect(() => {
