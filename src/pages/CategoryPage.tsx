@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { SuggestGroupModal } from '@/components/SuggestGroupModal';
-
+import { CategoryLiveFeed } from '@/components/CategoryLiveFeed';
 import { GroupCard } from '@/components/GroupCard';
 import { 
   ArrowLeft,
@@ -144,28 +144,27 @@ const CategoryPage = () => {
 
   return (
     <div className="min-h-screen bg-background pt-16">
-      
-      <div className="container mx-auto px-4 py-20">
+      <div className="container mx-auto px-4 py-6">
         {/* Back Button */}
         <Button 
           variant="ghost" 
           onClick={() => navigate('/')}
-          className="mb-6 flex items-center gap-2"
+          className="mb-4 flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Dashboard
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-2 xl:col-span-2">
             {/* Category Header */}
-            <div className="mb-8">
+            <div className="mb-6">
               <h2 className="text-3xl font-bold mb-2">{category.name}</h2>
-              <p className="text-xl text-muted-foreground">
+              <p className="text-lg text-muted-foreground">
                 {category.description}
               </p>
-              <div className="flex items-center gap-4 mt-4">
+              <div className="flex items-center gap-4 mt-3">
                 <Badge variant="secondary">
                   {groups.length} groups
                 </Badge>
@@ -210,9 +209,16 @@ const CategoryPage = () => {
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="space-y-6 sticky top-24">
+          {/* Right Sidebar - Live Feed */}
+          <div className="lg:col-span-1 xl:col-span-1">
+            <div className="sticky top-20">
+              <CategoryLiveFeed categoryId={categoryId!} />
+            </div>
+          </div>
+
+          {/* Far Right Sidebar - Quick Actions */}
+          <div className="hidden xl:block xl:col-span-1">
+            <div className="space-y-6 sticky top-20">
               {/* Quick Actions */}
               <Card>
                 <CardHeader>
