@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      auth_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          metadata: Json | null
+          provider: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          provider?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          provider?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      auth_identities: {
+        Row: {
+          created_at: string
+          email: string | null
+          email_verified: boolean | null
+          id: string
+          provider: string
+          provider_sub: string
+          raw_profile: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          email_verified?: boolean | null
+          id?: string
+          provider: string
+          provider_sub: string
+          raw_profile?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          email_verified?: boolean | null
+          id?: string
+          provider?: string
+          provider_sub?: string
+          raw_profile?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color_class: string | null
@@ -772,6 +841,54 @@ export type Database = {
           },
         ]
       }
+      refresh_tokens: {
+        Row: {
+          expires_at: string
+          id: string
+          issued_at: string
+          previous_token_id: string | null
+          revoked_at: string | null
+          session_id: string
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          expires_at: string
+          id?: string
+          issued_at?: string
+          previous_token_id?: string | null
+          revoked_at?: string | null
+          session_id: string
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          expires_at?: string
+          id?: string
+          issued_at?: string
+          previous_token_id?: string | null
+          revoked_at?: string | null
+          session_id?: string
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refresh_tokens_previous_token_id_fkey"
+            columns: ["previous_token_id"]
+            isOneToOne: false
+            referencedRelation: "refresh_tokens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refresh_tokens_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           created_at: string
@@ -818,6 +935,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          ip_address: unknown | null
+          last_activity_at: string
+          revoked_at: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          ip_address?: unknown | null
+          last_activity_at?: string
+          revoked_at?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: unknown | null
+          last_activity_at?: string
+          revoked_at?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -869,6 +1019,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_refresh_token_replay: {
+        Args: { _token_hash: string; _user_id: string }
+        Returns: boolean
+      }
       cleanup_posts_by_user: {
         Args: { _user_id: string }
         Returns: {
@@ -897,6 +1051,10 @@ export type Database = {
       is_group_member: {
         Args: { _group_id: string; _user_id: string }
         Returns: boolean
+      }
+      revoke_all_user_sessions: {
+        Args: { _user_id: string }
+        Returns: undefined
       }
     }
     Enums: {
