@@ -39,38 +39,35 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured");
+    const HF_TOKEN = Deno.env.get("HUGGING_FACE_ACCESS_TOKEN");
+    if (!HF_TOKEN) {
+      console.error("HUGGING_FACE_ACCESS_TOKEN not configured");
       return new Response(
         JSON.stringify({ error: "AI service not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Call Lovable AI (free Gemini) to get icon suggestion
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Call Hugging Face Inference API with Mistral
+    const response = await fetch("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${HF_TOKEN}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: `You are an icon suggestion assistant. Given a ${type} name, suggest the most relevant icon from the available list. Respond ONLY with the icon name, nothing else.
+        inputs: `You are an icon suggestion assistant. Given a ${type} name, suggest the most relevant icon from this list. Respond ONLY with the icon name, nothing else.
 
 Available icons: ${availableIcons.join(", ")}
 
-Choose the icon that best represents the concept, keywords, or theme of the name provided.`
-          },
-          {
-            role: "user",
-            content: `Suggest an icon for this ${type}: "${name}"`
-          }
-        ],
+${type} name: "${name}"
+
+Best matching icon:`,
+        parameters: {
+          max_new_tokens: 20,
+          temperature: 0.3,
+          return_full_text: false
+        }
       }),
     });
 
@@ -86,7 +83,11 @@ Choose the icon that best represents the concept, keywords, or theme of the name
     }
 
     const data = await response.json();
-    const suggestedIcon = data.choices?.[0]?.message?.content?.trim() || "";
+    // Hugging Face returns array with generated_text
+    const generatedText = Array.isArray(data) ? data[0]?.generated_text : data.generated_text;
+    const suggestedIcon = generatedText?.trim().split(/[\s\n,]/)[0] || "";
+    
+    console.log(`AI suggested: "${suggestedIcon}" for "${name}"`);
     
     // Validate that the suggested icon is in our list
     const icon = availableIcons.includes(suggestedIcon) 
