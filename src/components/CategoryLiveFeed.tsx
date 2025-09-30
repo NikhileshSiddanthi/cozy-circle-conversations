@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,6 +31,8 @@ export const CategoryLiveFeed = ({ categoryId }: CategoryLiveFeedProps) => {
   const navigate = useNavigate();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     fetchRecentPosts();
@@ -55,6 +57,40 @@ export const CategoryLiveFeed = ({ categoryId }: CategoryLiveFeedProps) => {
       supabase.removeChannel(channel);
     };
   }, [categoryId]);
+
+  // Auto-scroll effect
+  useEffect(() => {
+    if (!scrollRef.current || isPaused || posts.length === 0) return;
+
+    const scrollElement = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+    if (!scrollElement) return;
+
+    let scrollInterval: NodeJS.Timeout;
+    let direction = 1; // 1 for down, -1 for up
+
+    const startScrolling = () => {
+      scrollInterval = setInterval(() => {
+        if (isPaused) return;
+
+        const currentScroll = scrollElement.scrollTop;
+        const maxScroll = scrollElement.scrollHeight - scrollElement.clientHeight;
+
+        if (currentScroll >= maxScroll) {
+          direction = -1; // Start scrolling up
+        } else if (currentScroll <= 0) {
+          direction = 1; // Start scrolling down
+        }
+
+        scrollElement.scrollTop += direction * 0.5; // Smooth slow scroll
+      }, 30);
+    };
+
+    startScrolling();
+
+    return () => {
+      if (scrollInterval) clearInterval(scrollInterval);
+    };
+  }, [posts, isPaused]);
 
   const fetchRecentPosts = async () => {
     try {
@@ -130,7 +166,12 @@ export const CategoryLiveFeed = ({ categoryId }: CategoryLiveFeedProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <ScrollArea className="h-[600px]">
+        <ScrollArea 
+          ref={scrollRef}
+          className="h-[600px]"
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+        >
           <div className="space-y-1 px-4 pb-4">
             {posts.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
