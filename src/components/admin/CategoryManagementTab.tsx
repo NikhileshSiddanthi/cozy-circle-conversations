@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, Plus, Edit, Trash2, Flag, Building2, Globe, Users, Crown, TrendingUp, Briefcase, Vote, Gavel, MapPin, FolderOpen, Sparkles } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Flag, Building2, Globe, Users, Crown, TrendingUp, Briefcase, Vote, Gavel, MapPin, FolderOpen, Sparkles, RefreshCw } from 'lucide-react';
 import { AdminEmptyState } from './AdminEmptyState';
 import { ConfirmationModal } from './ConfirmationModal';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useIconGenerator } from '@/hooks/useIconGenerator';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 // Icon mapping for categories
 const iconMap: { [key: string]: any } = {
@@ -67,8 +69,10 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
   onUpdateCategory,
   onDeleteCategory
 }) => {
+  const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [regeneratingIcons, setRegeneratingIcons] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     categoryId: string;
@@ -126,6 +130,65 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
     setConfirmModal({ open: false, categoryId: '', categoryName: '' });
   };
 
+  const handleRegenerateAllIcons = async () => {
+    setRegeneratingIcons(true);
+    toast({
+      title: "Regenerating Icons",
+      description: `Processing ${categories.length} categories...`,
+    });
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const category of categories) {
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-icon', {
+          body: { name: category.name, type: 'category' }
+        });
+
+        if (error) {
+          console.error(`Error generating icon for ${category.name}:`, error);
+          errorCount++;
+          continue;
+        }
+
+        if (data?.icon) {
+          const { error: updateError } = await supabase
+            .from('categories')
+            .update({ icon: data.icon })
+            .eq('id', category.id);
+
+          if (updateError) {
+            console.error(`Error updating icon for ${category.name}:`, updateError);
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        }
+      } catch (err) {
+        console.error(`Error processing ${category.name}:`, err);
+        errorCount++;
+      }
+    }
+
+    setRegeneratingIcons(false);
+    
+    if (successCount > 0) {
+      toast({
+        title: "Icons Regenerated",
+        description: `Successfully updated ${successCount} category icons${errorCount > 0 ? `. ${errorCount} failed.` : '.'}`,
+      });
+      // Refresh the page to show new icons
+      window.location.reload();
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to regenerate icons. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <>
       <Card>
@@ -135,10 +198,23 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
               <Settings className="h-5 w-5" />
               Category Management
             </CardTitle>
-            <Button onClick={() => setShowForm(!showForm)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Category
-            </Button>
+            <div className="flex gap-2">
+              {categories.length > 0 && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleRegenerateAllIcons}
+                  disabled={regeneratingIcons}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${regeneratingIcons ? 'animate-spin' : ''}`} />
+                  {regeneratingIcons ? 'Regenerating...' : 'Regenerate All Icons'}
+                </Button>
+              )}
+              <Button onClick={() => setShowForm(!showForm)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Category
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
