@@ -24,8 +24,8 @@ interface UseAutoLinkPreviewReturn {
   clearAllPreviews: () => void;
 }
 
-// Enhanced URL regex to better detect various URL formats
-const URL_REGEX = /(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&=]*))/gi;
+// Enhanced URL regex to better detect various URL formats including YouTube URLs
+const URL_REGEX = /(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}(?:[-a-zA-Z0-9()@:%_\+.~#?&\/=]*))/gi;
 
 export function useAutoLinkPreview(): UseAutoLinkPreviewReturn {
   const [previews, setPreviews] = useState<LinkPreview[]>([]);
