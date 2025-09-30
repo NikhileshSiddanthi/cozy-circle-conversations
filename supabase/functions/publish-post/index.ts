@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
-import { DOMPurify } from 'https://esm.sh/isomorphic-dompurify@2.19.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,17 +24,24 @@ interface PublishPostResponse {
   postUrl: string;
 }
 
-// Sanitize HTML content to prevent XSS
+// Simple HTML sanitization - removes script tags and dangerous attributes
 const sanitizeHTML = (dirty: string): string => {
-  return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: [
-      'p', 'br', 'strong', 'em', 'u', 's', 'a', 'ul', 'ol', 'li',
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'
-    ],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-    ALLOW_DATA_ATTR: false,
-    ALLOW_UNKNOWN_PROTOCOLS: false,
-  });
+  if (!dirty) return '';
+  
+  // Remove script tags and their content
+  let clean = dirty.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  
+  // Remove on* event handlers
+  clean = clean.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '');
+  clean = clean.replace(/\son\w+\s*=\s*[^\s>]*/gi, '');
+  
+  // Remove javascript: protocols
+  clean = clean.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, '');
+  
+  // Remove data attributes except whitelisted ones
+  clean = clean.replace(/\sdata-(?!lov-id)[a-z-]+\s*=\s*["'][^"']*["']/gi, '');
+  
+  return clean;
 };
 
 Deno.serve(async (req) => {
