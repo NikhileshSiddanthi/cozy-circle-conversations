@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
+import { useIconGenerator } from "@/hooks/useIconGenerator";
+import { Badge } from "@/components/ui/badge";
 
 interface Category {
   id: string;
@@ -33,8 +35,22 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
     categoryId: "",
     type: "topic" as "topic" | "personality" | "institutional",
     isPublic: true,
-    inviteEmails: ""
+    inviteEmails: "",
+    icon: "Users" // Store generated icon
   });
+
+  // Use AI to generate icon suggestion based on group name
+  const { icon: suggestedIcon, loading: generatingIcon } = useIconGenerator(
+    formData.name, 
+    'group'
+  );
+
+  // Auto-update icon when AI suggests a new one
+  useEffect(() => {
+    if (suggestedIcon && formData.name) {
+      setFormData(prev => ({ ...prev, icon: suggestedIcon }));
+    }
+  }, [suggestedIcon, formData.name]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,7 +128,7 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
         description: "Your group suggestion has been sent to administrators for approval.",
       });
 
-      setFormData({ name: "", description: "", categoryId: "", type: "topic", isPublic: true, inviteEmails: "" });
+      setFormData({ name: "", description: "", categoryId: "", type: "topic", isPublic: true, inviteEmails: "", icon: "Users" });
       setOpen(false);
       onSuccess?.();
     } catch (error: any) {
@@ -140,13 +156,27 @@ export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalPr
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Group Name</label>
+            <label className="text-sm font-medium flex items-center gap-2">
+              Group Name
+              {generatingIcon && (
+                <Badge variant="secondary" className="gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  AI Generating Icon...
+                </Badge>
+              )}
+            </label>
             <Input
               placeholder="e.g., Trump Discussion, Prof. Rao Group, YSC School"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
             />
+            {formData.name && (
+              <p className="text-xs text-muted-foreground mt-1">
+                <Sparkles className="h-3 w-3 inline mr-1" />
+                AI will suggest a relevant icon for this group
+              </p>
+            )}
           </div>
 
           <div>

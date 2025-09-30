@@ -53,7 +53,8 @@ interface CategoryCardProps {
 }
 
 export const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick }) => {
-  const Icon = iconMap[category.icon] || Flag;
+  // Try to get icon from map, fallback to Flag if not found
+  const Icon = iconMap[category.icon as keyof typeof iconMap] || Flag;
   
   // Get consistent accent color based on category ID
   const accentColorIndex = category.id.charCodeAt(0) % accentColors.length;

@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings, Plus, Edit, Trash2, Flag, Building2, Globe, Users, Crown, TrendingUp, Briefcase, Vote, Gavel, MapPin, FolderOpen } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Flag, Building2, Globe, Users, Crown, TrendingUp, Briefcase, Vote, Gavel, MapPin, FolderOpen, Sparkles } from 'lucide-react';
 import { AdminEmptyState } from './AdminEmptyState';
 import { ConfirmationModal } from './ConfirmationModal';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { useIconGenerator } from '@/hooks/useIconGenerator';
+import { Badge } from '@/components/ui/badge';
 
 // Icon mapping for categories
 const iconMap: { [key: string]: any } = {
@@ -79,6 +81,19 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
     icon: 'Flag',
     color_class: 'bg-primary'
   });
+
+  // Use AI to generate icon suggestion based on category name
+  const { icon: suggestedIcon, loading: generatingIcon } = useIconGenerator(
+    categoryForm.name, 
+    'category'
+  );
+
+  // Auto-update icon when AI suggests a new one (only if user hasn't manually changed it)
+  useEffect(() => {
+    if (suggestedIcon && !editingCategory && categoryForm.name) {
+      setCategoryForm(prev => ({ ...prev, icon: suggestedIcon }));
+    }
+  }, [suggestedIcon, editingCategory, categoryForm.name]);
 
   const handleSubmit = async () => {
     if (editingCategory) {
@@ -154,7 +169,15 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Icon</Label>
+                    <Label className="flex items-center gap-2">
+                      Icon 
+                      {generatingIcon && (
+                        <Badge variant="secondary" className="gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          AI Generating...
+                        </Badge>
+                      )}
+                    </Label>
                     <Select value={categoryForm.icon} onValueChange={(value) => setCategoryForm({ ...categoryForm, icon: value })}>
                       <SelectTrigger>
                         <SelectValue />
@@ -173,6 +196,12 @@ export const CategoryManagementTab: React.FC<CategoryManagementTabProps> = ({
                         })}
                       </SelectContent>
                     </Select>
+                    {categoryForm.name && !editingCategory && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        <Sparkles className="h-3 w-3 inline mr-1" />
+                        AI will suggest an icon based on the name
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label>Color</Label>

@@ -17,6 +17,7 @@ import NewsPage from "./pages/NewsPage";
 import PostDetailPage from "./pages/PostDetailPage";
 import TrendingTopics from "./pages/TrendingTopics";
 import TestPage from "./pages/TestPage";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -92,6 +93,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <TrendingTopics />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <Profile />
               </ProtectedRoute>
             } 
           />
