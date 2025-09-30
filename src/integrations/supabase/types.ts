@@ -621,9 +621,11 @@ export type Database = {
           created_at: string
           dislike_count: number | null
           edited_at: string | null
+          flagged_at: string | null
           group_id: string
           id: string
           is_edited: boolean | null
+          is_flagged: boolean | null
           is_pinned: boolean | null
           like_count: number | null
           media_thumbnail: string | null
@@ -643,9 +645,11 @@ export type Database = {
           created_at?: string
           dislike_count?: number | null
           edited_at?: string | null
+          flagged_at?: string | null
           group_id: string
           id?: string
           is_edited?: boolean | null
+          is_flagged?: boolean | null
           is_pinned?: boolean | null
           like_count?: number | null
           media_thumbnail?: string | null
@@ -665,9 +669,11 @@ export type Database = {
           created_at?: string
           dislike_count?: number | null
           edited_at?: string | null
+          flagged_at?: string | null
           group_id?: string
           id?: string
           is_edited?: boolean | null
+          is_flagged?: boolean | null
           is_pinned?: boolean | null
           like_count?: number | null
           media_thumbnail?: string | null
@@ -759,6 +765,53 @@ export type Database = {
           },
           {
             foreignKeyName: "reactions_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          id: string
+          post_id: string
+          reason: string
+          reporter_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          post_id: string
+          reason: string
+          reporter_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          id?: string
+          post_id?: string
+          reason?: string
+          reporter_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_post_id_fkey"
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"

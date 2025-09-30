@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+import DOMPurify from 'https://esm.sh/isomorphic-dompurify@2.19.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +24,19 @@ interface PublishPostResponse {
   attachedMediaCount: number;
   postUrl: string;
 }
+
+// Sanitize HTML content to prevent XSS
+const sanitizeHTML = (dirty: string): string => {
+  return DOMPurify.sanitize(dirty, {
+    ALLOWED_TAGS: [
+      'p', 'br', 'strong', 'em', 'u', 's', 'a', 'ul', 'ol', 'li',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'
+    ],
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
+    ALLOW_DATA_ATTR: false,
+    ALLOW_UNKNOWN_PROTOCOLS: false,
+  });
+};
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
@@ -198,12 +212,22 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${draftMedia?.length || 0} media files to attach`);
 
+    // Sanitize content server-side to prevent XSS
+    let sanitizedContent = '';
+    if (draft.content) {
+      sanitizedContent = sanitizeHTML(draft.content);
+      console.log('Content sanitized:', {
+        original_length: draft.content.length,
+        sanitized_length: sanitizedContent.length
+      });
+    }
+
     // Validate draft has content (title OR content OR media)
     const hasTitle = draft.title && draft.title.trim().length > 0;
-    const hasContent = draft.content && draft.content.trim().length > 0;
+    const hasContent = sanitizedContent.trim().length > 0;
     const hasMedia = draftMedia && draftMedia.length > 0;
     
-    console.log('PUB VALIDATE:', { hasTitle, hasContent, hasMedia, title: draft.title, content: draft.content?.length });
+    console.log('PUB VALIDATE:', { hasTitle, hasContent, hasMedia, title: draft.title, content_length: sanitizedContent.length });
     
     if (!hasTitle && !hasContent && !hasMedia) {
       return new Response(
@@ -211,6 +235,20 @@ Deno.serve(async (req) => {
           error: 'Draft must have title, content, or media to publish', 
           code: 'INSUFFICIENT_CONTENT',
           message: 'Draft must have title, content, or media'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Enforce content length limit (5000 chars)
+    if (sanitizedContent.length > 5000) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Content exceeds maximum length of 5000 characters', 
+          code: 'CONTENT_TOO_LONG'
         }),
         { 
           status: 400, 
@@ -241,10 +279,10 @@ Deno.serve(async (req) => {
 
     // Prepare post data for insertion
     const postDataToInsert = {
-      user_id: user.id,
+      user_id: user.id, // Server-side enforcement, cannot be spoofed
       group_id: draft.group_id,
-      title: draft.title && draft.title.trim() ? draft.title.trim() : null,
-      content: draft.content || '',
+      title: draft.title && draft.title.trim() ? draft.title.trim().substring(0, 100) : null, // Enforce 100 char limit
+      content: sanitizedContent || '', // Use sanitized content
       media_type: mediaType,
       media_url: mediaUrl,
       media_thumbnail: mediaThumbnail,
@@ -256,7 +294,7 @@ Deno.serve(async (req) => {
       }
     };
 
-    console.log('INSERT DATA:', JSON.stringify(postDataToInsert, null, 2));
+    console.log('INSERT DATA (sanitized):', JSON.stringify(postDataToInsert, null, 2));
 
     // Begin atomic transaction to create post and attach media
     const { data: postData, error: postError } = await supabaseClient
