@@ -58,6 +58,11 @@ export const TourManager: React.FC<TourManagerProps> = ({
 
   // Initialize tour on mount
   useEffect(() => {
+    // Don't start tour until steps are loaded
+    if (tourSteps.length === 0) {
+      return;
+    }
+
     if (forceStart) {
       startTour(0);
     } else if (autoStart) {
@@ -71,7 +76,7 @@ export const TourManager: React.FC<TourManagerProps> = ({
         setTimeout(() => startTour(startIndex), 1000);
       }
     }
-  }, [autoStart, forceStart]);
+  }, [autoStart, forceStart, tourSteps.length]);
 
   // Handle route changes during tour
   useEffect(() => {
@@ -90,7 +95,7 @@ export const TourManager: React.FC<TourManagerProps> = ({
 
   // Start tour function
   const startTour = useCallback(async (startIndex = 0) => {
-    console.log('[Tour] Starting tour from step:', startIndex);
+    console.log('[Tour] Starting tour from step:', startIndex, 'total steps:', tourSteps.length);
     
     if (tourSteps.length === 0) {
       console.warn('[Tour] No tour steps available');
@@ -101,7 +106,12 @@ export const TourManager: React.FC<TourManagerProps> = ({
     sessionStorage.setItem(TOUR_CONFIG.STORAGE_KEY, String(startIndex));
     
     const currentStep = tourSteps[startIndex];
-    if (!currentStep) return;
+    if (!currentStep) {
+      console.warn('[Tour] Step not found at index:', startIndex);
+      return;
+    }
+    
+    console.log('[Tour] Starting with step:', currentStep.id, 'route:', currentStep.route, 'target:', currentStep.target);
     
     // Navigate to the step's route if needed
     if (currentStep.route !== location.pathname) {
@@ -110,20 +120,28 @@ export const TourManager: React.FC<TourManagerProps> = ({
       navigate(currentStep.route);
       
       // Wait for navigation to complete
-      await waitForNavigation(currentStep.route);
+      const navSuccess = await waitForNavigation(currentStep.route);
       isNavigating.current = false;
+      
+      if (!navSuccess) {
+        console.warn('[Tour] Navigation failed');
+      }
+      
+      // Additional delay after navigation
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
     // Wait for target element to appear
     if (currentStep.target !== 'body') {
       console.log('[Tour] Waiting for target:', currentStep.target);
-      const element = await waitForSelector(currentStep.target);
+      const element = await waitForSelector(currentStep.target, TOUR_CONFIG.WAIT_TIMEOUT_MS);
       
       if (!element) {
         console.warn('[Tour] Target not found, skipping step:', currentStep.id);
         
         if (navigationRetries.current < TOUR_CONFIG.MAX_NAV_RETRIES) {
           navigationRetries.current++;
+          console.log('[Tour] Retrying, attempt:', navigationRetries.current);
           // Retry with next step
           setTimeout(() => startTour(startIndex + 1), 500);
           return;
@@ -131,64 +149,20 @@ export const TourManager: React.FC<TourManagerProps> = ({
           // Skip this step
           navigationRetries.current = 0;
           if (startIndex < tourSteps.length - 1) {
+            console.log('[Tour] Max retries reached, moving to next step');
             setTimeout(() => startTour(startIndex + 1), 500);
             return;
           }
         }
+      } else {
+        console.log('[Tour] Target element found, starting tour');
       }
       
       navigationRetries.current = 0;
     }
     
     // Start the tour
-    setRun(true);
-  }, [navigate, location.pathname, tourSteps]);
-
-  // Handle next step
-  const handleNextStep = useCallback(async (index: number) => {
-    if (index >= tourSteps.length) {
-      // Tour completed
-      handleComplete();
-      return;
-    }
-    
-    setStepIndex(index);
-    sessionStorage.setItem(TOUR_CONFIG.STORAGE_KEY, String(index));
-    
-    const nextStep = tourSteps[index];
-    if (!nextStep) return;
-    
-    // Pause joyride while navigating
-    setRun(false);
-    
-    // Navigate to next route if needed
-    if (nextStep.route !== location.pathname) {
-      console.log('[Tour] Navigating to next step:', nextStep.route);
-      isNavigating.current = true;
-      navigate(nextStep.route);
-      
-      await waitForNavigation(nextStep.route);
-      isNavigating.current = false;
-    }
-    
-    // Wait for target element
-    if (nextStep.target !== 'body') {
-      const element = await waitForSelector(nextStep.target);
-      
-      if (!element) {
-        console.warn('[Tour] Target not found, skipping step:', nextStep.id);
-        // Skip to next step
-        if (index < tourSteps.length - 1) {
-          setTimeout(() => handleNextStep(index + 1), 500);
-          return;
-        } else {
-          handleComplete();
-          return;
-        }
-      }
-    }
-    
-    // Resume tour
+    console.log('[Tour] Setting run=true to start joyride');
     setRun(true);
   }, [navigate, location.pathname, tourSteps]);
 
@@ -201,6 +175,78 @@ export const TourManager: React.FC<TourManagerProps> = ({
     sessionStorage.removeItem(TOUR_CONFIG.STORAGE_KEY);
     onComplete?.();
   }, [onComplete]);
+
+  // Handle next step
+  const handleNextStep = useCallback(async (index: number) => {
+    console.log('[Tour] handleNextStep called with index:', index, 'total steps:', tourSteps.length);
+    
+    if (index >= tourSteps.length) {
+      // Tour completed
+      console.log('[Tour] Reached end of tour');
+      handleComplete();
+      return;
+    }
+    
+    setStepIndex(index);
+    sessionStorage.setItem(TOUR_CONFIG.STORAGE_KEY, String(index));
+    
+    const nextStep = tourSteps[index];
+    if (!nextStep) {
+      console.warn('[Tour] Next step not found at index:', index);
+      return;
+    }
+    
+    console.log('[Tour] Processing step:', nextStep.id, 'route:', nextStep.route, 'target:', nextStep.target);
+    
+    // Pause joyride while navigating
+    setRun(false);
+    
+    // Small delay to ensure joyride pauses properly
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Navigate to next route if needed
+    if (nextStep.route !== location.pathname) {
+      console.log('[Tour] Navigating to next step route:', nextStep.route);
+      isNavigating.current = true;
+      navigate(nextStep.route);
+      
+      const navSuccess = await waitForNavigation(nextStep.route);
+      isNavigating.current = false;
+      
+      if (!navSuccess) {
+        console.warn('[Tour] Navigation failed to:', nextStep.route);
+        // Try to continue anyway
+      }
+      
+      // Additional delay after navigation to let page render
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Wait for target element
+    if (nextStep.target !== 'body') {
+      console.log('[Tour] Waiting for target element:', nextStep.target);
+      const element = await waitForSelector(nextStep.target, TOUR_CONFIG.WAIT_TIMEOUT_MS);
+      
+      if (!element) {
+        console.warn('[Tour] Target not found:', nextStep.target, 'skipping to next step');
+        // Skip to next step
+        if (index < tourSteps.length - 1) {
+          setTimeout(() => handleNextStep(index + 1), 500);
+          return;
+        } else {
+          console.log('[Tour] Was last step, completing tour');
+          handleComplete();
+          return;
+        }
+      } else {
+        console.log('[Tour] Target element found:', nextStep.target);
+      }
+    }
+    
+    // Resume tour
+    console.log('[Tour] Resuming tour at step:', index);
+    setRun(true);
+  }, [navigate, location.pathname, tourSteps, handleComplete]);
 
   // Handle Joyride callbacks
   const handleJoyrideCallback = useCallback((data: CallBackProps) => {
