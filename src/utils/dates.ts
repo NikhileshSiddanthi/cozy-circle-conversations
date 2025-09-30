@@ -1,7 +1,9 @@
 import { formatDistanceToNow, format, parseISO, isValid } from 'date-fns';
+import { toZonedTime, formatInTimeZone } from 'date-fns-tz';
 
 /**
  * Format a timestamp as relative time (e.g. "3 hours ago")
+ * Handles UTC timestamps from database and converts to user's local timezone
  */
 export function formatRelative(timestampIso: string): string {
   try {
@@ -10,7 +12,7 @@ export function formatRelative(timestampIso: string): string {
       return 'Just now';
     }
     
-    // Parse the ISO timestamp
+    // Parse the ISO timestamp - Supabase returns UTC timestamps
     const date = parseISO(timestampIso);
     
     // Validate the parsed date
@@ -19,21 +21,11 @@ export function formatRelative(timestampIso: string): string {
       return 'Just now';
     }
     
-    // Get current time for comparison
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    // Convert to user's local timezone
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const zonedDate = toZonedTime(date, userTimezone);
     
-    // Log if timestamp is in the future (might indicate timezone issues)
-    if (diffMs < 0) {
-      console.warn('formatRelative: Timestamp is in the future', {
-        timestamp: timestampIso,
-        parsed: date.toISOString(),
-        now: now.toISOString(),
-        diffMs
-      });
-    }
-    
-    return formatDistanceToNow(date, { addSuffix: true });
+    return formatDistanceToNow(zonedDate, { addSuffix: true });
   } catch (error) {
     console.error('formatRelative: Error formatting timestamp:', timestampIso, error);
     return 'Just now';
@@ -42,13 +34,14 @@ export function formatRelative(timestampIso: string): string {
 
 /**
  * Format a timestamp as full local time (e.g. "10 Sep 2025, 7:23 AM")
+ * Automatically converts from UTC to user's local timezone
  */
 export function formatFull(timestampIso: string): string {
   try {
     if (!timestampIso) return 'Unknown time';
     
-    const date = parseISO(timestampIso);
-    return format(date, 'dd MMM yyyy, h:mm a');
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return formatInTimeZone(timestampIso, userTimezone, 'dd MMM yyyy, h:mm a');
   } catch (error) {
     console.warn('Invalid timestamp:', timestampIso, error);
     return 'Unknown time';
@@ -56,18 +49,17 @@ export function formatFull(timestampIso: string): string {
 }
 
 /**
- * Format timestamp with timezone info (e.g. "10 Sep 2025, 7:23 AM GMT+5:30")
+ * Format timestamp with timezone info (e.g. "10 Sep 2025, 7:23 AM IST")
+ * Shows the full timestamp in user's local timezone with timezone abbreviation
  */
 export function formatFullWithTz(timestampIso: string): string {
   try {
     if (!timestampIso) return 'Unknown time';
     
-    const date = parseISO(timestampIso);
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const tzOffset = date.getTimezoneOffset();
-    const tzString = `GMT${tzOffset <= 0 ? '+' : '-'}${Math.abs(Math.floor(tzOffset / 60))}:${String(Math.abs(tzOffset % 60)).padStart(2, '0')}`;
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const formattedDate = formatInTimeZone(timestampIso, userTimezone, 'dd MMM yyyy, h:mm a zzz');
     
-    return `${format(date, 'dd MMM yyyy, h:mm a')} ${tzString}`;
+    return formattedDate;
   } catch (error) {
     console.warn('Invalid timestamp:', timestampIso, error);
     return 'Unknown time';
