@@ -1,16 +1,41 @@
-import { formatDistanceToNow, format, parseISO } from 'date-fns';
+import { formatDistanceToNow, format, parseISO, isValid } from 'date-fns';
 
 /**
  * Format a timestamp as relative time (e.g. "3 hours ago")
  */
 export function formatRelative(timestampIso: string): string {
   try {
-    if (!timestampIso) return 'Just now';
+    if (!timestampIso) {
+      console.warn('formatRelative: Empty timestamp provided');
+      return 'Just now';
+    }
     
+    // Parse the ISO timestamp
     const date = parseISO(timestampIso);
+    
+    // Validate the parsed date
+    if (!isValid(date)) {
+      console.warn('formatRelative: Invalid date after parsing:', timestampIso);
+      return 'Just now';
+    }
+    
+    // Get current time for comparison
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    
+    // Log if timestamp is in the future (might indicate timezone issues)
+    if (diffMs < 0) {
+      console.warn('formatRelative: Timestamp is in the future', {
+        timestamp: timestampIso,
+        parsed: date.toISOString(),
+        now: now.toISOString(),
+        diffMs
+      });
+    }
+    
     return formatDistanceToNow(date, { addSuffix: true });
   } catch (error) {
-    console.warn('Invalid timestamp:', timestampIso, error);
+    console.error('formatRelative: Error formatting timestamp:', timestampIso, error);
     return 'Just now';
   }
 }

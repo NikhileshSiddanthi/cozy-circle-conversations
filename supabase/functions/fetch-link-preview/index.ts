@@ -76,26 +76,36 @@ async function validateUrl(url: string): Promise<boolean> {
 }
 
 function extractVideoId(url: string): string | null {
-  // Clean and normalize the URL first
-  const cleanUrl = url.replace(/\s+/g, '').trim();
+  // Clean and normalize the URL first - remove all whitespace and newlines
+  const cleanUrl = url.replace(/[\s\n\r]+/g, '').trim();
   
+  // More robust patterns that handle query parameters and fragments
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
-    // Handle URLs with extra parameters
-    /(?:youtube\.com\/watch\?.*v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+    // youtu.be format with optional query params: https://youtu.be/VIDEO_ID or https://youtu.be/VIDEO_ID?list=...
+    /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&#]|$)/,
+    // youtube.com/watch format: https://youtube.com/watch?v=VIDEO_ID&...
+    /(?:youtube\.com\/watch\?.*[?&]v=)([a-zA-Z0-9_-]{11})(?:[&#]|$)/,
+    // youtube.com/watch format without extra params
+    /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?:[?&#]|$)/,
+    // youtube.com/embed format
+    /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:[?&#]|$)/,
+    // youtube.com/v format
+    /(?:youtube\.com\/v\/)([a-zA-Z0-9_-]{11})(?:[?&#]|$)/,
   ];
 
   for (const pattern of patterns) {
     const match = cleanUrl.match(pattern);
     if (match && match[1]) {
+      const videoId = match[1];
       // YouTube video IDs are exactly 11 characters
-      const videoId = match[1].substring(0, 11);
-      if (videoId.length === 11) {
+      if (videoId.length === 11 && /^[a-zA-Z0-9_-]+$/.test(videoId)) {
+        console.log(`✅ Extracted video ID: ${videoId} from URL: ${cleanUrl}`);
         return videoId;
       }
     }
   }
+  
+  console.warn(`❌ Could not extract video ID from URL: ${cleanUrl}`);
   return null;
 }
 
