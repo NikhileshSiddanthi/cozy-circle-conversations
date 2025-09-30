@@ -4,9 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { CategoryCard } from '@/components/CategoryCard';
-import { TourGuide } from '@/components/TourGuide';
 import { Button } from '@/components/ui/button';
 import { Vote, HelpCircle } from 'lucide-react';
+import { useTour } from '@/hooks/useTour';
 
 interface Category {
   id: string;
@@ -20,9 +20,9 @@ interface Category {
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { start: startTour, reset: resetTour } = useTour();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -125,20 +125,12 @@ const Dashboard = () => {
   }
 
   const handleStartTour = () => {
-    // Clear the completed flag so tour can be shown
-    localStorage.removeItem('cozi_tour_completed');
-    setShowTour(true);
+    resetTour();
+    startTour(0);
   };
 
   return (
     <MainLayout>
-      {/* Tour Guide - Auto-start for new users OR manual trigger */}
-      <TourGuide 
-        autoStart={true} 
-        forceShow={showTour}
-        onComplete={() => setShowTour(false)} 
-      />
-
       {/* Welcome Section */}
       <div className="mb-6 md:mb-8">
         <div className="flex items-center justify-between">
@@ -162,7 +154,10 @@ const Dashboard = () => {
 
       {/* Categories Grid */}
       <div className="mb-6 md:mb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+        <div 
+          data-tour="categories-grid"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6"
+        >
           {categories.map((category) => (
             <CategoryCard
               key={category.id}

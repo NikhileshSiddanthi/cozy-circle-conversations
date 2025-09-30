@@ -153,6 +153,7 @@ export const Header = () => {
           <div className="flex items-center gap-2 md:gap-3">
             {/* Primary CTA - Desktop */}
             <Button
+              data-tour="create-post-button"
               onClick={handleCreateClick}
               className="hidden md:flex gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
               aria-label="Create new post"
@@ -212,18 +213,28 @@ export const Header = () => {
             </Sheet>
 
             {/* Theme Toggle */}
-            <ThemeToggle />
+            <div data-tour="theme-toggle">
+              <ThemeToggle />
+            </div>
 
             {/* Accent Color Picker */}
             <AccentColorPicker />
 
             {/* Notifications */}
-            <NotificationBell />
+            <div data-tour="notification-bell">
+              <NotificationBell />
+            </div>
 
             {/* Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-8 w-8 md:h-10 md:w-10" aria-label="User profile menu">
+                <Button 
+                  data-tour="profile-avatar"
+                  variant="ghost" 
+                  size="icon" 
+                  className="relative h-8 w-8 md:h-10 md:w-10" 
+                  aria-label="User profile menu"
+                >
                   <Avatar className="h-6 w-6 md:h-8 md:w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground text-xs md:text-sm">
                       {user?.email?.charAt(0).toUpperCase()}

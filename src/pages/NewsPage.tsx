@@ -233,7 +233,7 @@ const NewsPage = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div data-tour="news-feed" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Category Tabs */}
         <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="w-full">
           <TabsList className="grid grid-cols-7 w-full mb-8">
