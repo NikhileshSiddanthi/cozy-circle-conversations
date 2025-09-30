@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, Loader2, Vote, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import wallpaper from '@/assets/professional-wallpaper.jpg';
 
 const Auth = () => {
   const { user, signUp, signIn, signInWithGoogle, loading } = useAuth();
@@ -120,8 +121,16 @@ const Auth = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-        <div className="flex items-center gap-3 text-lg">
+      <div className="min-h-screen flex items-center justify-center relative">
+        <div 
+          className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url(${wallpaper})`,
+          }}
+        >
+          <div className="absolute inset-0 bg-background/95 backdrop-blur-sm" />
+        </div>
+        <div className="flex items-center gap-3 text-lg relative z-10">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <span className="text-foreground">Loading...</span>
         </div>
@@ -130,8 +139,16 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      <div 
+        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url(${wallpaper})`,
+        }}
+      >
+        <div className="absolute inset-0 bg-background/95 backdrop-blur-sm" />
+      </div>
+      <div className="w-full max-w-4xl flex items-center justify-center relative z-10">
         {/* Split screen layout */}
         <div className="w-full max-w-md lg:max-w-4xl lg:grid lg:grid-cols-2 lg:gap-8 items-center">
           {/* Left side - Brand message (hidden on mobile) */}
