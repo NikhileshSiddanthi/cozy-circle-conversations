@@ -134,7 +134,7 @@ const Dashboard = () => {
     <MainLayout>
       {/* Tour Guide - Auto-start for new users OR manual trigger */}
       <TourGuide 
-        autoStart={!showTour} 
+        autoStart={true} 
         forceShow={showTour}
         onComplete={() => setShowTour(false)} 
       />

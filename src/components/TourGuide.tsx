@@ -1,46 +1,61 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface TourStep {
   title: string;
   description: string;
-  icon?: React.ReactNode;
+  route?: string;
+  highlightSelector?: string;
 }
 
 const TOUR_STEPS: TourStep[] = [
   {
     title: "Welcome to COZI!",
-    description: "Let's take a quick tour to help you get started with the platform. This will only take a minute."
+    description: "Let's take a quick tour to help you get started with the platform. This will only take a minute.",
+    route: "/"
   },
   {
     title: "Browse Categories",
-    description: "Explore different political categories on the home page. Each category contains multiple groups focused on specific topics."
+    description: "These are the main categories covering different political topics. Each category contains multiple groups focused on specific discussions.",
+    route: "/"
   },
   {
     title: "Join Groups",
-    description: "Click on any category to see its groups. Join groups that interest you to participate in discussions and stay updated."
+    description: "Click on any category to explore its groups. Let me show you an example.",
+    route: "/groups"
   },
   {
     title: "Create Posts",
-    description: "Click the 'Create' button in the header to share your thoughts. You can add text, images, videos, polls, and link previews to your posts."
+    description: "Click the 'Create' button in the header to share your thoughts. You can add text, images, videos, polls, and link previews to your posts.",
+    route: "/"
+  },
+  {
+    title: "AI Post Suggestions",
+    description: "When creating a post, you can use AI-powered suggestions to get ideas, improve your content, or generate engaging posts automatically.",
+    route: "/"
   },
   {
     title: "Engage with Content",
-    description: "React to posts with different emojis, leave comments, and share content. Your interactions help build a vibrant community."
+    description: "React to posts with different emojis, leave comments, and share content. Your interactions help build a vibrant community.",
+    route: "/"
   },
   {
     title: "Stay Informed",
-    description: "Visit the News section to read curated news articles from trusted sources, organized by category for your convenience."
+    description: "Visit the News section to read curated news articles from trusted sources, organized by category for your convenience.",
+    route: "/news"
   },
   {
     title: "Customize Your Experience",
-    description: "Use the theme toggle and accent color picker in the header to personalize the app's appearance to your liking."
+    description: "Use the theme toggle and accent color picker in the header to personalize the app's appearance to your liking.",
+    route: "/"
   },
   {
     title: "Ready to Go!",
-    description: "You're all set! Start exploring, join conversations, and make your voice heard in the COZI community."
+    description: "You're all set! Start exploring, join conversations, and make your voice heard in the COZI community.",
+    route: "/"
   }
 ];
 
@@ -55,21 +70,32 @@ interface TourGuideProps {
 export const TourGuide: React.FC<TourGuideProps> = ({ autoStart = false, forceShow = false, onComplete }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (forceShow) {
       setIsOpen(true);
+      setCurrentStep(0);
     } else if (autoStart) {
       const hasCompletedTour = localStorage.getItem(TOUR_COMPLETED_KEY);
       if (!hasCompletedTour) {
-        setIsOpen(true);
+        // Delay showing tour by 1 second to let page load
+        const timer = setTimeout(() => setIsOpen(true), 1000);
+        return () => clearTimeout(timer);
       }
     }
   }, [autoStart, forceShow]);
 
   const handleNext = () => {
     if (currentStep < TOUR_STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      
+      // Navigate to the route for the next step
+      const nextStepData = TOUR_STEPS[nextStep];
+      if (nextStepData.route) {
+        navigate(nextStepData.route);
+      }
     } else {
       handleComplete();
     }
@@ -77,7 +103,14 @@ export const TourGuide: React.FC<TourGuideProps> = ({ autoStart = false, forceSh
 
   const handlePrevious = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
+      
+      // Navigate to the route for the previous step
+      const prevStepData = TOUR_STEPS[prevStep];
+      if (prevStepData.route) {
+        navigate(prevStepData.route);
+      }
     }
   };
 
