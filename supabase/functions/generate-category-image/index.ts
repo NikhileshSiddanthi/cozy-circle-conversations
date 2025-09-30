@@ -22,55 +22,34 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY not configured");
-    }
-
     // Create contextual prompt based on name and description
     const contextDescription = description ? ` ${description}` : '';
     const prompt = `Create a modern, minimalist icon for a ${type} named "${name}".${contextDescription} Style: clean vector design, solid background color, centered icon, professional look. Use vibrant colors appropriate to the topic. Square aspect ratio, high contrast.`;
 
     console.log("Prompt:", prompt);
 
-    // Call Lovable AI image generation
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        modalities: ['image', 'text']
-      })
+    // Encode prompt for URL
+    const encodedPrompt = encodeURIComponent(prompt);
+    
+    // Call Pollinations AI image generation (no API key needed)
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&enhance=true`;
+    
+    console.log("Generating image from Pollinations AI...");
+    
+    const response = await fetch(pollinationsUrl, {
+      method: 'GET',
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Lovable AI error:', response.status, errorText);
+      console.error('Pollinations AI error:', response.status);
       return new Response(
         JSON.stringify({ error: `AI generation failed: ${response.status}` }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const data = await response.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-    if (!imageUrl) {
-      console.error('No image URL in response:', data);
-      return new Response(
-        JSON.stringify({ error: 'No image generated' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Pollinations returns the image directly, so we use the URL
+    const imageUrl = pollinationsUrl;
 
     console.log(`Successfully generated ${type} image`);
 
