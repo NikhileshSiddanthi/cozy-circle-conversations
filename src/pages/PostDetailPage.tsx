@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { FloatingNavbar } from '@/components/FloatingNavbar';
+
 import { RelatedNewsSidebar } from '@/components/RelatedNewsSidebar';
 import { PostCard } from '@/components/PostCard';
 import { ArrowLeft } from 'lucide-react';
@@ -137,8 +137,7 @@ const PostDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <FloatingNavbar />
+    <div className="min-h-screen bg-background pt-16">
       
       <div className="container mx-auto px-4 py-20">
         {/* Back Button */}
