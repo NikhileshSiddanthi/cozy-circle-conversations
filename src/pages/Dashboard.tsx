@@ -6,7 +6,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { CategoryCard } from '@/components/CategoryCard';
 import { Button } from '@/components/ui/button';
 import { Vote, HelpCircle } from 'lucide-react';
-import { useTour } from '@/hooks/useTour';
+import { useSimpleTour } from '@/components/SimpleTour';
 
 interface Category {
   id: string;
@@ -20,7 +20,7 @@ interface Category {
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { start: startTour, reset: resetTour } = useTour();
+  const { startTour } = useSimpleTour();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -125,8 +125,7 @@ const Dashboard = () => {
   }
 
   const handleStartTour = () => {
-    resetTour();
-    startTour(0);
+    startTour();
   };
 
   return (

@@ -8,7 +8,7 @@ import { ToastProvider } from "@/components/ToastProvider";
 import { Header } from "@/components/Header";
 import { ContextBar } from "@/components/ContextBar";
 import { ThemeInitializer } from "@/components/ThemeInitializer";
-import TourManager from "@/components/TourManager";
+import { SimpleTour } from "@/components/SimpleTour";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -31,7 +31,7 @@ const App = () => (
       <ToastProvider>
         <TooltipProvider>
           <ThemeInitializer />
-          <TourManager autoStart={true} />
+          <SimpleTour autoStart={true} />
           <Toaster />
           <Sonner />
           <div className="min-h-screen bg-background">
