@@ -215,7 +215,8 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
         console.log('Editing post:', editPost.id, 'with data:', {
           title: formData.title.trim(),
           content: formData.content.trim() || "",
-          media_urls: formData.mediaFiles
+          media_urls: formData.mediaFiles,
+          linkPreview: linkPreviews[0] || null
         });
         
         const { error } = await supabase.functions.invoke('edit-post', {
@@ -223,7 +224,8 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
             postId: editPost.id,
             title: formData.title.trim(),
             content: formData.content.trim() || "",
-            media_urls: formData.mediaFiles
+            media_urls: formData.mediaFiles,
+            linkPreview: linkPreviews[0] || null
           }
         });
 

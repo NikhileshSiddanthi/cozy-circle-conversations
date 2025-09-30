@@ -11,6 +11,13 @@ interface EditPostRequest {
   title: string;
   content: string;
   media_urls?: string[];
+  linkPreview?: {
+    url: string;
+    title?: string;
+    description?: string;
+    image_url?: string;
+    provider?: string;
+  } | null;
 }
 
 serve(async (req) => {
@@ -62,7 +69,7 @@ serve(async (req) => {
     }
 
     const body: EditPostRequest = await req.json();
-    const { postId, title, content, media_urls } = body;
+    const { postId, title, content, media_urls, linkPreview } = body;
 
     if (!postId) {
       return new Response(
@@ -77,7 +84,7 @@ serve(async (req) => {
     // Verify post exists and user owns it
     const { data: existingPost, error: postError } = await supabase
       .from('posts')
-      .select('id, user_id')
+      .select('id, user_id, metadata')
       .eq('id', postId)
       .eq('user_id', user.id)
       .single();
@@ -92,6 +99,13 @@ serve(async (req) => {
       );
     }
 
+    // Prepare metadata update
+    const existingMetadata = (existingPost.metadata as any) || {};
+    const updatedMetadata = {
+      ...existingMetadata,
+      link_preview: linkPreview || undefined
+    };
+
     // Update the post
     const { error: updateError } = await supabase
       .from('posts')
@@ -101,6 +115,7 @@ serve(async (req) => {
         media_url: media_urls && media_urls.length > 0 ? 
           (media_urls.length === 1 ? media_urls[0] : JSON.stringify(media_urls)) : null,
         media_type: media_urls && media_urls.length > 0 ? 'image' : null,
+        metadata: updatedMetadata,
         is_edited: true,
         edited_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
