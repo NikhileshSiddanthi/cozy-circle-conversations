@@ -178,31 +178,47 @@ export const TourManager: React.FC<TourManagerProps> = ({
 
   // Handle next step
   const handleNextStep = useCallback(async (index: number) => {
+    console.log('[Tour] ========== handleNextStep START ==========');
     console.log('[Tour] handleNextStep called with index:', index, 'total steps:', tourSteps.length);
+    console.log('[Tour] Current tourSteps:', tourSteps.map(s => ({ id: s.id, route: s.route, target: s.target })));
     
     if (index >= tourSteps.length) {
       // Tour completed
-      console.log('[Tour] Reached end of tour');
+      console.log('[Tour] Reached end of tour - index', index, 'is >= tourSteps.length', tourSteps.length);
       handleComplete();
+      return;
+    }
+    
+    const nextStep = tourSteps[index];
+    if (!nextStep) {
+      console.error('[Tour] CRITICAL: Next step not found at index:', index);
+      console.error('[Tour] tourSteps array:', tourSteps);
+      console.error('[Tour] Attempting to access index', index, 'but array length is', tourSteps.length);
       return;
     }
     
     setStepIndex(index);
     sessionStorage.setItem(TOUR_CONFIG.STORAGE_KEY, String(index));
     
-    const nextStep = tourSteps[index];
-    if (!nextStep) {
-      console.warn('[Tour] Next step not found at index:', index);
-      return;
-    }
-    
-    console.log('[Tour] Processing step:', nextStep.id, 'route:', nextStep.route, 'target:', nextStep.target);
+    console.log('[Tour] Processing step:', {
+      id: nextStep.id,
+      route: nextStep.route,
+      target: nextStep.target,
+      requireAuth: nextStep.requireAuth,
+      desktopOnly: nextStep.desktopOnly,
+      mobileOnly: nextStep.mobileOnly
+    });
     
     // Pause joyride while navigating
+    console.log('[Tour] Pausing joyride (setRun(false))');
     setRun(false);
     
     // Small delay to ensure joyride pauses properly
     await new Promise(resolve => setTimeout(resolve, 100));
+    
+    console.log('[Tour] Current location.pathname:', location.pathname);
+    console.log('[Tour] Next step route:', nextStep.route);
+    console.log('[Tour] Need navigation:', nextStep.route !== location.pathname);
     
     // Navigate to next route if needed
     if (nextStep.route !== location.pathname) {
@@ -253,27 +269,43 @@ export const TourManager: React.FC<TourManagerProps> = ({
     const { status, type, index, action } = data;
     
     console.log('[Tour] Joyride callback:', { status, type, index, action });
+    console.log('[Tour] Current tourSteps.length:', tourSteps.length);
+    console.log('[Tour] Current stepIndex state:', stepIndex);
     
     if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+      console.log('[Tour] Tour finished or skipped');
       handleComplete();
     } else if (type === EVENTS.STEP_AFTER) {
       if (action === ACTIONS.NEXT) {
+        const nextIndex = index + 1;
+        console.log('[Tour] User clicked NEXT, moving to index:', nextIndex);
+        
+        if (nextIndex >= tourSteps.length) {
+          console.log('[Tour] Next index exceeds tourSteps length, completing tour');
+          handleComplete();
+          return;
+        }
+        
         // Move to next step
-        handleNextStep(index + 1);
+        handleNextStep(nextIndex);
       } else if (action === ACTIONS.PREV && index > 0) {
+        console.log('[Tour] User clicked PREV, moving to index:', index - 1);
         // Move to previous step
         handleNextStep(index - 1);
       }
     } else if (type === EVENTS.TARGET_NOT_FOUND) {
-      console.warn('[Tour] Target not found for step:', index);
+      console.warn('[Tour] TARGET_NOT_FOUND event for step:', index);
+      console.warn('[Tour] Step that failed:', tourSteps[index]);
       // Skip to next step
       if (index < tourSteps.length - 1) {
+        console.log('[Tour] Skipping to next step due to target not found');
         setTimeout(() => handleNextStep(index + 1), 500);
       } else {
+        console.log('[Tour] Was last step, completing tour');
         handleComplete();
       }
     }
-  }, [handleComplete, handleNextStep, tourSteps.length]);
+  }, [handleComplete, handleNextStep, tourSteps.length, tourSteps, stepIndex]);
 
   // Expose global API
   useEffect(() => {
