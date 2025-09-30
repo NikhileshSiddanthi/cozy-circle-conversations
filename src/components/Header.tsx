@@ -116,14 +116,14 @@ export const Header = () => {
         Skip to content
       </a>
       
-      <header className="fixed top-0 left-0 right-0 h-16 bg-background/95 backdrop-blur-md border-b border-border z-50" role="navigation" aria-label="Main navigation">
+      <header className="fixed top-0 left-0 right-0 h-16 bg-black/40 backdrop-blur-md border-b border-white/10 z-50" role="navigation" aria-label="Main navigation">
         <div className="flex items-center justify-between h-full px-3 md:px-6">
           {/* Left: Logo */}
           <div className="flex items-center gap-2 md:gap-3">
             <Button
               variant="ghost"
               onClick={() => navigate('/')}
-              className="font-bold text-lg md:text-xl text-primary hover:bg-primary/10 px-2 md:px-3"
+              className="font-bold text-lg md:text-xl text-foreground hover:text-primary px-2 md:px-3"
               aria-label="COZI Home"
             >
               COZI
@@ -135,10 +135,10 @@ export const Header = () => {
             {navItems.map((item) => (
               <Button
                 key={item.key}
-                variant={isActive(item.path) ? 'default' : 'ghost'}
+                variant="ghost"
                 size="sm"
                 onClick={() => navigate(item.path)}
-                className="gap-2"
+                className={`gap-2 ${isActive(item.path) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
                 aria-current={isActive(item.path) ? 'page' : undefined}
               >
                 <item.icon className="h-4 w-4" />

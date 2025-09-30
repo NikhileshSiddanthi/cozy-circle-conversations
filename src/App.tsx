@@ -29,19 +29,24 @@ const App = () => (
           <Toaster />
           <Sonner />
           <div className="min-h-screen bg-background">
-            <Header />
-            <ContextBar />
-            <main id="main-content" className="pt-24">
-              <Routes>
+            <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route 
-            path="/" 
+            path="/*" 
             element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            } 
-          />
+              <>
+                <Header />
+                <ContextBar />
+                <main id="main-content" className="pt-24">
+                  <Routes>
+                    <Route 
+                      path="/" 
+                      element={
+                        <ProtectedRoute>
+                          <Index />
+                        </ProtectedRoute>
+                      } 
+                    />
           <Route 
             path="/admin" 
             element={
@@ -91,17 +96,21 @@ const App = () => (
             } 
           />
           <Route 
-            path="/test" 
-            element={
-              <ProtectedRoute>
-                <TestPage />
-              </ProtectedRoute>
+                      path="/test" 
+                      element={
+                        <ProtectedRoute>
+                          <TestPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </main>
+              </>
             } 
           />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
               </Routes>
-            </main>
           </div>
         </TooltipProvider>
       </ToastProvider>

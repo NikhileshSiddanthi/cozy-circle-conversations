@@ -128,7 +128,7 @@ const Auth = () => {
             backgroundImage: `url(${wallpaper})`,
           }}
         >
-          <div className="absolute inset-0 bg-background/95 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/70" />
         </div>
         <div className="flex items-center gap-3 text-lg relative z-10">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -146,68 +146,28 @@ const Auth = () => {
           backgroundImage: `url(${wallpaper})`,
         }}
       >
-        <div className="absolute inset-0 bg-background/95 backdrop-blur-sm" />
+        <div className="absolute inset-0 bg-black/70" />
       </div>
-      <div className="w-full max-w-4xl flex items-center justify-center relative z-10">
-        {/* Split screen layout */}
-        <div className="w-full max-w-md lg:max-w-4xl lg:grid lg:grid-cols-2 lg:gap-8 items-center">
-          {/* Left side - Brand message (hidden on mobile) */}
-          <div className="hidden lg:flex flex-col justify-center space-y-6 p-8">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Vote className="h-12 w-12 text-primary" />
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  COZI
-                </h1>
-              </div>
-              <h2 className="text-2xl font-semibold text-foreground">
-                Welcome to the Future of Discussion
-              </h2>
-              <p className="text-lg text-muted-foreground leading-relaxed">
-                Engage in thoughtful discussions. Join the COZI Forum where ideas meet democracy.
-              </p>
+      <div className="w-full max-w-xl flex items-center justify-center relative z-10">
+        {/* Centered minimal layout */}
+        <div className="w-full space-y-8">
+          {/* Hero Section */}
+          <div className="text-center space-y-4">
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <Vote className="h-16 w-16 text-primary" />
             </div>
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-primary rounded-full" />
-                <span>Real-time political discussions</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-secondary rounded-full" />
-                <span>Connect with like-minded citizens</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-accent rounded-full" />
-                <span>Stay informed on trending topics</span>
-              </div>
-            </div>
+            <h1 className="text-5xl md:text-6xl font-bold text-foreground tracking-tight">
+              COZI Forum
+            </h1>
+            <p className="text-xl text-muted-foreground max-w-md mx-auto">
+              Join the conversation. Share your thoughts. Connect with your community.
+            </p>
           </div>
 
-          {/* Right side - Auth form */}
-          <div className="w-full animate-slide-up">
-            <Card className="border-0 shadow-xl bg-card/80 backdrop-blur-sm">
-              <CardHeader className="text-center space-y-4 pb-6">
-                {/* Mobile logo */}
-                <div className="lg:hidden flex items-center justify-center gap-2">
-                  <Vote className="h-8 w-8 text-primary" />
-                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                    COZI
-                  </CardTitle>
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-xl font-semibold text-foreground">
-                    {activeTab === 'signin' ? 'Welcome back' : 'Create your account'}
-                  </h3>
-                  <CardDescription className="text-muted-foreground">
-                    {activeTab === 'signin' 
-                      ? 'Sign in to continue to your account' 
-                      : 'Join the conversation today'
-                    }
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-6">
+          {/* Auth Form */}
+          <div className="w-full max-w-md mx-auto">
+            <Card className="border border-border/50 bg-card/40 backdrop-blur-md">
+              <CardContent className="pt-6 space-y-6">
                 {error && (
                   <Alert variant="destructive" className="animate-fade-in">
                     <AlertCircle className="h-4 w-4" />
@@ -216,11 +176,11 @@ const Auth = () => {
                 )}
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 bg-muted/50">
-                    <TabsTrigger value="signin" className="data-[state=active]:bg-background">
+                  <TabsList className="grid w-full grid-cols-2 bg-muted/30">
+                    <TabsTrigger value="signin">
                       Sign In
                     </TabsTrigger>
-                    <TabsTrigger value="signup" className="data-[state=active]:bg-background">
+                    <TabsTrigger value="signup">
                       Sign Up
                     </TabsTrigger>
                   </TabsList>
@@ -284,7 +244,7 @@ const Auth = () => {
 
                       <Button 
                         type="submit" 
-                        className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium transition-all duration-200" 
+                        className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200" 
                         disabled={isLoading}
                       >
                         {isLoading ? (
@@ -381,7 +341,7 @@ const Auth = () => {
 
                       <Button 
                         type="submit" 
-                        className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-medium transition-all duration-200" 
+                        className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-medium transition-all duration-200" 
                         disabled={isLoading}
                       >
                         {isLoading ? (

@@ -23,14 +23,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   return (
     <SidebarProvider defaultOpen>
       <div className="min-h-screen flex w-full relative">
-        {/* Professional Wallpaper Background */}
+        {/* Fullscreen Wallpaper Background with Dark Overlay */}
         <div 
           className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
           style={{
             backgroundImage: `url(${wallpaper})`,
           }}
         >
-          <div className="absolute inset-0 bg-background/95 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/70" />
         </div>
 
         <div className="flex w-full relative z-10">
