@@ -43,7 +43,7 @@ const colorOptions = [
 interface Category {
   id: string;
   name: string;
-  description: string;
+  description?: string | null;
   icon: string;
   color_class: string;
   created_at: string;
@@ -51,7 +51,7 @@ interface Category {
 
 interface CategoryForm {
   name: string;
-  description: string;
+  description?: string;
   icon: string;
   color_class: string;
 }

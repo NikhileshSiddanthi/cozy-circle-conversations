@@ -164,9 +164,6 @@ export const AllGroupsTab: React.FC = () => {
                   {group.description}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground mt-1">
-                {group.member_count} members
-              </p>
             </div>
           </div>
         ))}

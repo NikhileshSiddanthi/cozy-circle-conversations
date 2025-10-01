@@ -198,7 +198,6 @@ export const SearchBar = ({ className }: SearchBarProps) => {
                         {result.category && (
                           <p className="text-xs text-muted-foreground mb-1">
                             {result.category}
-                            {result.memberCount && ` • ${result.memberCount.toLocaleString()} members`}
                           </p>
                         )}
                         {result.excerpt && (

@@ -11,10 +11,11 @@ import { useSimpleTour } from '@/components/SimpleTour';
 interface Category {
   id: string;
   name: string;
-  description: string;
+  description?: string | null;
   icon: string;
   color_class: string;
   group_count?: number;
+  latest_post_at?: string | null;
 }
 
 const Dashboard = () => {
@@ -44,7 +45,7 @@ const Dashboard = () => {
       console.log('Categories fetched:', categoriesData?.length || 0);
       console.log('Categories data:', categoriesData);
 
-      // Fetch group counts and engagement metrics for each category
+      // Fetch group counts and latest post activity for each category
       const categoriesWithCounts = await Promise.all(
         (categoriesData || []).map(async (category) => {
           const { count } = await supabase
@@ -53,56 +54,38 @@ const Dashboard = () => {
             .eq('category_id', category.id)
             .eq('is_approved', true);
 
-          // Calculate engagement score (posts + comments + reactions in last 30 days)
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          
-          const { data: engagementData } = await supabase
+          // Get the latest post timestamp for this category
+          const { data: latestPost } = await supabase
             .from('posts')
             .select(`
-              id,
-              like_count,
-              comment_count,
               created_at,
               groups!inner(category_id)
             `)
             .eq('groups.category_id', category.id)
-            .gte('created_at', thirtyDaysAgo.toISOString());
-
-          let engagementScore = 0;
-          if (engagementData) {
-            engagementScore = engagementData.reduce((sum, post) => {
-              return sum + (post.like_count || 0) + (post.comment_count || 0) + 1; // +1 for the post itself
-            }, 0);
-          }
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
 
           return {
             ...category,
             group_count: count || 0,
-            engagement_score: engagementScore
+            latest_post_at: latestPost?.created_at || null
           };
         })
       );
 
-      // Sort categories by engagement, but keep Organizations and Personalities at end unless they have high engagement
+      // Sort categories by latest post activity (most recent first)
       const sortedCategories = categoriesWithCounts.sort((a, b) => {
-        const aIsSpecial = ['Organizations', 'Personalities'].includes(a.name);
-        const bIsSpecial = ['Organizations', 'Personalities'].includes(b.name);
+        // Categories with no posts go to the end
+        if (!a.latest_post_at && !b.latest_post_at) return 0;
+        if (!a.latest_post_at) return 1;
+        if (!b.latest_post_at) return -1;
         
-        // If both are special or neither are special, sort by engagement
-        if (aIsSpecial === bIsSpecial) {
-          return (b.engagement_score || 0) - (a.engagement_score || 0);
-        }
-        
-        // If only one is special, check if it has significant engagement (>10)
-        if (aIsSpecial && (a.engagement_score || 0) < 10) return 1; // Move to end
-        if (bIsSpecial && (b.engagement_score || 0) < 10) return -1; // Move to end
-        
-        // Otherwise sort by engagement
-        return (b.engagement_score || 0) - (a.engagement_score || 0);
+        // Sort by latest post date (most recent first)
+        return new Date(b.latest_post_at).getTime() - new Date(a.latest_post_at).getTime();
       });
 
-      console.log('Categories with counts and engagement:', sortedCategories);
+      console.log('Categories with counts and latest activity:', sortedCategories);
       setCategories(sortedCategories);
     } catch (error) {
       console.error('Error:', error);

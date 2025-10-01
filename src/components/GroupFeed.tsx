@@ -226,10 +226,6 @@ export const GroupFeed = ({ groupId }: GroupFeedProps) => {
               )}
               <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  {group.member_count} members
-                </div>
-                <div className="flex items-center gap-1">
                   <TrendingUp className="h-4 w-4" />
                   {group.type.replace("-", " ")}
                 </div>

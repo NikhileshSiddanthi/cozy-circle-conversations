@@ -86,10 +86,6 @@ export const GroupCard: React.FC<GroupCardProps> = ({ group, onClick }) => {
         
         {/* Stats */}
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <UsersIcon className="h-3 w-3" />
-            <span>{group.member_count || 0} members</span>
-          </div>
           <Badge variant="outline" className="text-xs capitalize">
             {group.type}
           </Badge>

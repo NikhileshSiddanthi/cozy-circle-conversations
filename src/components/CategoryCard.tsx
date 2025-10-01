@@ -18,7 +18,7 @@ const accentColors = [
 interface Category {
   id: string;
   name: string;
-  description: string;
+  description?: string | null;
   icon: string;
   color_class: string;
   group_count?: number;
@@ -56,13 +56,6 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick })
               <Icon className="h-6 w-6" />
             </div>
           )}
-          {/* Group Count Badge */}
-          <Badge 
-            variant="outline" 
-            className="text-xs px-2 py-1 bg-muted/50 text-muted-foreground border-muted-foreground/20 hover:bg-muted/70 transition-colors"
-          >
-            {category.group_count || 0} groups
-          </Badge>
         </div>
         
         {/* Title */}
@@ -72,10 +65,7 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({ category, onClick })
       </CardHeader>
       
       <CardContent className="pt-0">
-        {/* Description */}
-        <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
-          {category.description}
-        </p>
+        {/* No description displayed */}
       </CardContent>
     </Card>
   );

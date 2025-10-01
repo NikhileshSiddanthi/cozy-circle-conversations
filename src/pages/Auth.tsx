@@ -157,7 +157,7 @@ const Auth = () => {
               <Vote className="h-16 w-16 text-primary" />
             </div>
             <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight">
-              COZI Forum
+              COZI Chat
             </h1>
             <p className="text-xl text-gray-300 max-w-md mx-auto">
               Join the conversation. Share your thoughts. Connect with your community.

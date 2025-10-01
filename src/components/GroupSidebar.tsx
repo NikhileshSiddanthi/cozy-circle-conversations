@@ -185,10 +185,6 @@ export const GroupSidebar = ({ groupId, className = '' }: GroupSidebarProps) => 
             {/* Stats */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Members</span>
-                <span className="font-medium">{groupInfo.member_count || 0}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Created</span>
                 <span className="font-medium">
                   {new Date(groupInfo.created_at).toLocaleDateString()}

@@ -93,9 +93,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                         <p className="font-medium text-sm leading-tight">{group.name}</p>
                         <p className="text-xs text-muted-foreground mb-1">{group.category_name}</p>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {group.member_count.toLocaleString()}
-                          </Badge>
                           {group.trend_change !== 0 && (
                             <div className={`flex items-center gap-1 text-xs ${
                               group.trend_change > 0 ? 'text-green-600' : 'text-red-600'
@@ -140,9 +137,6 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
                         <p className="font-medium text-sm leading-tight">{group.name}</p>
                         <p className="text-xs text-muted-foreground mb-1">{group.category_name}</p>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {group.member_count.toLocaleString()} members
-                          </Badge>
                           <Badge variant="secondary" className="text-xs">
                             {formatDistanceToNow(new Date(group.created_at), { addSuffix: true })}
                           </Badge>
