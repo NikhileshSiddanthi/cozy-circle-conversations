@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,14 +18,14 @@ serve(async (req) => {
 
     console.log('Generating post suggestion for:', { groupName, categoryName, userPrompt });
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini-2025-08-07',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { 
             role: 'system', 
@@ -42,13 +42,12 @@ ${userPrompt ? `User wants to post about: ${userPrompt}` : 'Generate a general e
 Generate a post with a title and content that would spark discussion.` 
           }
         ],
-        max_completion_tokens: 300,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
+      console.error('AI API error:', response.status, errorText);
       return new Response(
         JSON.stringify({ error: 'Failed to generate suggestion' }), 
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
