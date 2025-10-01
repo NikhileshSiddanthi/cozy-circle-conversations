@@ -46,9 +46,11 @@ Generate a post with a title and content that would spark discussion.`;
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
+      console.error('AI API error:', response.status, response.statusText);
+      console.error('Error details:', errorText);
+      console.error('Request URL:', response.url);
       return new Response(
-        JSON.stringify({ error: 'Failed to generate suggestion' }), 
+        JSON.stringify({ error: 'Failed to generate suggestion', details: errorText }), 
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
