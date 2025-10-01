@@ -11,7 +11,8 @@ import {
   Image, 
   Video, 
   Send,
-  Loader2
+  Loader2,
+  Sparkles
 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,6 +46,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
   const [currentTab, setCurrentTab] = useState("text");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mediaUploading, setMediaUploading] = useState(false);
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
   
   const [draftId, setDraftId] = useState<string | null>(null);
   
@@ -171,6 +173,72 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
     const timer = setTimeout(saveDraft, 2000);
     return () => clearTimeout(timer);
   }, [formData.title, formData.content, formData.groupId, saveDraft, draftId, editPost]);
+
+  const handleGetAISuggestion = async () => {
+    if (!user || !formData.groupId) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a group first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsGeneratingSuggestion(true);
+    try {
+      // Get group and category info
+      const { data: group } = await supabase
+        .from('groups')
+        .select('name, description, categories(name)')
+        .eq('id', formData.groupId)
+        .single();
+
+      const { data, error } = await supabase.functions.invoke('suggest-post', {
+        body: { 
+          groupName: group?.name || '',
+          groupDescription: group?.description || '',
+          categoryName: group?.categories?.name || '',
+          userPrompt: formData.content || formData.title || ''
+        }
+      });
+
+      if (error) throw error;
+
+      // Parse the suggestion - it might have a title and content
+      const suggestion = data.suggestion;
+      
+      // Try to split into title and content if formatted
+      const lines = suggestion.split('\n');
+      const firstLine = lines[0].replace(/^(Title:|#)\s*/i, '').trim();
+      const restContent = lines.slice(1).join('\n').trim();
+      
+      if (restContent) {
+        setFormData(prev => ({
+          ...prev,
+          title: firstLine,
+          content: restContent
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          content: suggestion
+        }));
+      }
+
+      toast({
+        title: "AI Suggestion Generated",
+        description: "Review and edit the suggestion before publishing.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate suggestion",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingSuggestion(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -451,6 +519,18 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
               </div>
               
               <div className="flex gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={handleGetAISuggestion}
+                  disabled={isGeneratingSuggestion || !formData.groupId || isSubmitting}
+                >
+                  {isGeneratingSuggestion ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</>
+                  ) : (
+                    <><Sparkles className="h-4 w-4 mr-2" />AI Suggest</>
+                  )}
+                </Button>
                 <Button type="button" variant="ghost" onClick={resetForm} disabled={isSubmitting}>
                   Cancel
                 </Button>

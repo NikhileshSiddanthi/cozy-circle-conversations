@@ -605,6 +605,8 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
           <CommentSection
             postId={post.id}
             onCommentAdded={onUpdate}
+            postTitle={post.title}
+            postContent={post.content}
           />
         )}
       </CardContent>

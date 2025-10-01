@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
-import { Heart, Reply, MessageCircle, Calendar } from "lucide-react";
+import { Heart, Reply, MessageCircle, Calendar, Sparkles, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { EditableComment } from "./EditableComment";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -28,9 +28,13 @@ interface Comment {
 interface CommentSectionProps {
   postId: string;
   onCommentAdded?: () => void;
+  postTitle?: string;
+  postContent?: string;
+  groupName?: string;
+  categoryName?: string;
 }
 
-export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) => {
+export const CommentSection = ({ postId, onCommentAdded, postTitle, postContent, groupName, categoryName }: CommentSectionProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { role: userRole } = useUserRole();
@@ -40,6 +44,7 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
   const [replyContent, setReplyContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [userReactions, setUserReactions] = useState<Record<string, boolean>>({});
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
 
   useEffect(() => {
     fetchComments();
@@ -208,6 +213,38 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
     }
   };
 
+  const handleGetAISuggestion = async () => {
+    if (!user) return;
+    
+    setIsGeneratingSuggestion(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-comment', {
+        body: { 
+          postTitle: postTitle || '',
+          postContent: postContent || '',
+          groupName: groupName || '',
+          categoryName: categoryName || ''
+        }
+      });
+
+      if (error) throw error;
+
+      setNewComment(data.suggestion);
+      toast({
+        title: "AI Suggestion Generated",
+        description: "Review and edit the suggestion before posting.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate suggestion",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingSuggestion(false);
+    }
+  };
+
   const renderComment = (comment: Comment, isReply: boolean = false) => (
     <div key={comment.id} className={`space-y-3 ${isReply ? "ml-8 pl-4 border-l-2 border-muted" : ""}`}>
       <div className="flex items-start gap-3">
@@ -319,9 +356,23 @@ export const CommentSection = ({ postId, onCommentAdded }: CommentSectionProps) 
               <MessageCircle className="h-4 w-4" />
               Be respectful and keep discussions constructive.
             </div>
-            <Button onClick={() => handleAddComment()} disabled={isLoading || !newComment.trim()}>
-              Comment
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleGetAISuggestion}
+                disabled={isGeneratingSuggestion || !postContent}
+              >
+                {isGeneratingSuggestion ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Generating...</>
+                ) : (
+                  <><Sparkles className="h-4 w-4 mr-2" />AI Suggest</>
+                )}
+              </Button>
+              <Button onClick={() => handleAddComment()} disabled={isLoading || !newComment.trim()}>
+                Comment
+              </Button>
+            </div>
           </div>
         </div>
       </div>

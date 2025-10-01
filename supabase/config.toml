@@ -21,3 +21,7 @@ verify_jwt = false
 [functions.create-report]
 
 [functions.edit-post]
+
+[functions.suggest-comment]
+
+[functions.suggest-post]
