@@ -18,9 +18,8 @@ serve(async (req) => {
 
     console.log('Generating comment suggestion for post:', { postTitle, groupName, categoryName });
 
-    const prompt = `You are a helpful assistant that suggests thoughtful, engaging comments for social media posts. Keep comments concise (2-3 sentences), relevant, and conversational.
-
-Suggest a thoughtful comment for this post:
+    const systemPrompt = 'You are a helpful assistant that suggests thoughtful, engaging comments for social media posts. Keep comments concise (2-3 sentences), relevant, and conversational.';
+    const userPrompt = `Suggest a thoughtful comment for this post:
 Title: ${postTitle}
 Content: ${postContent}
 Group: ${groupName}
@@ -28,19 +27,20 @@ Category: ${categoryName}
 
 Generate a single engaging comment that adds value to the discussion.`;
 
-    const response = await fetch('https://api-inference.huggingface.co/models/meta-llama/Llama-3.1-8B-Instruct', {
+    const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${huggingFaceToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          max_new_tokens: 150,
-          temperature: 0.7,
-          top_p: 0.95,
-        }
+        model: 'meta-llama/Llama-3.1-8B-Instruct',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        max_tokens: 150,
+        temperature: 0.7,
       }),
     });
 
@@ -56,7 +56,7 @@ Generate a single engaging comment that adds value to the discussion.`;
     }
 
     const data = await response.json();
-    const suggestion = data[0]?.generated_text?.replace(prompt, '').trim() || data[0]?.generated_text?.trim();
+    const suggestion = data.choices?.[0]?.message?.content?.trim() || '';
 
     return new Response(
       JSON.stringify({ suggestion }), 

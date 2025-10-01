@@ -18,9 +18,8 @@ serve(async (req) => {
 
     console.log('Generating post suggestion for:', { groupName, categoryName, userPrompt });
 
-    const prompt = `You are a helpful assistant that suggests engaging social media posts. Create relevant, concise posts (2-4 paragraphs) that fit the group context and encourage discussion.
-
-Suggest a post for this group:
+    const systemPrompt = 'You are a helpful assistant that suggests engaging social media posts. Create relevant, concise posts (2-4 paragraphs) that fit the group context and encourage discussion.';
+    const prompt = `Suggest a post for this group:
 Group: ${groupName}
 Group Description: ${groupDescription || 'No description'}
 Category: ${categoryName}
@@ -28,19 +27,20 @@ ${userPrompt ? `User wants to post about: ${userPrompt}` : 'Generate a general e
 
 Generate a post with a title and content that would spark discussion.`;
 
-    const response = await fetch('https://api-inference.huggingface.co/models/meta-llama/Llama-3.1-8B-Instruct', {
+    const response = await fetch('https://router.huggingface.co/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${huggingFaceToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          max_new_tokens: 300,
-          temperature: 0.7,
-          top_p: 0.95,
-        }
+        model: 'meta-llama/Llama-3.1-8B-Instruct',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 300,
+        temperature: 0.7,
       }),
     });
 
@@ -56,7 +56,7 @@ Generate a post with a title and content that would spark discussion.`;
     }
 
     const data = await response.json();
-    const suggestion = data[0]?.generated_text?.replace(prompt, '').trim() || data[0]?.generated_text?.trim();
+    const suggestion = data.choices?.[0]?.message?.content?.trim() || '';
 
     return new Response(
       JSON.stringify({ suggestion }), 
