@@ -321,6 +321,13 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "groups_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories_with_activity"
+            referencedColumns: ["id"]
+          },
         ]
       }
       link_previews: {
@@ -1019,7 +1026,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      categories_with_activity: {
+        Row: {
+          color_class: string | null
+          created_at: string | null
+          description: string | null
+          group_count: number | null
+          icon: string | null
+          id: string | null
+          image_url: string | null
+          latest_post_at: string | null
+          name: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_refresh_token_replay: {
