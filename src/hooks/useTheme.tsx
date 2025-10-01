@@ -21,8 +21,8 @@ function getSystemTheme(): ResolvedTheme {
 }
 
 function getStoredTheme(): Theme {
-  if (typeof window === 'undefined') return 'system';
-  return (localStorage.getItem(THEME_KEY) as Theme) || 'system';
+  if (typeof window === 'undefined') return 'dark';
+  return (localStorage.getItem(THEME_KEY) as Theme) || 'dark';
 }
 
 function getStoredAccent(): string {

@@ -156,10 +156,10 @@ const Auth = () => {
             <div className="flex items-center justify-center gap-3 mb-6">
               <Vote className="h-16 w-16 text-primary" />
             </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-foreground tracking-tight">
+            <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight">
               COZI Forum
             </h1>
-            <p className="text-xl text-muted-foreground max-w-md mx-auto">
+            <p className="text-xl text-gray-300 max-w-md mx-auto">
               Join the conversation. Share your thoughts. Connect with your community.
             </p>
           </div>

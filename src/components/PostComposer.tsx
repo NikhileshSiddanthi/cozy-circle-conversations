@@ -70,6 +70,20 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
       clearAllPreviews();
     }
   }, [formData.content]);
+  
+  // Auto-suggest content based on title
+  useEffect(() => {
+    if (!formData.title || formData.title.length < 10 || editPost || !isExpanded) return;
+    
+    const timer = setTimeout(async () => {
+      if (!formData.content || formData.content.length < 20) {
+        await handleGetAISuggestion();
+      }
+    }, 2000); // 2 second debounce
+    
+    return () => clearTimeout(timer);
+  }, [formData.title]);
+  
   const characterCount = formData.content.length;
   const isOverLimit = characterCount > MAX_CHARACTERS;
 
@@ -204,25 +218,44 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
 
       if (error) throw error;
 
-      // Parse the suggestion - it might have a title and content
+      // Parse the suggestion - it might have title and content formatted
       const suggestion = data.suggestion;
       
-      // Try to split into title and content if formatted
-      const lines = suggestion.split('\n');
-      const firstLine = lines[0].replace(/^(Title:|#)\s*/i, '').trim();
-      const restContent = lines.slice(1).join('\n').trim();
+      // Match patterns like **Title:** "text" or **Title:** text
+      const titleMatch = suggestion.match(/\*\*Title:\*\*\s*["']?([^"\n]+)["']?/i);
+      const contentMatch = suggestion.match(/\*\*Content:\*\*\s*([\s\S]+)/i);
       
-      if (restContent) {
+      if (titleMatch && contentMatch) {
+        // Both title and content found
         setFormData(prev => ({
           ...prev,
-          title: firstLine,
-          content: restContent
+          title: titleMatch[1].trim(),
+          content: contentMatch[1].trim()
+        }));
+      } else if (contentMatch) {
+        // Only content found
+        setFormData(prev => ({
+          ...prev,
+          content: contentMatch[1].trim()
         }));
       } else {
-        setFormData(prev => ({
-          ...prev,
-          content: suggestion
-        }));
+        // Fallback: try simple line split
+        const lines = suggestion.split('\n').filter(l => l.trim());
+        const firstLine = lines[0]?.replace(/^(Title:|#|\*\*Title:\*\*)\s*/i, '').replace(/["']/g, '').trim();
+        const restContent = lines.slice(1).join('\n').trim();
+        
+        if (restContent && firstLine) {
+          setFormData(prev => ({
+            ...prev,
+            title: firstLine,
+            content: restContent
+          }));
+        } else {
+          setFormData(prev => ({
+            ...prev,
+            content: suggestion
+          }));
+        }
       }
 
       toast({

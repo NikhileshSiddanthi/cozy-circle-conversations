@@ -21,6 +21,11 @@ export const TourManager: React.FC<TourManagerProps> = ({
   const location = useLocation();
   const { user } = useAuth();
   
+  // Don't show tour on auth page
+  if (location.pathname === '/auth') {
+    return null;
+  }
+  
   const [run, setRun] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [steps, setSteps] = useState<Step[]>([]);
