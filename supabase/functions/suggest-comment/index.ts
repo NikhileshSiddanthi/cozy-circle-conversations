@@ -28,7 +28,7 @@ Category: ${categoryName}
 
 Generate a single engaging comment that adds value to the discussion.`;
 
-    const response = await fetch('https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3.1-8B-Instruct', {
+    const response = await fetch('https://api-inference.huggingface.co/models/meta-llama/Llama-3.1-8B-Instruct', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${huggingFaceToken}`,
