@@ -21,6 +21,8 @@ import TrendingTopics from "./pages/TrendingTopics";
 import TestPage from "./pages/TestPage";
 import Profile from "./pages/Profile";
 import AllGroupsPage from "./pages/AllGroupsPage";
+import ConnectionsPage from "./pages/ConnectionsPage";
+import MessagesPage from "./pages/MessagesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -114,6 +116,22 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/connections" 
+            element={
+              <ProtectedRoute>
+                <ConnectionsPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/messages" 
+            element={
+              <ProtectedRoute>
+                <MessagesPage />
               </ProtectedRoute>
             } 
           />

@@ -31,16 +31,33 @@ export const useConnections = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('connections')
-        .select(`
-          *,
-          requester:profiles!connections_requester_id_fkey(display_name, avatar_url),
-          recipient:profiles!connections_recipient_id_fkey(display_name, avatar_url)
-        `)
+        .select('*')
         .or(`requester_id.eq.${user?.id},recipient_id.eq.${user?.id}`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as Connection[];
+      
+      // Fetch profile data separately
+      const userIds = new Set<string>();
+      data.forEach(conn => {
+        userIds.add(conn.requester_id);
+        userIds.add(conn.recipient_id);
+      });
+
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', Array.from(userIds));
+
+      if (profileError) throw profileError;
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return data.map(conn => ({
+        ...conn,
+        requester: profileMap.get(conn.requester_id),
+        recipient: profileMap.get(conn.recipient_id),
+      })) as Connection[];
     },
     enabled: !!user,
   });

@@ -17,15 +17,28 @@ export const useMessages = (conversationId: string | null) => {
       
       const { data, error } = await supabase
         .from('messages')
-        .select(`
-          *,
-          sender:profiles!messages_sender_id_fkey(display_name, avatar_url)
-        `)
+        .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      return data as Message[];
+      
+      // Fetch sender profiles separately
+      const senderIds = [...new Set(data.map(m => m.sender_id))];
+      
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', senderIds);
+
+      if (profileError) throw profileError;
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      return data.map(msg => ({
+        ...msg,
+        sender: profileMap.get(msg.sender_id),
+      })) as Message[];
     },
     enabled: !!conversationId,
   });
