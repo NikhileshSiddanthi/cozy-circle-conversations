@@ -98,44 +98,51 @@ const ConnectionsPage = () => {
             ) : (
               pendingRequests.map((request) => (
                 <Card key={request.id}>
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={request.requester?.avatar_url || ''} />
-                        <AvatarFallback>
-                          {request.requester?.display_name?.[0] || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-semibold">{request.requester?.display_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Sent {new Date(request.created_at).toLocaleDateString()}
-                        </p>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4 flex-1">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={request.requester?.avatar_url || ''} />
+                          <AvatarFallback>
+                            {request.requester?.display_name?.[0] || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-semibold">{request.requester?.display_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Sent {new Date(request.created_at).toLocaleDateString()}
+                          </p>
+                          {request.message && (
+                            <p className="mt-2 text-sm border-l-2 border-primary pl-3 py-1">
+                              {request.message}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => updateConnection.mutate({ 
-                          id: request.id, 
-                          status: 'accepted' 
-                        })}
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Accept
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateConnection.mutate({ 
-                          id: request.id, 
-                          status: 'rejected' 
-                        })}
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Decline
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => updateConnection.mutate({ 
+                            id: request.id, 
+                            status: 'accepted' 
+                          })}
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Accept
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateConnection.mutate({ 
+                            id: request.id, 
+                            status: 'rejected' 
+                          })}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Decline
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

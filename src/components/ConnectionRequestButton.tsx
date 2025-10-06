@@ -1,5 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { UserPlus, Check, Clock, X } from 'lucide-react';
 import { useConnections } from '@/hooks/useConnections';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +28,8 @@ export const ConnectionRequestButton: React.FC<ConnectionRequestButtonProps> = (
 }) => {
   const { user } = useAuth();
   const { connections, sendRequest, updateConnection } = useConnections();
+  const [isOpen, setIsOpen] = useState(false);
+  const [message, setMessage] = useState('');
 
   // Don't show button for own profile
   if (user?.id === userId) return null;
@@ -30,15 +43,63 @@ export const ConnectionRequestButton: React.FC<ConnectionRequestButtonProps> = (
 
   if (!existingConnection) {
     return (
-      <Button
-        variant={variant}
-        size={size}
-        onClick={() => sendRequest.mutate(userId)}
-        disabled={sendRequest.isPending}
-      >
-        <UserPlus className="h-4 w-4 mr-2" />
-        Connect
-      </Button>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button variant={variant} size={size}>
+            <UserPlus className="h-4 w-4 mr-2" />
+            Connect
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Connection Request</DialogTitle>
+            <DialogDescription>
+              Add a message to introduce yourself (optional)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="message">Message</Label>
+              <Textarea
+                id="message"
+                placeholder="Hi! I'd like to connect with you..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                maxLength={500}
+                rows={4}
+              />
+              <p className="text-sm text-muted-foreground">{message.length}/500</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsOpen(false);
+                setMessage('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                sendRequest.mutate(
+                  { recipientId: userId, message: message.trim() || undefined },
+                  {
+                    onSuccess: () => {
+                      setIsOpen(false);
+                      setMessage('');
+                    },
+                  }
+                );
+              }}
+              disabled={sendRequest.isPending}
+            >
+              Send Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
   }
 

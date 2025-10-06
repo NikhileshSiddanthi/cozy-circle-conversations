@@ -11,6 +11,7 @@ export interface Connection {
   recipient_id: string;
   status: ConnectionStatus;
   created_at: string;
+  message?: string | null;
   requester?: {
     display_name: string;
     avatar_url: string | null;
@@ -63,13 +64,14 @@ export const useConnections = () => {
   });
 
   const sendRequest = useMutation({
-    mutationFn: async (recipientId: string) => {
+    mutationFn: async ({ recipientId, message }: { recipientId: string; message?: string }) => {
       const { data, error } = await supabase
         .from('connections')
         .insert({
           requester_id: user?.id,
           recipient_id: recipientId,
           status: 'pending',
+          message: message || null,
         })
         .select()
         .single();

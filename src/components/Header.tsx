@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, Grid3X3, Newspaper, Settings, LogOut, User, Menu, Search, Plus, Users, MessageSquare } from 'lucide-react';
+import { Home, Grid3X3, Newspaper, Settings, LogOut, User, Menu, Search, Plus, Users, MessageSquare, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import { VisitorCounter } from '@/components/VisitorCounter';
 import { CreatePostButton } from '@/components/CreatePostButton';
@@ -67,6 +67,7 @@ export const Header = () => {
   const navItems = [
     { icon: Home, label: 'Home', path: '/', key: 'home' },
     { icon: Grid3X3, label: 'Groups', path: '/groups', key: 'groups' },
+    { icon: UserPlus, label: 'Discover', path: '/discover', key: 'discover' },
     { icon: Users, label: 'Connections', path: '/connections', key: 'connections' },
     { icon: MessageSquare, label: 'Messages', path: '/messages', key: 'messages' },
     { icon: Newspaper, label: 'News', path: '/news', key: 'news' },
@@ -248,6 +249,10 @@ export const Header = () => {
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <User className="mr-2 h-4 w-4" />
                   Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/discover')}>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Discover
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/connections')}>
                   <Users className="mr-2 h-4 w-4" />

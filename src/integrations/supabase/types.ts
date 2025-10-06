@@ -177,6 +177,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          message: string | null
           recipient_id: string
           requester_id: string
           status: string
@@ -185,6 +186,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          message?: string | null
           recipient_id: string
           requester_id: string
           status?: string
@@ -193,6 +195,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          message?: string | null
           recipient_id?: string
           requester_id?: string
           status?: string

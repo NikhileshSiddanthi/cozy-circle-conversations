@@ -23,6 +23,7 @@ import Profile from "./pages/Profile";
 import AllGroupsPage from "./pages/AllGroupsPage";
 import ConnectionsPage from "./pages/ConnectionsPage";
 import MessagesPage from "./pages/MessagesPage";
+import DiscoverConnectionsPage from "./pages/DiscoverConnectionsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -116,6 +117,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/discover" 
+            element={
+              <ProtectedRoute>
+                <DiscoverConnectionsPage />
               </ProtectedRoute>
             } 
           />
