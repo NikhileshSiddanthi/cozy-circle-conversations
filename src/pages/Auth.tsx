@@ -12,11 +12,13 @@ import { useToast } from '@/hooks/use-toast';
 import wallpaper from '@/assets/professional-wallpaper.jpg';
 
 const Auth = () => {
-  const { user, signUp, signIn, signInWithGoogle, loading } = useAuth();
+  const { user, signUp, signIn, signInWithGoogle, resetPassword, loading } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('signin');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
 
   // Form states
   const [email, setEmail] = useState('');
@@ -114,6 +116,48 @@ const Auth = () => {
       const errorMessage = `Unexpected error: ${err instanceof Error ? err.message : 'Unknown error'}`;
       setError(errorMessage);
       console.error('Google sign in error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resetEmail) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const { error } = await resetPassword(resetEmail);
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Check your email",
+          description: "We've sent you a password reset link.",
+        });
+        setShowForgotPassword(false);
+        setResetEmail('');
+      }
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -235,6 +279,7 @@ const Auth = () => {
                         <div className="flex justify-end">
                           <button
                             type="button"
+                            onClick={() => setShowForgotPassword(true)}
                             className="text-sm text-primary hover:text-primary/80 transition-colors"
                           >
                             Forgot password?
@@ -366,6 +411,64 @@ const Auth = () => {
                     </p>
                   </TabsContent>
                 </Tabs>
+
+                {/* Forgot Password Modal */}
+                {showForgotPassword && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <Card className="w-full max-w-md mx-4">
+                      <CardHeader>
+                        <CardTitle>Reset Password</CardTitle>
+                        <CardDescription>
+                          Enter your email and we'll send you a reset link
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <form onSubmit={handleResetPassword} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="reset-email">Email</Label>
+                            <Input
+                              id="reset-email"
+                              type="email"
+                              placeholder="Enter your email"
+                              value={resetEmail}
+                              onChange={(e) => setResetEmail(e.target.value)}
+                              disabled={isLoading}
+                              required
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setShowForgotPassword(false);
+                                setResetEmail('');
+                              }}
+                              disabled={isLoading}
+                              className="flex-1"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="submit"
+                              disabled={isLoading}
+                              className="flex-1"
+                            >
+                              {isLoading ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : (
+                                'Send Reset Link'
+                              )}
+                            </Button>
+                          </div>
+                        </form>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 {/* Social Login */}
                 <div className="space-y-4">
