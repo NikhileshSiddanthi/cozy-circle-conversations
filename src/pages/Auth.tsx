@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, Loader2, Vote, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import wallpaper from '@/assets/professional-wallpaper.jpg';
+import { MatrixRain } from '@/components/MatrixRain';
 
 const Auth = () => {
   const { user, signUp, signIn, signInWithGoogle, resetPassword, loading } = useAuth();
@@ -166,17 +166,10 @@ const Auth = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center relative">
-        <div 
-          className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
-          style={{
-            backgroundImage: `url(${wallpaper})`,
-          }}
-        >
-          <div className="absolute inset-0 bg-black/70" />
-        </div>
+        <MatrixRain />
         <div className="flex items-center gap-3 text-lg relative z-10">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <span className="text-foreground">Loading...</span>
+          <span className="text-green-400">Loading...</span>
         </div>
       </div>
     );
@@ -184,14 +177,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
-      <div 
-        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `url(${wallpaper})`,
-        }}
-      >
-        <div className="absolute inset-0 bg-black/70" />
-      </div>
+      <MatrixRain />
       <div className="w-full max-w-xl flex items-center justify-center relative z-10">
         {/* Centered minimal layout */}
         <div className="w-full space-y-8">
