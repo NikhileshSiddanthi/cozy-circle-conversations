@@ -64,6 +64,12 @@ All colors MUST be HSL.
 
   .dark,
   [data-theme="dark"] {
+    /* COZI Chat Color Palette */
+    --bg: 200 38% 3%;
+    --teal: 172 100% 45%;
+    --green: 146 100% 54%;
+    --text: 168 100% 96%;
+    
     /* Dark theme - Minimal & Elegant */
     --background: 0 0% 7%;
     --foreground: 0 0% 95%;
