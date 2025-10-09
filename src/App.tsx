@@ -1,9 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/components/ToastProvider";
 import { Header } from "@/components/Header";
 import { ContextBar } from "@/components/ContextBar";
@@ -26,19 +24,15 @@ import MessagesPage from "./pages/MessagesPage";
 import DiscoverConnectionsPage from "./pages/DiscoverConnectionsPage";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
-
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <ToastProvider>
-        <TooltipProvider>
-          <ThemeInitializer />
-          <SimpleTour autoStart={true} />
-          <Toaster />
-          <Sonner />
-          <div className="min-h-screen bg-background">
-            <Routes>
+  <ToastProvider>
+    <TooltipProvider>
+      <ThemeInitializer />
+      <SimpleTour autoStart={true} />
+      <Toaster />
+      <Sonner />
+      <div className="min-h-screen bg-background">
+        <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route 
             path="/*" 
@@ -159,12 +153,10 @@ const App = () => (
               </>
             } 
           />
-              </Routes>
-          </div>
-        </TooltipProvider>
-      </ToastProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+        </Routes>
+      </div>
+    </TooltipProvider>
+  </ToastProvider>
 );
 
 export default App;
