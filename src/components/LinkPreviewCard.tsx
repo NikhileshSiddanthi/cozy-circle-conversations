@@ -51,6 +51,21 @@ export const LinkPreviewCard = ({
     fetched_at: preview.fetched_at || new Date().toISOString()
   };
 
+  const handleClick = () => {
+    if (preview.embed_html) {
+      setIsExpanded(!isExpanded);
+    } else {
+      // Open within app if possible
+      const isCurrentDomain = preview.url.includes(window.location.hostname);
+      if (isCurrentDomain) {
+        const path = new URL(preview.url).pathname;
+        window.location.href = path;
+      } else {
+        window.location.href = preview.url;
+      }
+    }
+  };
+
   const handleExpand = () => {
     if (preview.embed_html) {
       setIsExpanded(!isExpanded);
@@ -76,14 +91,15 @@ export const LinkPreviewCard = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <a 
-                href={preview.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline truncate"
+              <span 
+                className="text-sm text-primary hover:underline truncate cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClick();
+                }}
               >
                 {preview.url}
-              </a>
+              </span>
             </div>
             {showRemove && (
               <Button variant="ghost" size="sm" onClick={onRemove}>
@@ -162,14 +178,15 @@ export const LinkPreviewCard = ({
                   
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <ExternalLink className="h-3 w-3" />
-                    <a 
-                      href={preview.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:underline truncate"
+                    <span 
+                      className="hover:underline truncate cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleClick();
+                      }}
                     >
                       {domain}
-                    </a>
+                    </span>
                     {isVideo && preview.embed_html && (
                       <Button
                         variant="ghost"

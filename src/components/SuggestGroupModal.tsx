@@ -19,15 +19,21 @@ interface Category {
 }
 
 interface SuggestGroupModalProps {
-  categories: Category[];
+  categories?: Category[];
   onSuccess?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export const SuggestGroupModal = ({ categories, onSuccess }: SuggestGroupModalProps) => {
+export const SuggestGroupModal = ({ categories = [], onSuccess, open: controlledOpen, onOpenChange }: SuggestGroupModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Use controlled open state if provided, otherwise use internal
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   
   const [formData, setFormData] = useState({
     name: "",

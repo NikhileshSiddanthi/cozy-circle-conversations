@@ -396,10 +396,18 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
         ) : null;
 
       case "link":
-        // Legacy link handling - should be replaced by metadata link_preview
+        // Legacy link handling - open within app if possible
         return (
           <div
-            onClick={() => window.open(post.media_url, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes')}
+            onClick={() => {
+              const isCurrentDomain = post.media_url?.includes(window.location.hostname);
+              if (isCurrentDomain && post.media_url) {
+                const path = new URL(post.media_url).pathname;
+                navigate(path);
+              } else if (post.media_url) {
+                window.location.href = post.media_url;
+              }
+            }}
             className="flex items-center gap-2 p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
           >
             <ExternalLink className="h-4 w-4" />

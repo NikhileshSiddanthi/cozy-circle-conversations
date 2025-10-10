@@ -118,7 +118,16 @@ export const LinkPreview: React.FC<LinkPreviewProps> = ({
 
           <div 
             className="border border-border/50 rounded-lg p-3 hover:bg-accent/50 cursor-pointer transition-colors"
-            onClick={() => window.open(currentPreview.url, '_blank')}
+            onClick={() => {
+              // Open within app if it's our domain, otherwise external
+              const isCurrentDomain = currentPreview.url.includes(window.location.hostname);
+              if (isCurrentDomain) {
+                const path = new URL(currentPreview.url).pathname;
+                window.location.href = path;
+              } else {
+                window.location.href = currentPreview.url;
+              }
+            }}
           >
             <div className="flex items-start gap-3">
               {currentPreview.image && (

@@ -19,13 +19,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, Grid3X3, Newspaper, Settings, LogOut, User, Menu, Search, Plus, Users, MessageSquare, UserPlus } from 'lucide-react';
+import { Home, Grid3X3, Newspaper, Settings, LogOut, User, Menu, Search, Plus, Users, MessageSquare, UserPlus, Flag } from 'lucide-react';
 import { useState } from 'react';
 import { VisitorCounter } from '@/components/VisitorCounter';
 import { CreatePostButton } from '@/components/CreatePostButton';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { AccentColorPicker } from '@/components/AccentColorPicker';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { SuggestGroupModal } from '@/components/SuggestGroupModal';
 import { PostComposer } from '@/components/PostComposer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +39,7 @@ export const Header = () => {
   const { toast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showSuggestGroupModal, setShowSuggestGroupModal] = useState(false);
   const [availableGroups, setAvailableGroups] = useState<any[]>([]);
 
   useEffect(() => {
@@ -67,9 +68,7 @@ export const Header = () => {
   const navItems = [
     { icon: Home, label: 'Home', path: '/', key: 'home' },
     { icon: Grid3X3, label: 'Groups', path: '/groups', key: 'groups' },
-    { icon: UserPlus, label: 'Discover', path: '/discover', key: 'discover' },
     { icon: Users, label: 'Connections', path: '/connections', key: 'connections' },
-    { icon: MessageSquare, label: 'Messages', path: '/messages', key: 'messages' },
     { icon: Newspaper, label: 'News', path: '/news', key: 'news' },
   ];
 
@@ -155,15 +154,26 @@ export const Header = () => {
           {/* Right: Primary CTA + Actions */}
           <div className="flex items-center gap-2 md:gap-3">
             {/* Primary CTA - Desktop */}
-            <Button
-              data-tour="create-post-button"
-              onClick={handleCreateClick}
-              className="hidden md:flex gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
-              aria-label="Create new post"
-            >
-              <Plus className="h-4 w-4" />
-              Create
-            </Button>
+            <div className="hidden md:flex items-center gap-2">
+              <Button
+                data-tour="create-post-button"
+                onClick={handleCreateClick}
+                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                aria-label="Create new post"
+              >
+                <Plus className="h-4 w-4" />
+                Create
+              </Button>
+              <Button
+                onClick={() => setShowSuggestGroupModal(true)}
+                variant="outline"
+                className="gap-2"
+                aria-label="Suggest a group"
+              >
+                <Flag className="h-4 w-4" />
+                Suggest Group
+              </Button>
+            </div>
 
             {/* Visitor Counter */}
             <VisitorCounter />
@@ -219,9 +229,6 @@ export const Header = () => {
             <div data-tour="theme-toggle">
               <ThemeToggle />
             </div>
-
-            {/* Accent Color Picker */}
-            <AccentColorPicker />
 
             {/* Notifications */}
             <div data-tour="notification-bell">
@@ -307,6 +314,12 @@ export const Header = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Suggest Group Modal */}
+      <SuggestGroupModal 
+        open={showSuggestGroupModal} 
+        onOpenChange={setShowSuggestGroupModal} 
+      />
     </>
   );
 };

@@ -11,9 +11,10 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { UserPlus, Check, Clock, X } from 'lucide-react';
+import { UserPlus, Check, Clock, X, MessageSquare } from 'lucide-react';
 import { useConnections } from '@/hooks/useConnections';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMessageConnection } from '@/hooks/useMessageConnection';
 
 interface ConnectionRequestButtonProps {
   userId: string;
@@ -28,6 +29,7 @@ export const ConnectionRequestButton: React.FC<ConnectionRequestButtonProps> = (
 }) => {
   const { user } = useAuth();
   const { connections, sendRequest, updateConnection } = useConnections();
+  const { createConversationAndNavigate } = useMessageConnection();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -105,10 +107,20 @@ export const ConnectionRequestButton: React.FC<ConnectionRequestButtonProps> = (
 
   if (existingConnection.status === 'accepted') {
     return (
-      <Button variant="outline" size={size} disabled>
-        <Check className="h-4 w-4 mr-2" />
-        Connected
-      </Button>
+      <div className="flex gap-2">
+        <Button variant="outline" size={size} disabled>
+          <Check className="h-4 w-4 mr-2" />
+          Connected
+        </Button>
+        <Button 
+          variant="default" 
+          size={size}
+          onClick={() => createConversationAndNavigate.mutate(userId)}
+        >
+          <MessageSquare className="h-4 w-4 mr-2" />
+          Message
+        </Button>
+      </div>
     );
   }
 

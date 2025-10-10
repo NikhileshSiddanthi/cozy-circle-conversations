@@ -1,4 +1,5 @@
 import React from 'react';
+import { InAppLink } from './InAppLink';
 
 interface ClickableContentProps {
   content: string;
@@ -19,18 +20,16 @@ export const ClickableContent: React.FC<ClickableContentProps> = ({
       // Check if this part is a URL
       if (URL_REGEX.test(part)) {
         return (
-          <a
+          <InAppLink
             key={index}
             href={part}
-            target="_blank"
-            rel="noopener noreferrer"
             className="text-primary hover:underline break-all"
             onClick={(e) => {
               e.stopPropagation(); // Prevent triggering parent click handlers
             }}
           >
             {part}
-          </a>
+          </InAppLink>
         );
       }
       return part;

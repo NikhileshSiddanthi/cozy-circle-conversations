@@ -398,6 +398,49 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully published draft ${draftId} as post ${postData.id}`);
 
+    // Create notifications for group members if this is a group post
+    if (draft.group_id && publishOptions.notifyMembers !== false) {
+      try {
+        // Get all group members except the post creator
+        const { data: groupMembers } = await supabaseClient
+          .from('group_members')
+          .select('user_id')
+          .eq('group_id', draft.group_id)
+          .eq('status', 'approved')
+          .neq('user_id', user.id);
+
+        if (groupMembers && groupMembers.length > 0) {
+          // Get group name for notification
+          const { data: groupData } = await supabaseClient
+            .from('groups')
+            .select('name')
+            .eq('id', draft.group_id)
+            .single();
+
+          const notifications = groupMembers.map(member => ({
+            user_id: member.user_id,
+            type: 'group_post',
+            title: 'New Post in Group',
+            message: `New post in ${groupData?.name || 'your group'}: ${postData.title || 'Untitled'}`,
+            data: { 
+              post_id: postData.id,
+              group_id: draft.group_id,
+              author_id: user.id
+            }
+          }));
+
+          await supabaseClient
+            .from('notifications')
+            .insert(notifications);
+          
+          console.log(`Created ${notifications.length} group post notifications`);
+        }
+      } catch (notifError) {
+        console.error('Failed to create group notifications:', notifError);
+        // Don't fail the publish for notification errors
+      }
+    }
+
     return new Response(
       JSON.stringify({
         postId: postData.id,

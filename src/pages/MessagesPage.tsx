@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useConversations } from '@/hooks/useConversations';
 import { useMessages } from '@/hooks/useMessages';
@@ -13,11 +14,19 @@ import { formatDistanceToNow } from 'date-fns';
 
 const MessagesPage = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const { conversations, isLoading: loadingConversations } = useConversations();
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   
   const { messages, isLoading: loadingMessages, sendMessage } = useMessages(selectedConversation);
+
+  // Handle pre-selected conversation from navigation state
+  useEffect(() => {
+    if (location.state?.selectedConversation) {
+      setSelectedConversation(location.state.selectedConversation);
+    }
+  }, [location.state]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();

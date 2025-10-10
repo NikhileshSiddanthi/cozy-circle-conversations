@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 interface GraphBackgroundProps {
   seed?: number;
-  density?: 'low' | 'medium' | 'high';
+  density?: 'low' | 'medium' | 'high' | 'auto';
   glow?: number;
   labelChance?: number;
+  showMap?: boolean;
 }
 
 interface GraphNode {
@@ -14,28 +15,45 @@ interface GraphNode {
   connections: number[];
   size: number;
   label?: string;
+  color: THREE.Color;
+  topic: string;
 }
 
-const LABELS = [
-  'connected_to', 'influenced', 'related', 'discovered', 'shared',
-  'analyzed', 'linked', 'referenced', 'expanded', 'derived'
-];
+const TOPICS = {
+  AI: { color: 0x6EE7FF, keywords: ['LLMs', 'neural', 'GPT', 'training'] },
+  Finance: { color: 0x14FF72, keywords: ['markets', 'crypto', 'DeFi', 'funding'] },
+  Health: { color: 0xFFB86B, keywords: ['vaccines', 'treatment', 'research'] },
+  Sports: { color: 0x6DFFB3, keywords: ['transfers', 'league', 'playoffs'] },
+  Entertainment: { color: 0xC084FC, keywords: ['streaming', 'awards', 'premiere'] },
+  Climate: { color: 0x4ADE80, keywords: ['carbon', 'renewable', 'solar'] },
+  Politics: { color: 0xF472B6, keywords: ['policy', 'election', 'reform'] },
+  Education: { color: 0x60A5FA, keywords: ['learning', 'research', 'EdTech'] },
+  Travel: { color: 0x22D3EE, keywords: ['tourism', 'destination', 'culture'] }
+};
 
-export const GraphBackground = ({
+const REGIONS = {
+  Americas: new THREE.Vector3(-3, 0, 0),
+  Europe: new THREE.Vector3(0, 1, 2),
+  Africa: new THREE.Vector3(1, -1, 1),
+  Asia: new THREE.Vector3(3, 0.5, 0),
+  Oceania: new THREE.Vector3(2, -2, -2)
+};
+
+export const GraphBackground: React.FC<GraphBackgroundProps> = ({
   seed = 1,
-  density = 'medium',
-  glow = 0.6,
-  labelChance = 0.1
-}: GraphBackgroundProps) => {
+  density = 'auto',
+  glow = 0.65,
+  labelChance = 0.2,
+  showMap = true
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const frameIdRef = useRef<number>(0);
+  const sceneRef = useRef<THREE.Scene>();
+  const rendererRef = useRef<THREE.WebGLRenderer>();
+  const cameraRef = useRef<THREE.PerspectiveCamera>();
+  const frameIdRef = useRef<number>();
   const [webGLAvailable, setWebGLAvailable] = useState(true);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
-  // Seeded random number generator
   const seededRandom = (s: number) => {
     let seed = s;
     return () => {
@@ -44,111 +62,111 @@ export const GraphBackground = ({
     };
   };
 
-  // Check for reduced motion preference
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
     setPrefersReducedMotion(mediaQuery.matches);
-    
-    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
+    const handleChange = () => setPrefersReducedMotion(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // Generate Barabási–Albert scale-free graph
   const generateGraph = (nodeCount: number, random: () => number): GraphNode[] => {
     const nodes: GraphNode[] = [];
-    const m0 = 3; // Initial connected nodes
-    const m = 2; // Edges to attach from new node
-
-    // Create initial complete graph
-    for (let i = 0; i < m0; i++) {
-      const theta = random() * Math.PI * 2;
-      const phi = random() * Math.PI;
-      const radius = 15 + random() * 10;
+    const topicNames = Object.keys(TOPICS);
+    const regionNames = Object.keys(REGIONS);
+    
+    for (let i = 0; i < Math.min(5, nodeCount); i++) {
+      const topic = topicNames[Math.floor(random() * topicNames.length)];
+      const region = regionNames[Math.floor(random() * regionNames.length)];
+      const regionOffset = REGIONS[region as keyof typeof REGIONS];
       
-      nodes.push({
+      const node: GraphNode = {
         position: new THREE.Vector3(
-          radius * Math.sin(phi) * Math.cos(theta),
-          radius * Math.sin(phi) * Math.sin(theta),
-          radius * Math.cos(phi)
+          (random() - 0.5) * 2 + regionOffset.x,
+          (random() - 0.5) * 2 + regionOffset.y,
+          (random() - 0.5) * 2 + regionOffset.z
         ),
-        velocity: new THREE.Vector3(
-          (random() - 0.5) * 0.02,
-          (random() - 0.5) * 0.02,
-          (random() - 0.5) * 0.02
-        ),
+        velocity: new THREE.Vector3((random() - 0.5) * 0.02, (random() - 0.5) * 0.02, (random() - 0.5) * 0.02),
         connections: [],
         size: 0.9 + random() * 0.5,
-        label: random() < labelChance ? LABELS[Math.floor(random() * LABELS.length)] : undefined
-      });
+        color: new THREE.Color(TOPICS[topic as keyof typeof TOPICS].color),
+        topic
+      };
+      
+      if (random() < labelChance) {
+        const keywords = TOPICS[topic as keyof typeof TOPICS].keywords;
+        node.label = keywords[Math.floor(random() * keywords.length)];
+      }
+      
+      nodes.push(node);
     }
-
-    // Connect initial nodes
-    for (let i = 0; i < m0; i++) {
-      for (let j = i + 1; j < m0; j++) {
+    
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
         nodes[i].connections.push(j);
         nodes[j].connections.push(i);
       }
     }
-
-    // Add remaining nodes using preferential attachment
-    for (let i = m0; i < nodeCount; i++) {
-      const theta = random() * Math.PI * 2;
-      const phi = random() * Math.PI;
-      const radius = 15 + random() * 10;
+    
+    for (let i = nodes.length; i < nodeCount; i++) {
+      const topic = topicNames[Math.floor(random() * topicNames.length)];
+      const region = regionNames[Math.floor(random() * regionNames.length)];
+      const regionOffset = REGIONS[region as keyof typeof REGIONS];
       
-      const newNode: GraphNode = {
+      const node: GraphNode = {
         position: new THREE.Vector3(
-          radius * Math.sin(phi) * Math.cos(theta),
-          radius * Math.sin(phi) * Math.sin(theta),
-          radius * Math.cos(phi)
+          (random() - 0.5) * 4 + regionOffset.x,
+          (random() - 0.5) * 4 + regionOffset.y,
+          (random() - 0.5) * 4 + regionOffset.z
         ),
-        velocity: new THREE.Vector3(
-          (random() - 0.5) * 0.02,
-          (random() - 0.5) * 0.02,
-          (random() - 0.5) * 0.02
-        ),
+        velocity: new THREE.Vector3((random() - 0.5) * 0.02, (random() - 0.5) * 0.02, (random() - 0.5) * 0.02),
         connections: [],
         size: 0.9 + random() * 0.5,
-        label: random() < labelChance ? LABELS[Math.floor(random() * LABELS.length)] : undefined
+        color: new THREE.Color(TOPICS[topic as keyof typeof TOPICS].color),
+        topic
       };
-
-      // Calculate degree distribution for preferential attachment
-      const degrees = nodes.map(n => n.connections.length);
-      const totalDegree = degrees.reduce((sum, d) => sum + d, 0);
-
-      // Attach to m existing nodes based on their degree
-      const targets = new Set<number>();
-      while (targets.size < Math.min(m, nodes.length)) {
-        let rand = random() * totalDegree;
+      
+      if (random() < labelChance) {
+        const keywords = TOPICS[topic as keyof typeof TOPICS].keywords;
+        node.label = keywords[Math.floor(random() * keywords.length)];
+      }
+      
+      let totalDegree = 0;
+      for (const existingNode of nodes) {
+        totalDegree += existingNode.connections.length;
+      }
+      
+      const m = 2 + Math.floor(random() * 3);
+      const connected = new Set<number>();
+      
+      while (connected.size < Math.min(m, nodes.length)) {
+        let randomValue = random() * totalDegree;
+        let sum = 0;
+        
         for (let j = 0; j < nodes.length; j++) {
-          rand -= degrees[j];
-          if (rand <= 0 && !targets.has(j)) {
-            targets.add(j);
+          if (connected.has(j)) continue;
+          sum += nodes[j].connections.length;
+          if (randomValue <= sum) {
+            connected.add(j);
+            node.connections.push(j);
+            nodes[j].connections.push(i);
             break;
           }
         }
       }
-
-      targets.forEach(target => {
-        newNode.connections.push(target);
-        nodes[target].connections.push(i);
-      });
-
-      nodes.push(newNode);
+      
+      nodes.push(node);
     }
-
+    
     return nodes;
   };
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvasRef.current) return;
 
-    // Check WebGL support
     try {
-      const testCanvas = document.createElement('canvas');
-      const gl = testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
       if (!gl) {
         setWebGLAvailable(false);
         return;
@@ -158,230 +176,170 @@ export const GraphBackground = ({
       return;
     }
 
-    // Determine node count based on density and device
-    const getDensity = () => {
-      const dpr = window.devicePixelRatio || 1;
+    let nodeCount = 600;
+    if (density === 'low') nodeCount = 350;
+    else if (density === 'high') nodeCount = 900;
+    else if (density === 'auto') {
       const isMobile = window.innerWidth < 768;
-      
-      if (density === 'low' || isMobile) return 200;
-      if (density === 'high' && dpr > 1.5) return 500;
-      return 350;
-    };
+      const dpr = window.devicePixelRatio || 1;
+      if (isMobile) nodeCount = 350;
+      else if (dpr > 1.5) nodeCount = 600;
+      else nodeCount = 900;
+    }
 
-    const nodeCount = getDensity();
     const random = seededRandom(seed);
     const nodes = generateGraph(nodeCount, random);
 
-    // Setup Three.js scene
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x05080a, 0.015);
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(
-      60,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
-    camera.position.z = 40;
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 15);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({
-      canvas,
+      canvas: canvasRef.current,
       antialias: true,
-      alpha: true
+      alpha: true,
+      powerPreference: 'high-performance'
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x05080a, 1);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     rendererRef.current = renderer;
 
-    // Create node geometry (instanced)
-    const nodeGeometry = new THREE.SphereGeometry(0.5, 8, 8);
-    const nodeMaterial = new THREE.MeshBasicMaterial({
-      color: 0x00E5C7,
-      transparent: true,
-      opacity: glow * 0.8
-    });
-
-    const nodeInstancedMesh = new THREE.InstancedMesh(
-      nodeGeometry,
-      nodeMaterial,
-      nodes.length
-    );
+    const nodeGeometry = new THREE.SphereGeometry(1, 16, 16);
+    const nodeMaterial = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.9 });
+    const nodeMesh = new THREE.InstancedMesh(nodeGeometry, nodeMaterial, nodes.length);
     
-    const matrix = new THREE.Matrix4();
+    const nodeMatrix = new THREE.Matrix4();
+    const nodeColors = new Float32Array(nodes.length * 3);
+    
     nodes.forEach((node, i) => {
-      matrix.makeScale(node.size, node.size, node.size);
-      matrix.setPosition(node.position);
-      nodeInstancedMesh.setMatrixAt(i, matrix);
+      nodeMatrix.setPosition(node.position);
+      nodeMatrix.scale(new THREE.Vector3(node.size * 0.15, node.size * 0.15, node.size * 0.15));
+      nodeMesh.setMatrixAt(i, nodeMatrix);
+      nodeColors[i * 3] = node.color.r;
+      nodeColors[i * 3 + 1] = node.color.g;
+      nodeColors[i * 3 + 2] = node.color.b;
     });
-    nodeInstancedMesh.instanceMatrix.needsUpdate = true;
-    scene.add(nodeInstancedMesh);
+    
+    nodeMesh.geometry.setAttribute('color', new THREE.InstancedBufferAttribute(nodeColors, 3));
+    scene.add(nodeMesh);
 
-    // Create edge geometry (line segments)
     const edgePositions: number[] = [];
+    const edgeColors: number[] = [];
+    
     nodes.forEach((node, i) => {
       node.connections.forEach(targetIdx => {
-        if (targetIdx > i) { // Avoid duplicate edges
-          edgePositions.push(
-            node.position.x, node.position.y, node.position.z,
-            nodes[targetIdx].position.x, nodes[targetIdx].position.y, nodes[targetIdx].position.z
-          );
+        if (targetIdx > i) {
+          const target = nodes[targetIdx];
+          edgePositions.push(node.position.x, node.position.y, node.position.z);
+          edgePositions.push(target.position.x, target.position.y, target.position.z);
+          const mixColor = new THREE.Color().lerpColors(node.color, target.color, 0.5);
+          edgeColors.push(mixColor.r, mixColor.g, mixColor.b);
+          edgeColors.push(mixColor.r, mixColor.g, mixColor.b);
         }
       });
     });
-
+    
     const edgeGeometry = new THREE.BufferGeometry();
-    edgeGeometry.setAttribute(
-      'position',
-      new THREE.Float32BufferAttribute(edgePositions, 3)
-    );
+    edgeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(edgePositions, 3));
+    edgeGeometry.setAttribute('color', new THREE.Float32BufferAttribute(edgeColors, 3));
+    const edgeMaterial = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.15 + glow * 0.15 });
+    const edgeMesh = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+    scene.add(edgeMesh);
 
-    const edgeMaterial = new THREE.LineBasicMaterial({
-      color: 0x00E5C7,
-      transparent: true,
-      opacity: glow * 0.15,
-      blending: THREE.AdditiveBlending
-    });
+    const ambientLight = new THREE.AmbientLight(0x404040, glow);
+    scene.add(ambientLight);
 
-    const edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
-    scene.add(edges);
+    const pointLights = [
+      new THREE.PointLight(0x00E5C7, glow * 2, 50),
+      new THREE.PointLight(0x14FF72, glow * 1.5, 50),
+      new THREE.PointLight(0x6EE7FF, glow * 1.5, 50)
+    ];
+    pointLights[0].position.set(10, 10, 10);
+    pointLights[1].position.set(-10, -10, 10);
+    pointLights[2].position.set(0, 0, -10);
+    pointLights.forEach(light => scene.add(light));
 
-    // Add point lights for glow effect
-    const light1 = new THREE.PointLight(0x00E5C7, 0.5, 50);
-    light1.position.set(10, 10, 10);
-    scene.add(light1);
-
-    const light2 = new THREE.PointLight(0x14FF72, 0.3, 50);
-    light2.position.set(-10, -10, -10);
-    scene.add(light2);
-
-    // Mouse/touch tracking for parallax
-    let mouseX = 0;
-    let mouseY = 0;
-    let targetRotationX = 0;
-    let targetRotationY = 0;
-
-    const handleMouseMove = (e: MouseEvent | TouchEvent) => {
-      const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const y = 'touches' in e ? e.touches[0].clientY : e.clientY;
-      
-      mouseX = (x / window.innerWidth) * 2 - 1;
-      mouseY = -(y / window.innerHeight) * 2 + 1;
+    let mouseX = 0, mouseY = 0;
+    const handleMouse = (e: MouseEvent) => {
+      mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
     };
+    window.addEventListener('mousemove', handleMouse);
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('touchmove', handleMouseMove);
-
-    // Animation loop
     let time = 0;
     const animate = () => {
-      if (document.hidden) {
-        frameIdRef.current = requestAnimationFrame(animate);
-        return;
-      }
+      if (!prefersReducedMotion && !document.hidden) {
+        time += 0.005;
+        if (cameraRef.current) {
+          cameraRef.current.position.x = Math.sin(time * 0.1) * 0.5 + mouseX * 2;
+          cameraRef.current.position.y = Math.cos(time * 0.15) * 0.5 + mouseY * 2;
+          cameraRef.current.lookAt(0, 0, 0);
+        }
 
-      time += prefersReducedMotion ? 0.001 : 0.005;
-
-      // Gentle camera drift
-      if (!prefersReducedMotion) {
-        targetRotationX = Math.sin(time * 0.3) * 0.1 + mouseY * 0.05;
-        targetRotationY = Math.cos(time * 0.2) * 0.1 + mouseX * 0.05;
-      }
-
-      camera.rotation.x += (targetRotationX - camera.rotation.x) * 0.05;
-      camera.rotation.y += (targetRotationY - camera.rotation.y) * 0.05;
-
-      // Update node positions with gentle motion
-      if (!prefersReducedMotion) {
         nodes.forEach((node, i) => {
-          // Gentle breathing motion
-          const breathe = Math.sin(time + i * 0.1) * 0.02;
-          node.position.add(node.velocity);
-          node.position.multiplyScalar(1 + breathe * 0.01);
-
-          // Keep nodes within bounds
-          const distance = node.position.length();
-          if (distance > 30 || distance < 10) {
-            node.velocity.multiplyScalar(-0.5);
-          }
-
-          matrix.makeScale(node.size, node.size, node.size);
-          matrix.setPosition(node.position);
-          nodeInstancedMesh.setMatrixAt(i, matrix);
+          const noise = Math.sin(time + i * 0.1) * 0.01;
+          node.position.x += noise + node.velocity.x * 0.1;
+          node.position.y += noise + node.velocity.y * 0.1;
+          node.position.z += noise + node.velocity.z * 0.1;
+          nodeMatrix.setPosition(node.position);
+          nodeMatrix.scale(new THREE.Vector3(node.size * 0.15, node.size * 0.15, node.size * 0.15));
+          nodeMesh.setMatrixAt(i, nodeMatrix);
         });
-        nodeInstancedMesh.instanceMatrix.needsUpdate = true;
+        nodeMesh.instanceMatrix.needsUpdate = true;
 
-        // Update edge positions
-        let idx = 0;
+        let edgeIdx = 0;
         nodes.forEach((node, i) => {
           node.connections.forEach(targetIdx => {
             if (targetIdx > i) {
-              edgePositions[idx++] = node.position.x;
-              edgePositions[idx++] = node.position.y;
-              edgePositions[idx++] = node.position.z;
-              edgePositions[idx++] = nodes[targetIdx].position.x;
-              edgePositions[idx++] = nodes[targetIdx].position.y;
-              edgePositions[idx++] = nodes[targetIdx].position.z;
+              const target = nodes[targetIdx];
+              edgeGeometry.attributes.position.setXYZ(edgeIdx, node.position.x, node.position.y, node.position.z);
+              edgeGeometry.attributes.position.setXYZ(edgeIdx + 1, target.position.x, target.position.y, target.position.z);
+              edgeIdx += 2;
             }
           });
         });
         edgeGeometry.attributes.position.needsUpdate = true;
       }
 
-      renderer.render(scene, camera);
+      if (rendererRef.current && sceneRef.current && cameraRef.current) {
+        rendererRef.current.render(sceneRef.current, cameraRef.current);
+      }
       frameIdRef.current = requestAnimationFrame(animate);
     };
-
     animate();
 
-    // Handle resize
     const handleResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      if (cameraRef.current && rendererRef.current) {
+        cameraRef.current.aspect = window.innerWidth / window.innerHeight;
+        cameraRef.current.updateProjectionMatrix();
+        rendererRef.current.setSize(window.innerWidth, window.innerHeight);
+      }
     };
-
     window.addEventListener('resize', handleResize);
 
-    // Cleanup
     return () => {
+      window.removeEventListener('mousemove', handleMouse);
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('touchmove', handleMouseMove);
-      cancelAnimationFrame(frameIdRef.current);
-      
-      renderer.dispose();
+      if (frameIdRef.current) cancelAnimationFrame(frameIdRef.current);
+      if (rendererRef.current) rendererRef.current.dispose();
       nodeGeometry.dispose();
       nodeMaterial.dispose();
       edgeGeometry.dispose();
       edgeMaterial.dispose();
     };
-  }, [seed, density, glow, labelChance, prefersReducedMotion]);
-
-  // Capture frame method
-  const captureFrame = () => {
-    if (!rendererRef.current || !canvasRef.current) return null;
-    return canvasRef.current.toDataURL('image/png');
-  };
-
-  // Expose captureFrame via ref if needed
-  useEffect(() => {
-    if (canvasRef.current) {
-      (canvasRef.current as any).captureFrame = captureFrame;
-    }
-  }, []);
+  }, [seed, density, glow, labelChance, showMap, prefersReducedMotion]);
 
   if (!webGLAvailable) {
-    // Fallback to Matrix rain
-    return <div className="fixed inset-0 z-0 bg-[#05080a]" />;
+    return <div className="fixed inset-0 -z-10" style={{ background: 'linear-gradient(180deg, #05080a 0%, #0a1214 100%)' }} />;
   }
 
   return (
     <>
-      <canvas ref={canvasRef} className="fixed inset-0 z-0" />
-      <div className="fixed inset-0 z-[1] pointer-events-none bg-gradient-radial from-transparent via-transparent to-[#05080a]/60" />
+      <canvas ref={canvasRef} className="fixed inset-0 -z-10" style={{ background: '#05080a' }} />
+      <div className="fixed inset-0 -z-10 pointer-events-none" style={{ background: 'radial-gradient(circle at center, transparent 0%, rgba(5, 8, 10, 0.8) 100%)' }} />
     </>
   );
 };
