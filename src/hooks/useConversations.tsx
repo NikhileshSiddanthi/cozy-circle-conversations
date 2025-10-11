@@ -75,7 +75,12 @@ export const useConversations = () => {
             display_name: p.profile.display_name,
             avatar_url: p.profile.avatar_url,
           })),
-      })) as Conversation[];
+      })).sort((a: any, b: any) => {
+        // Sort by last_message_at, most recent first
+        const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+        const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+        return bTime - aTime;
+      }) as Conversation[];
     },
     enabled: !!user,
   });
@@ -118,12 +123,12 @@ export const useConversations = () => {
     },
   });
 
-  // Set up realtime subscription for new conversations
+  // Set up realtime subscription for new conversations and updates
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel('conversation-changes')
+    const participantChannel = supabase
+      .channel('conversation-participant-changes')
       .on(
         'postgres_changes',
         {
@@ -138,8 +143,35 @@ export const useConversations = () => {
       )
       .subscribe();
 
+    const conversationChannel = supabase
+      .channel('conversation-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations',
+        },
+        (payload) => {
+          // Update the specific conversation's last_message_at
+          queryClient.setQueryData(['conversations', user.id], (old: Conversation[] = []) => {
+            return old.map(conv => 
+              conv.id === payload.new.id 
+                ? { ...conv, last_message_at: payload.new.last_message_at }
+                : conv
+            ).sort((a, b) => {
+              const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+              const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+              return bTime - aTime;
+            });
+          });
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(participantChannel);
+      supabase.removeChannel(conversationChannel);
     };
   }, [user, queryClient]);
 

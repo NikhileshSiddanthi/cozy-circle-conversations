@@ -93,11 +93,27 @@ export const useMessages = (conversationId: string | null) => {
           table: 'messages',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        (payload) => {
+        async (payload) => {
+          // Don't duplicate if it's the current user's message
+          if (payload.new.sender_id === user?.id) return;
+
+          // Fetch sender profile for new message
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_id, display_name, avatar_url')
+            .eq('user_id', payload.new.sender_id)
+            .single();
+
+          const newMessage: Message = {
+            ...payload.new as any,
+            sender: profile ? {
+              display_name: profile.display_name,
+              avatar_url: profile.avatar_url,
+            } : undefined,
+          };
+
           queryClient.setQueryData(['messages', conversationId], (old: Message[] = []) => {
-            // Don't duplicate if it's the current user's message
-            if (payload.new.sender_id === user?.id) return old;
-            return [...old, payload.new as Message];
+            return [...old, newMessage];
           });
         }
       )
