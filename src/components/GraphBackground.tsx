@@ -337,9 +337,9 @@ export const GraphBackground: React.FC<GraphBackgroundProps> = ({
   }
 
   return (
-    <>
-      <canvas ref={canvasRef} className="fixed inset-0 -z-10" style={{ background: '#05080a' }} />
-      <div className="fixed inset-0 -z-10 pointer-events-none" style={{ background: 'radial-gradient(circle at center, transparent 0%, rgba(5, 8, 10, 0.8) 100%)' }} />
-    </>
+    <div className="fixed inset-0 z-0">
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ background: '#05080a' }} />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(circle at center, transparent 0%, rgba(5, 8, 10, 0.8) 100%)' }} />
+    </div>
   );
 };

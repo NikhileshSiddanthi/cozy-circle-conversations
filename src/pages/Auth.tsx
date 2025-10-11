@@ -14,9 +14,9 @@ const Auth = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center relative">
-        <GraphBackground seed={1} density="medium" glow={0.6} labelChance={0.1} />
-        <div className="flex items-center gap-3 text-lg relative z-10">
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
+        <GraphBackground seed={1} density="auto" glow={0.65} labelChance={0.2} showMap={true} />
+        <div className="flex items-center gap-3 text-lg relative z-20">
           <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#00E5C7' }} />
           <span style={{ color: '#E8FFFB' }}>Loading...</span>
         </div>
@@ -25,9 +25,9 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative">
-      <GraphBackground seed={1} density="medium" glow={0.6} labelChance={0.1} />
-      <div className="relative z-10 w-full">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <GraphBackground seed={1} density="auto" glow={0.65} labelChance={0.2} showMap={true} />
+      <div className="relative z-20 w-full max-w-md mx-auto">
         <LoginCard />
       </div>
     </div>
