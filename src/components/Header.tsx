@@ -152,7 +152,7 @@ export const Header = () => {
           </nav>
 
           {/* Right: Primary CTA + Actions */}
-          <div className="flex items-center gap-2 md:gap-3">
+          <div className="flex items-center gap-1 md:gap-3">
             {/* Primary CTA - Desktop */}
             <div className="hidden md:flex items-center gap-2">
               <Button
@@ -175,14 +175,16 @@ export const Header = () => {
               </Button>
             </div>
 
-            {/* Visitor Counter */}
-            <VisitorCounter />
+            {/* Visitor Counter - Hidden on mobile */}
+            <div className="hidden sm:block">
+              <VisitorCounter />
+            </div>
 
             {/* Mobile Search Button */}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden xl:hidden h-8 w-8 md:h-10 md:w-10" aria-label="Search">
-                  <Search className="h-4 w-4 md:h-5 md:w-5" />
+                <Button variant="ghost" size="icon" className="lg:hidden xl:hidden h-8 w-8" aria-label="Search">
+                  <Search className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="top" className="h-auto">
@@ -201,8 +203,8 @@ export const Header = () => {
             {/* Mobile Navigation Menu */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8 md:h-10 md:w-10" aria-label="Open navigation menu">
-                  <Menu className="h-4 w-4 md:h-5 md:w-5" />
+                <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8" aria-label="Open navigation menu">
+                  <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-72">
@@ -226,12 +228,12 @@ export const Header = () => {
             </Sheet>
 
             {/* Theme Toggle */}
-            <div data-tour="theme-toggle">
+            <div data-tour="theme-toggle" className="hidden sm:block">
               <ThemeToggle />
             </div>
 
             {/* Notifications */}
-            <div data-tour="notification-bell">
+            <div data-tour="notification-bell" className="hidden sm:block">
               <NotificationBell />
             </div>
 
@@ -242,11 +244,11 @@ export const Header = () => {
                   data-tour="profile-avatar"
                   variant="ghost" 
                   size="icon" 
-                  className="relative h-8 w-8 md:h-10 md:w-10" 
+                  className="relative h-8 w-8" 
                   aria-label="User profile menu"
                 >
-                  <Avatar className="h-6 w-6 md:h-8 md:w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs md:text-sm">
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
                       {user?.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

@@ -514,8 +514,8 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
       <CardContent className="space-y-4">
         <div className="group">
           <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold mb-2 break-words">
                 {post.title}
                 {post.is_edited && (
                   <span className="ml-2 text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
@@ -526,7 +526,7 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
               {post.content && (
                 <ClickableContent 
                   content={post.content}
-                  className="text-muted-foreground whitespace-pre-wrap"
+                  className="text-muted-foreground whitespace-pre-wrap break-words"
                 />
               )}
             </div>
