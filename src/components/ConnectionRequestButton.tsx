@@ -107,8 +107,8 @@ export const ConnectionRequestButton: React.FC<ConnectionRequestButtonProps> = (
 
   if (existingConnection.status === 'accepted') {
     return (
-      <div className="flex gap-2">
-        <Button variant="outline" size={size} disabled>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Button variant="outline" size={size} disabled className="w-full sm:w-auto">
           <Check className="h-4 w-4 mr-2" />
           Connected
         </Button>
@@ -116,6 +116,8 @@ export const ConnectionRequestButton: React.FC<ConnectionRequestButtonProps> = (
           variant="default" 
           size={size}
           onClick={() => createConversationAndNavigate.mutate(userId)}
+          className="w-full sm:w-auto"
+          disabled={createConversationAndNavigate.isPending}
         >
           <MessageSquare className="h-4 w-4 mr-2" />
           Message
@@ -144,7 +146,7 @@ export const ConnectionRequestButton: React.FC<ConnectionRequestButtonProps> = (
 
     // If current user received the request
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <Button
           variant="default"
           size={size}
@@ -152,6 +154,8 @@ export const ConnectionRequestButton: React.FC<ConnectionRequestButtonProps> = (
             id: existingConnection.id, 
             status: 'accepted' 
           })}
+          className="w-full sm:w-auto"
+          disabled={updateConnection.isPending}
         >
           <Check className="h-4 w-4 mr-2" />
           Accept
@@ -163,6 +167,8 @@ export const ConnectionRequestButton: React.FC<ConnectionRequestButtonProps> = (
             id: existingConnection.id, 
             status: 'rejected' 
           })}
+          className="w-full sm:w-auto"
+          disabled={updateConnection.isPending}
         >
           <X className="h-4 w-4" />
         </Button>

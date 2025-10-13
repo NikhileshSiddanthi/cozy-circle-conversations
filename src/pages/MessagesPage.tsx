@@ -60,20 +60,20 @@ const MessagesPage = () => {
 
   return (
     <MainLayout>
-      <div className="container max-w-6xl py-8">
-        <div className="flex items-center gap-3 mb-6">
-          <MessageSquare className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold">Messages</h1>
+      <div className="container max-w-6xl py-4 md:py-8 px-2 md:px-4">
+        <div className="flex items-center gap-2 md:gap-3 mb-4 md:mb-6">
+          <MessageSquare className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+          <h1 className="text-2xl md:text-3xl font-bold">Messages</h1>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[calc(100vh-250px)]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6 h-[calc(100vh-180px)] md:h-[calc(100vh-250px)]">
           {/* Conversations List */}
-          <Card className="md:col-span-1">
-            <CardHeader>
-              <CardTitle>Conversations</CardTitle>
+          <Card className={`md:col-span-1 ${selectedConversation ? 'hidden md:block' : ''}`}>
+            <CardHeader className="py-3 md:py-6">
+              <CardTitle className="text-base md:text-lg">Conversations</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="h-[calc(100vh-350px)]">
+              <ScrollArea className="h-[calc(100vh-240px)] md:h-[calc(100vh-350px)]">
                 {conversations.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 px-4">
                     <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
@@ -86,18 +86,18 @@ const MessagesPage = () => {
                     <button
                       key={conv.id}
                       onClick={() => setSelectedConversation(conv.id)}
-                      className={`w-full flex items-center gap-3 p-4 hover:bg-accent transition-colors ${
+                      className={`w-full flex items-center gap-2 md:gap-3 p-3 md:p-4 hover:bg-accent transition-colors ${
                         selectedConversation === conv.id ? 'bg-accent' : ''
                       }`}
                     >
-                      <Avatar>
+                      <Avatar className="h-10 w-10 md:h-12 md:w-12">
                         <AvatarImage src={getConversationAvatar(conv) || ''} />
                         <AvatarFallback>
                           {getConversationName(conv)[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 text-left">
-                        <p className="font-semibold text-sm">{getConversationName(conv)}</p>
+                      <div className="flex-1 text-left min-w-0">
+                        <p className="font-semibold text-sm md:text-base truncate">{getConversationName(conv)}</p>
                         {conv.last_message_at && (
                           <p className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(conv.last_message_at), { addSuffix: true })}
@@ -112,48 +112,56 @@ const MessagesPage = () => {
           </Card>
 
           {/* Chat Area */}
-          <Card className="md:col-span-2">
+          <Card className={`md:col-span-2 ${!selectedConversation ? 'hidden md:flex' : ''}`}>
             {selectedConversation ? (
               <>
-                <CardHeader>
-                  <CardTitle>
+                <CardHeader className="py-3 md:py-6 flex flex-row items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                    onClick={() => setSelectedConversation(null)}
+                  >
+                    <MessageSquare className="h-5 w-5" />
+                  </Button>
+                  <CardTitle className="text-base md:text-lg">
                     {conversations.find((c) => c.id === selectedConversation) &&
                       getConversationName(
                         conversations.find((c) => c.id === selectedConversation)
                       )}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col h-[calc(100vh-450px)]">
-                  <ScrollArea className="flex-1 pr-4 mb-4">
+                <CardContent className="flex flex-col h-[calc(100vh-280px)] md:h-[calc(100vh-450px)] p-3 md:p-6">
+                  <ScrollArea className="flex-1 pr-2 md:pr-4 mb-3 md:mb-4">
                     {loadingMessages ? (
-                      <p className="text-center text-muted-foreground">Loading messages...</p>
+                      <p className="text-center text-muted-foreground text-sm">Loading messages...</p>
                     ) : messages.length === 0 ? (
-                      <p className="text-center text-muted-foreground">No messages yet</p>
+                      <p className="text-center text-muted-foreground text-sm">No messages yet</p>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="space-y-3 md:space-y-4">
                         {messages.map((msg) => {
                           const isOwn = msg.sender_id === user?.id;
                           return (
                             <div
                               key={msg.id}
-                              className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}
+                              className={`flex gap-2 md:gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}
                             >
                               {!isOwn && (
-                                <Avatar className="h-8 w-8">
+                                <Avatar className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0">
                                   <AvatarImage src={msg.sender?.avatar_url || ''} />
-                                  <AvatarFallback>
+                                  <AvatarFallback className="text-xs">
                                     {msg.sender?.display_name?.[0] || 'U'}
                                   </AvatarFallback>
                                 </Avatar>
                               )}
                               <div
-                                className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                                className={`max-w-[75%] md:max-w-[70%] rounded-lg px-3 py-2 md:px-4 md:py-2 ${
                                   isOwn
                                     ? 'bg-primary text-primary-foreground'
                                     : 'bg-muted'
                                 }`}
                               >
-                                <p className="text-sm">{msg.content}</p>
+                                <p className="text-sm break-words">{msg.content}</p>
                                 <p
                                   className={`text-xs mt-1 ${
                                     isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'
@@ -175,9 +183,9 @@ const MessagesPage = () => {
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       placeholder="Type a message..."
-                      className="flex-1"
+                      className="flex-1 text-sm md:text-base"
                     />
-                    <Button type="submit" size="icon">
+                    <Button type="submit" size="icon" className="h-10 w-10">
                       <Send className="h-4 w-4" />
                     </Button>
                   </form>

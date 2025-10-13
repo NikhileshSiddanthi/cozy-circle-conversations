@@ -38,7 +38,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           <LeftSidebar />
           
           {/* Main Content */}
-          <main className="flex-1 min-w-0 px-3 py-4 md:px-6 md:py-6">
+          <main className="flex-1 min-w-0 px-2 py-3 md:px-6 md:py-6">
             <div className="max-w-4xl mx-auto">
               {children}
             </div>
