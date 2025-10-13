@@ -12,11 +12,15 @@ export const useMessageConnection = () => {
 
   const createConversationAndNavigate = useMutation({
     mutationFn: async (recipientId: string) => {
+      console.log('💬 Creating/finding conversation:', { userId: user?.id, recipientId });
+      
       // Check if conversation already exists
       const { data: existingConversations } = await supabase
         .from('conversation_participants')
         .select('conversation_id')
         .eq('user_id', user?.id);
+      
+      console.log('Existing conversations:', existingConversations);
 
       if (existingConversations && existingConversations.length > 0) {
         const conversationIds = existingConversations.map(c => c.conversation_id);
@@ -44,7 +48,12 @@ export const useMessageConnection = () => {
         .select()
         .single();
 
-      if (convError) throw convError;
+      if (convError) {
+        console.error('❌ Conversation creation error:', convError);
+        throw convError;
+      }
+      
+      console.log('✅ Conversation created:', conv);
 
       // Add participants
       const participants = [
@@ -56,7 +65,12 @@ export const useMessageConnection = () => {
         .from('conversation_participants')
         .insert(participants);
 
-      if (partError) throw partError;
+      if (partError) {
+        console.error('❌ Participants insert error:', partError);
+        throw partError;
+      }
+      
+      console.log('✅ Participants added');
 
       return conv.id;
     },

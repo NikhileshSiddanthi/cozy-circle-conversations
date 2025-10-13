@@ -49,13 +49,23 @@ export const useMessages = (conversationId: string | null) => {
       media_url?: string; 
       media_type?: string;
     }) => {
-      if (!conversationId) throw new Error('No conversation selected');
+      console.log('📤 Sending message:', { conversationId, userId: user?.id, content });
+      
+      if (!conversationId) {
+        console.error('❌ No conversation selected');
+        throw new Error('No conversation selected');
+      }
+      
+      if (!user?.id) {
+        console.error('❌ No user ID');
+        throw new Error('User not authenticated');
+      }
 
       const { data, error } = await supabase
         .from('messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: user?.id,
+          sender_id: user.id,
           content,
           media_url,
           media_type,
@@ -63,7 +73,12 @@ export const useMessages = (conversationId: string | null) => {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Message send error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Message sent successfully:', data);
       return data;
     },
     onSuccess: () => {

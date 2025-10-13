@@ -39,6 +39,8 @@ export const useConversations = () => {
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['conversations', user?.id],
     queryFn: async () => {
+      console.log('🔄 Fetching conversations for user:', user?.id);
+      
       const { data, error } = await supabase
         .from('conversation_participants')
         .select(`
@@ -51,7 +53,12 @@ export const useConversations = () => {
         `)
         .eq('user_id', user?.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Conversations fetch error:', error);
+        throw error;
+      }
+      
+      console.log('Raw conversations data:', data);
 
       const convIds = data.map((d: any) => d.conversation.id);
       
@@ -64,9 +71,14 @@ export const useConversations = () => {
         `)
         .in('conversation_id', convIds);
 
-      if (partError) throw partError;
+      if (partError) {
+        console.error('❌ Participants fetch error:', partError);
+        throw partError;
+      }
+      
+      console.log('Participants data:', participantsData);
 
-      return data.map((d: any) => ({
+      const result = data.map((d: any) => ({
         ...d.conversation,
         participants: participantsData
           .filter((p: any) => p.conversation_id === d.conversation.id)
@@ -81,6 +93,9 @@ export const useConversations = () => {
         const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return bTime - aTime;
       }) as Conversation[];
+      
+      console.log('✅ Processed conversations:', result);
+      return result;
     },
     enabled: !!user,
   });
