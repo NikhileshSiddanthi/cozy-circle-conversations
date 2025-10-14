@@ -115,7 +115,10 @@ export const ConnectionRequestButton: React.FC<ConnectionRequestButtonProps> = (
         <Button 
           variant="default" 
           size={size}
-          onClick={() => createConversationAndNavigate.mutate(userId)}
+          onClick={() => {
+            console.log('🔘 Message button clicked for userId:', userId);
+            createConversationAndNavigate.mutate(userId);
+          }}
           className="w-full sm:w-auto"
           disabled={createConversationAndNavigate.isPending}
         >

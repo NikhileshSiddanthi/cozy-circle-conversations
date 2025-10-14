@@ -14,6 +14,11 @@ export const useMessageConnection = () => {
     mutationFn: async (recipientId: string) => {
       console.log('💬 Creating/finding conversation:', { userId: user?.id, recipientId });
       
+      if (!user?.id) {
+        console.error('❌ No user ID - cannot create conversation');
+        throw new Error('User not authenticated');
+      }
+      
       // Check if conversation already exists
       const { data: existingConversations } = await supabase
         .from('conversation_participants')
@@ -75,8 +80,13 @@ export const useMessageConnection = () => {
       return conv.id;
     },
     onSuccess: (conversationId) => {
+      console.log('✅ Conversation created, navigating to /messages with:', conversationId);
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       navigate('/messages', { state: { selectedConversation: conversationId } });
+      toast({
+        title: 'Conversation started',
+        description: 'You can now send messages',
+      });
     },
     onError: (error: any) => {
       toast({
