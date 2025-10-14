@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Users, Clock, Check, X } from 'lucide-react';
+import { UserPlus, Users, Clock, Check, X, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMessageConnection } from '@/hooks/useMessageConnection';
 
 const ConnectionsPage = () => {
   const { user } = useAuth();
   const { connections, acceptedConnections, pendingRequests, isLoading, updateConnection } = useConnections();
+  const { createConversationAndNavigate } = useMessageConnection();
 
   if (isLoading) {
     return (
@@ -75,7 +77,16 @@ const ConnectionsPage = () => {
                           </p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const otherUserId = isRequester ? connection.recipient_id : connection.requester_id;
+                          createConversationAndNavigate.mutate(otherUserId);
+                        }}
+                        disabled={createConversationAndNavigate.isPending}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-2" />
                         Message
                       </Button>
                     </CardContent>
