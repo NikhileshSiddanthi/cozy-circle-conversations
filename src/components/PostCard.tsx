@@ -251,11 +251,13 @@ export const PostCard = ({ post, onUpdate }: PostCardProps) => {
 
     if (navigator.share) {
       try {
-        await navigator.share({
+        const { sanitizeShareData } = await import('@/lib/share/sanitizeShareText');
+        const shareData = sanitizeShareData({
           title: post.title,
           text: post.content || "",
           url: url,
         });
+        await navigator.share(shareData);
       } catch (error) {
         // User cancelled sharing or sharing failed
       }

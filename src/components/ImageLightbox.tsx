@@ -124,11 +124,13 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
     const currentImage = images[currentIndex];
     if (navigator.share) {
       try {
-        await navigator.share({
+        const { sanitizeShareData } = await import('@/lib/share/sanitizeShareText');
+        const shareData = sanitizeShareData({
           title: 'Shared Image',
           text: currentImage.caption || 'Check out this image',
           url: currentImage.url
         });
+        await navigator.share(shareData);
       } catch (error) {
         // User cancelled share or error occurred
       }

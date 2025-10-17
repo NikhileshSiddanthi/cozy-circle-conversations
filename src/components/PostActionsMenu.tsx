@@ -78,10 +78,12 @@ export const PostActionsMenu = ({
     
     if (navigator.share) {
       try {
-        await navigator.share({
+        const { sanitizeShareData } = await import('@/lib/share/sanitizeShareText');
+        const shareData = sanitizeShareData({
           title: postTitle,
           url: shareUrl,
         });
+        await navigator.share(shareData);
       } catch (error) {
         // User cancelled sharing
       }
