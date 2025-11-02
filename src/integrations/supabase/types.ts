@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.12 (cd3cf9e)"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -19,7 +19,7 @@ export type Database = {
           created_at: string
           event_type: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           metadata: Json | null
           provider: string | null
           user_agent: string | null
@@ -29,7 +29,7 @@ export type Database = {
           created_at?: string
           event_type: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           provider?: string | null
           user_agent?: string | null
@@ -39,7 +39,7 @@ export type Database = {
           created_at?: string
           event_type?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           provider?: string | null
           user_agent?: string | null
@@ -1117,7 +1117,7 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           last_activity_at: string
           revoked_at: string | null
           user_agent: string | null
@@ -1127,7 +1127,7 @@ export type Database = {
           created_at?: string
           expires_at: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           last_activity_at?: string
           revoked_at?: string | null
           user_agent?: string | null
@@ -1137,7 +1137,7 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           last_activity_at?: string
           revoked_at?: string | null
           user_agent?: string | null
@@ -1240,25 +1240,22 @@ export type Database = {
       }
       has_role: {
         Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
+          required_role: Database["public"]["Enums"]["app_role"]
+          user_id: string
         }
         Returns: boolean
       }
-      increment_visitor_count: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      increment_visitor_count: { Args: never; Returns: undefined }
       is_conversation_participant: {
-        Args: { _conversation_id: string; _user_id: string }
+        Args: { conversation_id: string; user_id: string }
         Returns: boolean
       }
       is_group_admin_or_moderator: {
-        Args: { _group_id: string; _user_id: string }
+        Args: { group_id: string; user_id: string }
         Returns: boolean
       }
       is_group_member: {
-        Args: { _group_id: string; _user_id: string }
+        Args: { group_id: string; user_id: string }
         Returns: boolean
       }
       revoke_all_user_sessions: {
@@ -1267,9 +1264,9 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
-      draft_status: "editing" | "scheduled" | "published" | "discarded"
-      media_status: "pending" | "uploaded" | "attached" | "expired" | "failed"
+      app_role: "user" | "moderator" | "admin"
+      draft_status: "editing" | "publishing" | "published" | "failed"
+      media_status: "pending" | "uploaded" | "attached" | "deleted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1397,9 +1394,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
-      draft_status: ["editing", "scheduled", "published", "discarded"],
-      media_status: ["pending", "uploaded", "attached", "expired", "failed"],
+      app_role: ["user", "moderator", "admin"],
+      draft_status: ["editing", "publishing", "published", "failed"],
+      media_status: ["pending", "uploaded", "attached", "deleted"],
     },
   },
 } as const
