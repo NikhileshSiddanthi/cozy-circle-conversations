@@ -75,9 +75,20 @@ export const LoginCard = () => {
       >
         {/* Title */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2" style={{ color: '#E8FFFB' }}>
-            COZI Chat
-          </h1>
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <h1 className="text-4xl font-bold" style={{ color: '#E8FFFB' }}>
+              COZI Chat
+            </h1>
+            <span 
+              className="px-3 py-1 text-xs font-semibold rounded-full"
+              style={{ 
+                background: 'linear-gradient(135deg, #00E5C7 0%, #14FF72 100%)',
+                color: '#05080a'
+              }}
+            >
+              QA v2.0
+            </span>
+          </div>
           <p className="text-sm" style={{ color: 'rgba(232, 255, 251, 0.6)' }}>
             {isSignUp ? 'Create your account' : 'Sign in to continue'}
           </p>
