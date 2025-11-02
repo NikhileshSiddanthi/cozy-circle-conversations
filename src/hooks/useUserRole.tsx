@@ -9,7 +9,6 @@ export const useUserRole = () => {
 
   useEffect(() => {
     const fetchUserRole = async () => {
-      console.log('QA Pipeline Test: Fetching user role');
       if (!user) {
         setRole(null);
         setLoading(false);
