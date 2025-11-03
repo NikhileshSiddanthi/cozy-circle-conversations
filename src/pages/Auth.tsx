@@ -9,6 +9,7 @@ const Auth = () => {
 
   // Redirect if already authenticated
   if (!loading && user) {
+    console.log('User authenticated, redirecting to home');
     return <Navigate to="/" replace />;
   }
 
