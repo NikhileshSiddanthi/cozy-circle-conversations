@@ -30,6 +30,9 @@ jobs:
     - name: Run tests
       run: bun test
       continue-on-error: true
+      env:
+        VITE_SUPABASE_URL: https://test-project.supabase.co
+        VITE_SUPABASE_ANON_KEY: test-anon-key
     
     - name: Build project
       run: bun run build
