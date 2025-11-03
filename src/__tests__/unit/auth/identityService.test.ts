@@ -6,19 +6,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IdentityService } from '@/services/auth/identityService';
 
+// Create mock query builder
+const createMockQueryBuilder = () => ({
+  select: vi.fn().mockReturnThis(),
+  insert: vi.fn().mockReturnThis(),
+  update: vi.fn().mockReturnThis(),
+  delete: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
+  neq: vi.fn().mockReturnThis(),
+  maybeSingle: vi.fn(),
+  single: vi.fn(),
+  order: vi.fn().mockReturnThis(),
+});
+
 // Mock Supabase client
 const mockSupabase = {
-  from: vi.fn(() => ({
-    select: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    neq: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn(),
-    single: vi.fn(),
-    order: vi.fn().mockReturnThis(),
-  })),
+  from: vi.fn(() => createMockQueryBuilder()),
   rpc: vi.fn(),
 };
 
@@ -42,14 +45,17 @@ describe('IdentityService', () => {
         email_verified: true,
       };
 
-      // Mock finding existing
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery1 = createMockQueryBuilder();
+      const mockQuery2 = createMockQueryBuilder();
+      
+      mockSupabase.from.mockReturnValueOnce(mockQuery1);
+      mockQuery1.maybeSingle.mockResolvedValueOnce({
         data: existingIdentity,
         error: null,
       });
 
-      // Mock update
-      mockSupabase.from().single.mockResolvedValueOnce({
+      mockSupabase.from.mockReturnValueOnce(mockQuery2);
+      mockQuery2.single.mockResolvedValueOnce({
         data: { ...existingIdentity, updated_at: new Date().toISOString() },
         error: null,
       });
@@ -68,13 +74,6 @@ describe('IdentityService', () => {
     });
 
     it('should create new identity if not found', async () => {
-      // Mock not finding existing
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
-        data: null,
-        error: null,
-      });
-
-      // Mock creation
       const newIdentity = {
         id: 'new-id',
         user_id: 'user-1',
@@ -84,7 +83,17 @@ describe('IdentityService', () => {
         email_verified: true,
       };
 
-      mockSupabase.from().single.mockResolvedValueOnce({
+      const mockQuery1 = createMockQueryBuilder();
+      const mockQuery2 = createMockQueryBuilder();
+      
+      mockSupabase.from.mockReturnValueOnce(mockQuery1);
+      mockQuery1.maybeSingle.mockResolvedValueOnce({
+        data: null,
+        error: null,
+      });
+
+      mockSupabase.from.mockReturnValueOnce(mockQuery2);
+      mockQuery2.single.mockResolvedValueOnce({
         data: newIdentity,
         error: null,
       });
@@ -112,7 +121,11 @@ describe('IdentityService', () => {
         email_verified: true,
       };
 
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery1 = createMockQueryBuilder();
+      const mockQuery2 = createMockQueryBuilder();
+      
+      mockSupabase.from.mockReturnValueOnce(mockQuery1);
+      mockQuery1.maybeSingle.mockResolvedValueOnce({
         data: existingIdentity,
         error: null,
       });
@@ -122,7 +135,8 @@ describe('IdentityService', () => {
         email: 'new@example.com',
       };
 
-      mockSupabase.from().single.mockResolvedValueOnce({
+      mockSupabase.from.mockReturnValueOnce(mockQuery2);
+      mockQuery2.single.mockResolvedValueOnce({
         data: updatedIdentity,
         error: null,
       });
@@ -140,7 +154,9 @@ describe('IdentityService', () => {
     });
 
     it('should require user_id for new identity creation', async () => {
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: null,
       });
@@ -151,7 +167,6 @@ describe('IdentityService', () => {
         email: 'user@example.com',
         email_verified: true,
         raw_profile: {},
-        // Missing user_id
       });
 
       expect(result.error).toBeDefined();
@@ -161,8 +176,9 @@ describe('IdentityService', () => {
 
   describe('linkIdentity', () => {
     it('should prevent linking identity already used by another user', async () => {
-      // Mock identity exists for different user
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
         data: { user_id: 'other-user' },
         error: null,
       });
@@ -181,19 +197,24 @@ describe('IdentityService', () => {
     });
 
     it('should allow linking new provider to user', async () => {
-      // Mock identity doesn't exist
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery1 = createMockQueryBuilder();
+      const mockQuery2 = createMockQueryBuilder();
+      const mockQuery3 = createMockQueryBuilder();
+      
+      mockSupabase.from.mockReturnValueOnce(mockQuery1);
+      mockQuery1.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: null,
       });
 
-      // Mock successful creation
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      mockSupabase.from.mockReturnValueOnce(mockQuery2);
+      mockQuery2.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: null,
       });
 
-      mockSupabase.from().single.mockResolvedValueOnce({
+      mockSupabase.from.mockReturnValueOnce(mockQuery3);
+      mockQuery3.single.mockResolvedValueOnce({
         data: {
           id: 'new-link',
           user_id: 'user-1',
@@ -218,8 +239,9 @@ describe('IdentityService', () => {
 
   describe('unlinkIdentity', () => {
     it('should prevent unlinking last authentication method', async () => {
-      // Mock user has only one identity
-      mockSupabase.from().order.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.order.mockResolvedValueOnce({
         data: [{ id: '1', provider: 'google' }],
         error: null,
       });
@@ -231,8 +253,11 @@ describe('IdentityService', () => {
     });
 
     it('should allow unlinking when multiple methods exist', async () => {
-      // Mock user has multiple identities
-      mockSupabase.from().order.mockResolvedValueOnce({
+      const mockQuery1 = createMockQueryBuilder();
+      const mockQuery2 = createMockQueryBuilder();
+      
+      mockSupabase.from.mockReturnValueOnce(mockQuery1);
+      mockQuery1.order.mockResolvedValueOnce({
         data: [
           { id: '1', provider: 'google' },
           { id: '2', provider: 'apple' },
@@ -240,8 +265,8 @@ describe('IdentityService', () => {
         error: null,
       });
 
-      // Mock deletion
-      mockSupabase.from().delete.mockResolvedValueOnce({
+      mockSupabase.from.mockReturnValueOnce(mockQuery2);
+      mockQuery2.delete.mockResolvedValueOnce({
         error: null,
       });
 
@@ -253,7 +278,9 @@ describe('IdentityService', () => {
 
   describe('checkEmailConflict', () => {
     it('should detect email used by another account', async () => {
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
         data: { user_id: 'other-user' },
         error: null,
       });
@@ -268,7 +295,9 @@ describe('IdentityService', () => {
     });
 
     it('should allow email not used by others', async () => {
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: null,
       });

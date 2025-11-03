@@ -6,14 +6,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UsernameService } from '@/services/auth/usernameService';
 
+// Create mock query builder
+const createMockQueryBuilder = () => ({
+  select: vi.fn().mockReturnThis(),
+  update: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
+  ilike: vi.fn().mockReturnThis(),
+  maybeSingle: vi.fn(),
+});
+
 const mockSupabase = {
-  from: vi.fn(() => ({
-    select: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    ilike: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn(),
-  })),
+  from: vi.fn(() => createMockQueryBuilder()),
 };
 
 vi.mock('@/integrations/supabase/client', () => ({
@@ -27,7 +30,9 @@ describe('UsernameService', () => {
 
   describe('validateUsername', () => {
     it('should accept valid usernames', async () => {
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: null,
       });
@@ -68,7 +73,9 @@ describe('UsernameService', () => {
     });
 
     it('should detect taken username', async () => {
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
         data: { username: 'taken_user' },
         error: null,
       });
@@ -82,8 +89,9 @@ describe('UsernameService', () => {
 
   describe('suggestUsername', () => {
     it('should generate username from display name', async () => {
-      // Mock all checks as available
-      mockSupabase.from().maybeSingle.mockResolvedValue({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValue(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValue({
         data: null,
         error: null,
       });
@@ -99,7 +107,9 @@ describe('UsernameService', () => {
     });
 
     it('should generate username from email if no display name', async () => {
-      mockSupabase.from().maybeSingle.mockResolvedValue({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValue(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValue({
         data: null,
         error: null,
       });
@@ -114,14 +124,16 @@ describe('UsernameService', () => {
 
     it('should handle collision with numeric suffix', async () => {
       let callCount = 0;
-      mockSupabase.from().maybeSingle.mockImplementation(() => {
-        callCount++;
-        // First call: base is taken
-        // Second call: base1 is available
-        return Promise.resolve({
-          data: callCount === 1 ? { username: 'john_doe' } : null,
-          error: null,
+      mockSupabase.from.mockImplementation(() => {
+        const mockQuery = createMockQueryBuilder();
+        mockQuery.maybeSingle.mockImplementation(() => {
+          callCount++;
+          return Promise.resolve({
+            data: callCount === 1 ? { username: 'john_doe' } : null,
+            error: null,
+          });
         });
+        return mockQuery;
       });
 
       const username = await UsernameService.suggestUsername({
@@ -133,7 +145,9 @@ describe('UsernameService', () => {
     });
 
     it('should sanitize special characters', async () => {
-      mockSupabase.from().maybeSingle.mockResolvedValue({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValue(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValue({
         data: null,
         error: null,
       });
@@ -143,12 +157,13 @@ describe('UsernameService', () => {
         provider: 'apple',
       });
 
-      // Should only contain valid characters
       expect(username).toMatch(/^[a-z0-9_]+$/);
     });
 
     it('should handle empty display name and email', async () => {
-      mockSupabase.from().maybeSingle.mockResolvedValue({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValue(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValue({
         data: null,
         error: null,
       });
@@ -163,14 +178,17 @@ describe('UsernameService', () => {
 
   describe('reserveUsername', () => {
     it('should reserve valid username', async () => {
-      // Mock validation passes
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery1 = createMockQueryBuilder();
+      const mockQuery2 = createMockQueryBuilder();
+      
+      mockSupabase.from.mockReturnValueOnce(mockQuery1);
+      mockQuery1.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: null,
       });
 
-      // Mock update succeeds
-      mockSupabase.from().eq.mockResolvedValueOnce({
+      mockSupabase.from.mockReturnValueOnce(mockQuery2);
+      mockQuery2.eq.mockResolvedValueOnce({
         error: null,
       });
 
@@ -186,7 +204,7 @@ describe('UsernameService', () => {
     it('should reject invalid username', async () => {
       const result = await UsernameService.reserveUsername(
         'user-1',
-        'x' // Too short
+        'x'
       );
 
       expect(result.success).toBe(false);
@@ -194,14 +212,17 @@ describe('UsernameService', () => {
     });
 
     it('should handle unique constraint violation', async () => {
-      // Mock validation passes (race condition)
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery1 = createMockQueryBuilder();
+      const mockQuery2 = createMockQueryBuilder();
+      
+      mockSupabase.from.mockReturnValueOnce(mockQuery1);
+      mockQuery1.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: null,
       });
 
-      // Mock update fails with unique violation
-      mockSupabase.from().eq.mockResolvedValueOnce({
+      mockSupabase.from.mockReturnValueOnce(mockQuery2);
+      mockQuery2.eq.mockResolvedValueOnce({
         error: { code: '23505', message: 'duplicate key' },
       });
 
