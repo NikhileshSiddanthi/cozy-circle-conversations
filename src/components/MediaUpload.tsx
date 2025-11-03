@@ -525,13 +525,14 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
                   </div>
                   
                    {/* File Preview */}
-                   <div className="flex-shrink-0">
+                   <div className="flex-shrink-0" data-testid="media-preview">
                      {mediaFile.file.type.startsWith('image/') ? (
                        <img
                          src={mediaFile.preview}
                          alt={mediaFile.file.name}
                          className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
                          onClick={() => openViewer(index)}
+                         data-testid="uploaded-image-preview"
                        />
                      ) : mediaFile.file.type.startsWith('video/') ? (
                        <video
@@ -557,6 +558,7 @@ export const MediaUpload: React.FC<MediaUploadProps> = ({
                         size="sm"
                         onClick={() => removeFile(mediaFile.id)}
                         className="h-6 w-6 p-0 hover:bg-destructive/10"
+                        data-testid="remove-media-button"
                       >
                         <X className="h-3 w-3" />
                       </Button>

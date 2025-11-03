@@ -60,6 +60,13 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
     mediaFiles: editPost?.media_urls || []
   });
 
+  // Log title changes for testing
+  useEffect(() => {
+    if (formData.title && isExpanded) {
+      console.log('Title changing to:', formData.title);
+    }
+  }, [formData.title, isExpanded]);
+
   const MAX_CHARACTERS = 5000;
 
   // Auto-process content for link previews
@@ -110,20 +117,60 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
         if (error) throw error;
         setDraftId(draft.id);
       } else {
-        const { data: draft, error } = await supabase
+        // Check for existing draft first
+        const { data: existingDrafts } = await supabase
           .from('post_drafts')
-          .insert({
-            user_id: user!.id,
-            group_id: formData.groupId || selectedGroupId || null,
-            title: "",
-            content: "",
-            status: 'editing'
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('user_id', user!.id)
+          .eq('status', 'editing')
+          .order('updated_at', { ascending: false })
+          .limit(1);
 
-        if (error) throw error;
-        setDraftId(draft.id);
+        if (existingDrafts && existingDrafts.length > 0) {
+          const existingDraft = existingDrafts[0];
+          setDraftId(existingDraft.id);
+          
+          // Restore draft data
+          setFormData(prev => ({
+            ...prev,
+            title: existingDraft.title || "",
+            content: existingDraft.content || "",
+            groupId: existingDraft.group_id || selectedGroupId || "",
+          }));
+
+          // Load draft media
+          const { data: draftMedia } = await supabase
+            .from('draft_media')
+            .select('url')
+            .eq('draft_id', existingDraft.id)
+            .order('created_at');
+
+          if (draftMedia && draftMedia.length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              mediaFiles: draftMedia.map(m => m.url)
+            }));
+          }
+
+          console.log('Draft restored:', existingDraft.id);
+        } else {
+          // Create new draft
+          const { data: draft, error } = await supabase
+            .from('post_drafts')
+            .insert({
+              user_id: user!.id,
+              group_id: formData.groupId || selectedGroupId || null,
+              title: "",
+              content: "",
+              status: 'editing'
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          setDraftId(draft.id);
+          console.log('New draft created:', draft.id);
+        }
       }
   // Deployment sync test - force fresh deployment
   console.log('PostComposer - latest version with Text/Media/Link tabs');
@@ -162,6 +209,12 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
     if (!draftId || editPost) return;
 
     try {
+      console.log('Draft saving:', {
+        draftId,
+        title: formData.title,
+        content: formData.content.substring(0, 50) + '...'
+      });
+
       const { error } = await supabase
         .from('post_drafts')
         .update({
@@ -174,6 +227,8 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
 
       if (error) {
         console.error('Failed to save draft:', error);
+      } else {
+        console.log('Draft saved successfully');
       }
     } catch (error) {
       console.error('Draft save error:', error);
@@ -276,6 +331,8 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('PUB START: Publishing post');
+    
     if (mediaUploading) {
       toast({
         title: "Please wait",
@@ -285,6 +342,8 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
       return;
     }
 
+    console.log('PUB VALIDATE: Validating post data');
+    
     // Validate content (allow text-only posts)
     const hasTitle = formData.title.trim().length > 0;
     const hasContent = formData.content.trim().length > 0;
@@ -369,6 +428,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
         }
 
         console.log('Publish response:', data);
+        console.log('POST CREATED: Post successfully published', data.postId);
 
         toast({
           title: "Post Published",
