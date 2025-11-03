@@ -1,14 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { supabase } from '@/integrations/supabase/client';
 
+const mockInvoke = vi.fn();
+
 // Mock Supabase client
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     functions: {
-      invoke: vi.fn(),
+      invoke: mockInvoke,
     },
     auth: {
-      getUser: vi.fn(),
+      getUser: vi.fn(() => Promise.resolve({
+        data: { user: { id: 'test-user-id' } },
+        error: null
+      })),
     },
   },
 }));
@@ -29,7 +34,7 @@ describe('Uploads API', () => {
         error: null,
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { data, error } = await supabase.functions.invoke('uploads', {
         body: {
@@ -54,7 +59,7 @@ describe('Uploads API', () => {
         },
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { error } = await supabase.functions.invoke('uploads', {
         body: {
@@ -77,7 +82,7 @@ describe('Uploads API', () => {
         },
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { error } = await supabase.functions.invoke('uploads', {
         body: {
@@ -100,7 +105,7 @@ describe('Uploads API', () => {
         },
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { error } = await supabase.functions.invoke('uploads', {
         body: {
@@ -130,7 +135,7 @@ describe('Uploads API', () => {
         error: null,
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { data, error } = await supabase.functions.invoke('uploads', {
         body: {
@@ -154,7 +159,7 @@ describe('Uploads API', () => {
         },
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { error } = await supabase.functions.invoke('uploads', {
         body: {
@@ -193,7 +198,7 @@ describe('Draft Media API', () => {
         error: null,
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { data, error } = await supabase.functions.invoke('draft-media', {
         body: {
@@ -217,7 +222,7 @@ describe('Draft Media API', () => {
         error: null,
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { error } = await supabase.functions.invoke('draft-media', {
         body: {
@@ -238,7 +243,7 @@ describe('Draft Media API', () => {
         },
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { error } = await supabase.functions.invoke('draft-media', {
         body: {
@@ -260,7 +265,7 @@ describe('Draft Media API', () => {
         error: null,
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { data, error } = await supabase.functions.invoke('draft-media', {
         body: {
@@ -282,7 +287,7 @@ describe('Draft Media API', () => {
         },
       };
 
-      vi.mocked(supabase.functions.invoke).mockResolvedValue(mockResponse);
+      mockInvoke.mockResolvedValue(mockResponse);
 
       const { error } = await supabase.functions.invoke('draft-media', {
         body: {

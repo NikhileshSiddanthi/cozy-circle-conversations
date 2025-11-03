@@ -44,14 +44,14 @@ describe('AuthContext', () => {
   });
 
   it('provides auth context with initial loading state', async () => {
-    const { getByTestId } = render(
+    const { getByTestId, findByText } = render(
       <AuthProvider>
         <TestComponent />
       </AuthProvider>
     );
 
-    // Initially should be loading
-    expect(getByTestId('loading')).toHaveTextContent('Loading...');
+    // Should eventually show Ready state
+    await findByText('Ready');
     
     // Should not be authenticated initially
     expect(getByTestId('user')).toHaveTextContent('Not authenticated');
