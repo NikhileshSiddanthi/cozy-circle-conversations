@@ -6,17 +6,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SessionService } from '@/services/auth/sessionService';
 
+// Create mock query builder
+const createMockQueryBuilder = () => ({
+  select: vi.fn().mockReturnThis(),
+  insert: vi.fn().mockReturnThis(),
+  update: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
+  is: vi.fn().mockReturnThis(),
+  maybeSingle: vi.fn(),
+  single: vi.fn(),
+});
+
 // Mock Supabase client
 const mockSupabase = {
-  from: vi.fn(() => ({
-    select: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    is: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn(),
-    single: vi.fn(),
-  })),
+  from: vi.fn(() => createMockQueryBuilder()),
   rpc: vi.fn(),
 };
 
@@ -37,7 +40,9 @@ describe('SessionService', () => {
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       };
 
-      mockSupabase.from().single.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.single.mockResolvedValueOnce({
         data: mockSession,
         error: null,
       });
@@ -55,9 +60,13 @@ describe('SessionService', () => {
 
   describe('validateSession', () => {
     it('should return valid for active non-expired session', async () => {
-      const futureExpiry = new Date(Date.now() + 10 * 60 * 60 * 1000); // 10 hours
+      const futureExpiry = new Date(Date.now() + 10 * 60 * 60 * 1000);
 
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery1 = createMockQueryBuilder();
+      const mockQuery2 = createMockQueryBuilder();
+      
+      mockSupabase.from.mockReturnValueOnce(mockQuery1);
+      mockQuery1.maybeSingle.mockResolvedValueOnce({
         data: {
           id: 'session-1',
           expires_at: futureExpiry.toISOString(),
@@ -66,6 +75,8 @@ describe('SessionService', () => {
         error: null,
       });
 
+      mockSupabase.from.mockReturnValueOnce(mockQuery2);
+
       const result = await SessionService.validateSession('session-1');
 
       expect(result.valid).toBe(true);
@@ -73,9 +84,11 @@ describe('SessionService', () => {
     });
 
     it('should suggest refresh for session expiring soon', async () => {
-      const soonExpiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+      const soonExpiry = new Date(Date.now() + 30 * 60 * 1000);
 
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
         data: {
           id: 'session-1',
           expires_at: soonExpiry.toISOString(),
@@ -91,9 +104,11 @@ describe('SessionService', () => {
     });
 
     it('should return invalid for expired session', async () => {
-      const pastExpiry = new Date(Date.now() - 1000); // Past
+      const pastExpiry = new Date(Date.now() - 1000);
 
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
         data: {
           id: 'session-1',
           expires_at: pastExpiry.toISOString(),
@@ -109,11 +124,13 @@ describe('SessionService', () => {
     });
 
     it('should return invalid for revoked session', async () => {
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
         data: {
           id: 'session-1',
           expires_at: new Date(Date.now() + 10000).toISOString(),
-          revoked_at: new Date().toISOString(), // Revoked
+          revoked_at: new Date().toISOString(),
         },
         error: null,
       });
@@ -126,14 +143,14 @@ describe('SessionService', () => {
 
   describe('rotateRefreshToken', () => {
     it('should detect replay attack on revoked token', async () => {
-      // Mock replay detection returns false
       mockSupabase.rpc.mockResolvedValueOnce({
         data: false,
         error: null,
       });
 
-      // Mock token is revoked (replay)
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
         data: { revoked_at: new Date().toISOString() },
         error: null,
       });
@@ -149,14 +166,18 @@ describe('SessionService', () => {
     });
 
     it('should successfully rotate valid token', async () => {
-      // Mock validation succeeds
       mockSupabase.rpc.mockResolvedValueOnce({
         data: true,
         error: null,
       });
 
-      // Mock old token data
-      mockSupabase.from().single.mockResolvedValueOnce({
+      const mockQuery1 = createMockQueryBuilder();
+      const mockQuery2 = createMockQueryBuilder();
+      const mockQuery3 = createMockQueryBuilder();
+      const mockQuery4 = createMockQueryBuilder();
+      
+      mockSupabase.from.mockReturnValueOnce(mockQuery1);
+      mockQuery1.single.mockResolvedValueOnce({
         data: {
           id: 'old-token-id',
           session_id: 'session-1',
@@ -164,11 +185,14 @@ describe('SessionService', () => {
         error: null,
       });
 
-      // Mock new token creation
-      mockSupabase.from().single.mockResolvedValueOnce({
+      mockSupabase.from.mockReturnValueOnce(mockQuery2);
+      mockSupabase.from.mockReturnValueOnce(mockQuery3);
+      mockQuery3.single.mockResolvedValueOnce({
         data: { id: 'new-token-id' },
         error: null,
       });
+
+      mockSupabase.from.mockReturnValueOnce(mockQuery4);
 
       const result = await SessionService.rotateRefreshToken(
         'valid-old-token',
@@ -186,8 +210,10 @@ describe('SessionService', () => {
         error: null,
       });
 
-      mockSupabase.from().maybeSingle.mockResolvedValueOnce({
-        data: { revoked_at: null }, // Not revoked, just wrong user
+      const mockQuery = createMockQueryBuilder();
+      mockSupabase.from.mockReturnValueOnce(mockQuery);
+      mockQuery.maybeSingle.mockResolvedValueOnce({
+        data: { revoked_at: null },
         error: null,
       });
 
