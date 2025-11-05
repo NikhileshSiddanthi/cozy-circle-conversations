@@ -24,6 +24,7 @@ import MessagesPage from "./pages/MessagesPage";
 import DiscoverConnectionsPage from "./pages/DiscoverConnectionsPage";
 import NotFound from "./pages/NotFound";
 import AdminSeedData from "./pages/AdminSeedData";
+import MakeAdmin from "./pages/MakeAdmin";
 
 const App = () => (
   <ToastProvider>
@@ -64,6 +65,14 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <AdminSeedData />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/make-admin" 
+            element={
+              <ProtectedRoute>
+                <MakeAdmin />
               </ProtectedRoute>
             } 
           />
