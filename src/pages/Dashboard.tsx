@@ -97,11 +97,36 @@ const Dashboard = () => {
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-center">
-            <Vote className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
-            <p className="text-muted-foreground">Loading COZI...</p>
+        <div className="mb-6 md:mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-3">Welcome to COZI</h1>
+              <p className="text-lg md:text-xl text-muted-foreground">
+                For A Free, Fair & Open Public Sphere
+              </p>
+            </div>
           </div>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="animate-pulse">
+              <div className="bg-card border border-border rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="h-12 w-12 bg-muted rounded-lg" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 bg-muted rounded w-3/4" />
+                    <div className="h-4 bg-muted rounded w-full" />
+                    <div className="h-4 bg-muted rounded w-2/3" />
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="h-4 bg-muted rounded w-20" />
+                  <div className="h-4 bg-muted rounded w-24" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </MainLayout>
     );
@@ -115,22 +140,11 @@ const Dashboard = () => {
     <MainLayout>
       {/* Welcome Section */}
       <div className="mb-6 md:mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-3">Welcome to COZI</h1>
-            <p className="text-lg md:text-xl text-muted-foreground">
-              For A Free, Fair & Open Public Sphere
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleStartTour}
-            className="gap-2"
-          >
-            <HelpCircle className="h-4 w-4" />
-            App Tour
-          </Button>
+        <div>
+          <h1 className="text-2xl md:text-4xl font-bold mb-2 md:mb-3">Welcome to COZI</h1>
+          <p className="text-lg md:text-xl text-muted-foreground">
+            For A Free, Fair & Open Public Sphere
+          </p>
         </div>
       </div>
 

@@ -48,12 +48,20 @@ const NewsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [categoryCache, setCategoryCache] = useState<Record<string, NewsArticle[]>>({});
 
   useEffect(() => {
     fetchLatestNews();
   }, []);
 
   useEffect(() => {
+    // Check cache first before fetching
+    if (categoryCache[selectedCategory]) {
+      setArticles(categoryCache[selectedCategory]);
+      setLoading(false);
+      return;
+    }
+    
     if (selectedCategory !== 'all') {
       fetchNewsByCategory(selectedCategory);
     }
@@ -153,6 +161,12 @@ const NewsPage = () => {
 
       if (articlesError) throw articlesError;
       setArticles(articlesData || []);
+      
+      // Cache the results
+      setCategoryCache(prev => ({
+        ...prev,
+        [selectedCategory]: articlesData || []
+      }));
 
     } catch (error) {
       console.error('Error fetching news data:', error);

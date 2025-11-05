@@ -131,7 +131,7 @@ export const ContextBar = () => {
 
   return (
     <div 
-      className="h-10 bg-muted/30 border-b border-border flex items-center px-3 md:px-6 text-sm text-muted-foreground"
+      className="h-10 bg-muted/30 border-b border-border flex items-center px-3 md:px-6 text-sm text-muted-foreground relative z-40"
       data-testid="context-bar"
     >
       <div className="flex items-center gap-2 max-w-full overflow-hidden">

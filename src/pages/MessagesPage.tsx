@@ -192,9 +192,9 @@ const MessagesPage = () => {
                 </CardContent>
               </>
             ) : (
-              <CardContent className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <CardContent className="flex items-center justify-center h-full p-8">
+                <div className="text-center flex flex-col items-center justify-center">
+                  <MessageSquare className="h-16 w-16 text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
                     Select a conversation to start messaging
                   </p>
