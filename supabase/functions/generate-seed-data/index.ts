@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
-import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,9 +23,9 @@ serve(async (req) => {
       }
     );
 
-    const HF_TOKEN = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
-    if (!HF_TOKEN) {
-      throw new Error('HUGGING_FACE_ACCESS_TOKEN not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
     }
 
     console.log('Starting seed data generation...');
@@ -40,24 +39,35 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    const hf = new HfInference(HF_TOKEN);
-
-    // Helper function to call AI
+    // Helper function to call AI - using OpenAI GPT-5 Nano via Lovable AI
     async function generateWithAI(prompt: string): Promise<string> {
       try {
-        const result = await hf.textGeneration({
-          model: 'meta-llama/Llama-3.1-8B-Instruct',
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 200,
-            temperature: 0.7,
-            return_full_text: false,
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
           },
+          body: JSON.stringify({
+            model: 'openai/gpt-5-nano',
+            messages: [
+              { role: 'system', content: 'You are a helpful assistant that generates concise, realistic content. Keep responses brief and natural.' },
+              { role: 'user', content: prompt }
+            ],
+            max_completion_tokens: 150,
+          }),
         });
-        
-        return result.generated_text.trim();
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Lovable AI error: ${response.status} - ${errorText}`);
+          throw new Error(`AI API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content.trim();
       } catch (error) {
-        console.error('HuggingFace API error:', error);
+        console.error('AI generation error:', error);
         throw error;
       }
     }
