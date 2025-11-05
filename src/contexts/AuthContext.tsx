@@ -227,15 +227,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setSession(null);
       setUser(null);
       
-      // Sign out from Supabase
-      await supabase.auth.signOut({ scope: 'global' });
+      // Clear localStorage to remove any cached tokens
+      localStorage.removeItem('supabase.auth.token');
       
-      // Redirect after signout is complete
-      window.location.href = '/auth';
+      // Sign out from Supabase (don't await to prevent delays)
+      supabase.auth.signOut({ scope: 'global' });
+      
+      // Immediate redirect using replace to avoid history
+      window.location.replace('/auth');
     } catch (error) {
       console.error('Error signing out:', error);
-      // Still redirect even if there's an error
-      window.location.href = '/auth';
+      // Clear storage and redirect anyway
+      localStorage.clear();
+      window.location.replace('/auth');
     }
   };
 
