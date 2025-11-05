@@ -42,7 +42,7 @@ serve(async (req) => {
     // Helper function to call AI
     async function generateWithAI(prompt: string): Promise<string> {
       const response = await fetch(
-        'https://api-inference.huggingface.co/models/meta-llama/Llama-3.1-8B-Instruct',
+        'https://router.huggingface.co/hf-inference/models/meta-llama/Llama-3.1-8B-Instruct',
         {
           method: 'POST',
           headers: {
@@ -142,7 +142,7 @@ serve(async (req) => {
             creator_id: user.id,
             is_public: true,
             is_approved: true,
-            type: 'discussion'
+            type: 'topic'
           })
           .select()
           .single();
