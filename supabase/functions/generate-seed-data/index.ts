@@ -39,63 +39,35 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    // Helper function to call AI with retry logic
-    async function generateWithAI(prompt: string, retries = 3): Promise<string> {
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'google/gemini-2.5-flash-lite',
-              messages: [
-                { role: 'system', content: 'You are a helpful assistant that generates concise, realistic content. Keep responses brief and natural.' },
-                { role: 'user', content: prompt }
-              ],
-              max_completion_tokens: 150,
-            }),
-          });
+    // Template-based content generators (no AI needed)
+    const groupTemplates = {
+      'Technology': ['Tech Innovators Hub', 'Coding Best Practices', 'AI & Machine Learning', 'Web Development Tips', 'Mobile App Builders'],
+      'Sports': ['Football Fans United', 'Basketball Discussion', 'Fitness & Training', 'Extreme Sports', 'Local Sports Teams'],
+      'Entertainment': ['Movie Buffs Club', 'Music Lovers Society', 'TV Series Reviews', 'Gaming Community', 'Celebrity News'],
+      'Science': ['Space Exploration', 'Climate Science', 'Biology Research', 'Physics Discussion', 'Chemistry Lab'],
+      'Health': ['Nutrition & Diet', 'Mental Wellness', 'Fitness Journey', 'Medical Insights', 'Healthy Living'],
+      'Business': ['Startup Founders', 'Marketing Strategies', 'Investment Tips', 'Leadership Skills', 'Entrepreneurship'],
+      'Education': ['Online Learning', 'Study Techniques', 'Career Development', 'Teaching Methods', 'Academic Research'],
+      'Travel': ['Adventure Seekers', 'Budget Travel', 'Cultural Experiences', 'Photography Tours', 'Local Food Discovery'],
+      'Food': ['Cooking Recipes', 'Restaurant Reviews', 'Baking Enthusiasts', 'International Cuisine', 'Healthy Eating'],
+      'Gaming': ['PC Gaming', 'Console Players', 'Indie Games', 'Esports Community', 'Game Development']
+    };
 
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Lovable AI error (attempt ${attempt}): ${response.status} - ${errorText}`);
-            
-            // Don't retry on rate limit or payment errors
-            if (response.status === 429 || response.status === 402) {
-              throw new Error(`AI API error: ${response.status} - ${errorText}`);
-            }
-            
-            // Retry on 5xx errors
-            if (attempt < retries && response.status >= 500) {
-              console.log(`Retrying after 2s (attempt ${attempt}/${retries})...`);
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              continue;
-            }
-            
-            throw new Error(`AI API error: ${response.status}`);
-          }
+    const postTemplates = [
+      { title: 'Welcome to our community!', content: 'Excited to be part of this group. Looking forward to great discussions and sharing ideas with everyone here.' },
+      { title: 'What are your thoughts on this?', content: 'I\'ve been thinking about this topic lately and would love to hear different perspectives from the community.' },
+      { title: 'Sharing my experience', content: 'I wanted to share something interesting that happened recently. Hope this helps or inspires someone in the group.' },
+      { title: 'Question for the community', content: 'I have a question that I hope some of you can help me with. Any insights would be greatly appreciated!' },
+      { title: 'Great resource I found', content: 'Just discovered something amazing that I think everyone here would find valuable. Check it out and let me know what you think!' }
+    ];
 
-          const data = await response.json();
-          return data.choices[0].message.content.trim();
-        } catch (error) {
-          console.error(`AI generation error (attempt ${attempt}):`, error);
-          
-          if (attempt < retries) {
-            console.log(`Retrying after 2s (attempt ${attempt}/${retries})...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            continue;
-          }
-          
-          throw error;
-        }
-      }
-      
-      throw new Error('Failed to generate content after retries');
-    }
-
+    const commentTemplates = [
+      'Great post! Thanks for sharing this.',
+      'I completely agree with your perspective.',
+      'This is really helpful, appreciate it!',
+      'Interesting take on this topic.',
+      'Thanks for bringing this up!'
+    ];
     // Category themes
     const categoryThemes = [
       { name: 'Technology', icon: 'Laptop', color: 'bg-blue-500', description: 'All things tech, gadgets, and innovation' },
@@ -149,21 +121,18 @@ serve(async (req) => {
 
       categories.push({ ...category, theme: theme.name });
 
-      // Create 5 groups per category
+      // Create 5 groups per category using templates
+      const templates = groupTemplates[theme.name as keyof typeof groupTemplates] || groupTemplates['Technology'];
+      
       for (let i = 0; i < 5; i++) {
-        const groupName = await generateWithAI(
-          `Generate a creative and engaging group name for the ${theme.name} category. Just return the name, nothing else. Max 50 characters.`
-        );
-        
-        const groupDescription = await generateWithAI(
-          `Write a brief, welcoming description for a group called "${groupName.trim()}" in the ${theme.name} category. Keep it under 150 characters.`
-        );
+        const groupName = templates[i];
+        const groupDescription = `A community for ${theme.name.toLowerCase()} enthusiasts to connect, share, and learn together.`;
 
         const { data: group, error: groupError } = await supabaseClient
           .from('groups')
           .insert({
-            name: groupName.trim().substring(0, 100),
-            description: groupDescription.trim().substring(0, 500),
+            name: groupName,
+            description: groupDescription,
             category_id: category.id,
             creator_id: user.id,
             is_public: true,
@@ -178,7 +147,7 @@ serve(async (req) => {
           continue;
         }
 
-        console.log(`Created group: ${groupName.trim()}`);
+        console.log(`Created group: ${groupName}`);
 
         // Auto-join creator to the group
         await supabaseClient
@@ -190,21 +159,17 @@ serve(async (req) => {
             status: 'approved'
           });
 
-        // Create 5 posts per group
+        // Create 5 posts per group using templates
         for (let j = 0; j < 5; j++) {
-          const postTitle = await generateWithAI(
-            `Generate an interesting post title related to ${theme.name} and the group "${groupName.trim()}". Keep it engaging and under 100 characters. Just the title, nothing else.`
-          );
-
-          const postContent = await generateWithAI(
-            `Write engaging post content for a title: "${postTitle.trim()}". Make it informative and conversational. Keep it between 100-300 characters.`
-          );
+          const template = postTemplates[j];
+          const postTitle = `${template.title} - ${groupName}`;
+          const postContent = template.content;
 
           const { data: post, error: postError } = await supabaseClient
             .from('posts')
             .insert({
-              title: postTitle.trim().substring(0, 200),
-              content: postContent.trim().substring(0, 2000),
+              title: postTitle,
+              content: postContent,
               user_id: user.id,
               group_id: group.id
             })
@@ -216,18 +181,16 @@ serve(async (req) => {
             continue;
           }
 
-          console.log(`Created post: ${postTitle.trim().substring(0, 50)}...`);
+          console.log(`Created post: ${postTitle.substring(0, 50)}...`);
 
-          // Create 5 comments per post
+          // Create 5 comments per post using templates
           for (let k = 0; k < 5; k++) {
-            const commentContent = await generateWithAI(
-              `Write a thoughtful comment responding to this post: "${postTitle.trim()}". Keep it conversational and under 150 characters.`
-            );
+            const commentContent = commentTemplates[k];
 
             const { error: commentError } = await supabaseClient
               .from('comments')
               .insert({
-                content: commentContent.trim().substring(0, 1000),
+                content: commentContent,
                 post_id: post.id,
                 user_id: user.id
               });
