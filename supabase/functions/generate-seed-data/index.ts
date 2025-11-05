@@ -79,28 +79,44 @@ serve(async (req) => {
       { name: 'Gaming', icon: 'Gamepad2', color: 'bg-violet-500', description: 'Video games, esports, and gaming culture' }
     ];
 
-    const createdCategories = [];
+    const categories = [];
     
-    // Create categories
+    // Get or create categories
     for (const theme of categoryThemes) {
-      const { data: category, error } = await supabaseClient
+      // Try to get existing category first
+      let { data: existingCategory } = await supabaseClient
         .from('categories')
-        .insert({
-          name: theme.name,
-          description: theme.description,
-          icon: theme.icon,
-          color_class: theme.color
-        })
-        .select()
+        .select('*')
+        .eq('name', theme.name)
         .single();
 
-      if (error) {
-        console.error(`Error creating category ${theme.name}:`, error);
-        continue;
+      let category = existingCategory;
+
+      // If doesn't exist, create it
+      if (!existingCategory) {
+        const { data: newCategory, error } = await supabaseClient
+          .from('categories')
+          .insert({
+            name: theme.name,
+            description: theme.description,
+            icon: theme.icon,
+            color_class: theme.color
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error(`Error creating category ${theme.name}:`, error);
+          continue;
+        }
+
+        category = newCategory;
+        console.log(`Created category: ${theme.name}`);
+      } else {
+        console.log(`Using existing category: ${theme.name}`);
       }
 
-      createdCategories.push({ ...category, theme: theme.name });
-      console.log(`Created category: ${theme.name}`);
+      categories.push({ ...category, theme: theme.name });
 
       // Create 5 groups per category
       for (let i = 0; i < 5; i++) {
@@ -201,10 +217,10 @@ serve(async (req) => {
         success: true, 
         message: 'Seed data generated successfully!',
         stats: {
-          categories: createdCategories.length,
-          groups: createdCategories.length * 5,
-          posts: createdCategories.length * 5 * 5,
-          comments: createdCategories.length * 5 * 5 * 5
+          categories: categories.length,
+          groups: categories.length * 5,
+          posts: categories.length * 5 * 5,
+          comments: categories.length * 5 * 5 * 5
         }
       }),
       { 
