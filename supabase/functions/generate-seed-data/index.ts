@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import { HfInference } from 'https://esm.sh/@huggingface/inference@2.3.2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,35 +40,26 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
+    const hf = new HfInference(HF_TOKEN);
+
     // Helper function to call AI
     async function generateWithAI(prompt: string): Promise<string> {
-      const response = await fetch(
-        'https://router.huggingface.co/hf-inference/models/meta-llama/Llama-3.1-8B-Instruct',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${HF_TOKEN}`,
-            'Content-Type': 'application/json',
+      try {
+        const result = await hf.textGeneration({
+          model: 'meta-llama/Llama-3.1-8B-Instruct',
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 200,
+            temperature: 0.7,
+            return_full_text: false,
           },
-          body: JSON.stringify({
-            inputs: prompt,
-            parameters: {
-              max_new_tokens: 200,
-              temperature: 0.7,
-              return_full_text: false,
-            },
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`HuggingFace API error: ${response.status} - ${errorText}`);
-        throw new Error(`HuggingFace API error: ${response.status}`);
+        });
+        
+        return result.generated_text.trim();
+      } catch (error) {
+        console.error('HuggingFace API error:', error);
+        throw error;
       }
-
-      const data = await response.json();
-      return data[0].generated_text.trim();
     }
 
     // Category themes
