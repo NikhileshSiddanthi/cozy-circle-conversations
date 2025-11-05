@@ -39,19 +39,46 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    // Template-based content generators (no AI needed)
-    const groupTemplates = {
-      'Technology': ['Tech Innovators Hub', 'Coding Best Practices', 'AI & Machine Learning', 'Web Development Tips', 'Mobile App Builders'],
-      'Sports': ['Football Fans United', 'Basketball Discussion', 'Fitness & Training', 'Extreme Sports', 'Local Sports Teams'],
-      'Entertainment': ['Movie Buffs Club', 'Music Lovers Society', 'TV Series Reviews', 'Gaming Community', 'Celebrity News'],
-      'Science': ['Space Exploration', 'Climate Science', 'Biology Research', 'Physics Discussion', 'Chemistry Lab'],
-      'Health': ['Nutrition & Diet', 'Mental Wellness', 'Fitness Journey', 'Medical Insights', 'Healthy Living'],
-      'Business': ['Startup Founders', 'Marketing Strategies', 'Investment Tips', 'Leadership Skills', 'Entrepreneurship'],
-      'Education': ['Online Learning', 'Study Techniques', 'Career Development', 'Teaching Methods', 'Academic Research'],
-      'Travel': ['Adventure Seekers', 'Budget Travel', 'Cultural Experiences', 'Photography Tours', 'Local Food Discovery'],
-      'Food': ['Cooking Recipes', 'Restaurant Reviews', 'Baking Enthusiasts', 'International Cuisine', 'Healthy Eating'],
-      'Gaming': ['PC Gaming', 'Console Players', 'Indie Games', 'Esports Community', 'Game Development']
-    };
+    // Helper function to call AI with retry logic
+    async function generateWithAI(prompt: string, retries = 2): Promise<string> {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash-lite',
+              messages: [
+                { role: 'system', content: 'You are a helpful assistant. Give concise responses.' },
+                { role: 'user', content: prompt }
+              ],
+              max_completion_tokens: 100,
+            }),
+          });
+
+          if (!response.ok) {
+            if (attempt < retries) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              continue;
+            }
+            throw new Error(`AI API error: ${response.status}`);
+          }
+
+          const data = await response.json();
+          return data.choices[0].message.content.trim();
+        } catch (error) {
+          if (attempt < retries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          throw error;
+        }
+      }
+      throw new Error('Failed after retries');
+    }
 
     const postTemplates = [
       { title: 'Welcome to our community!', content: 'Excited to be part of this group. Looking forward to great discussions and sharing ideas with everyone here.' },
@@ -68,25 +95,16 @@ serve(async (req) => {
       'Interesting take on this topic.',
       'Thanks for bringing this up!'
     ];
-    // Category themes
+    // Only 2 categories for simplicity
     const categoryThemes = [
-      { name: 'Technology', icon: 'Laptop', color: 'bg-blue-500', description: 'All things tech, gadgets, and innovation' },
-      { name: 'Sports', icon: 'Trophy', color: 'bg-green-500', description: 'Sports news, teams, and athletic discussions' },
-      { name: 'Entertainment', icon: 'Film', color: 'bg-purple-500', description: 'Movies, TV shows, music, and pop culture' },
-      { name: 'Science', icon: 'Microscope', color: 'bg-cyan-500', description: 'Scientific discoveries and research' },
-      { name: 'Health', icon: 'Heart', color: 'bg-red-500', description: 'Health, fitness, and wellness' },
-      { name: 'Business', icon: 'Briefcase', color: 'bg-yellow-500', description: 'Business, finance, and entrepreneurship' },
-      { name: 'Education', icon: 'GraduationCap', color: 'bg-indigo-500', description: 'Learning, courses, and academic discussions' },
-      { name: 'Travel', icon: 'Plane', color: 'bg-orange-500', description: 'Travel destinations and experiences' },
-      { name: 'Food', icon: 'UtensilsCrossed', color: 'bg-pink-500', description: 'Recipes, restaurants, and culinary adventures' },
-      { name: 'Gaming', icon: 'Gamepad2', color: 'bg-violet-500', description: 'Video games, esports, and gaming culture' }
+      { name: 'Technology', icon: 'Laptop', color: 'bg-blue-500', description: 'All things tech and innovation' },
+      { name: 'Sports', icon: 'Trophy', color: 'bg-green-500', description: 'Sports news and discussions' }
     ];
 
     const categories = [];
     
     // Get or create categories
     for (const theme of categoryThemes) {
-      // Try to get existing category first
       let { data: existingCategory } = await supabaseClient
         .from('categories')
         .select('*')
@@ -95,7 +113,6 @@ serve(async (req) => {
 
       let category = existingCategory;
 
-      // If doesn't exist, create it
       if (!existingCategory) {
         const { data: newCategory, error } = await supabaseClient
           .from('categories')
@@ -112,7 +129,6 @@ serve(async (req) => {
           console.error(`Error creating category ${theme.name}:`, error);
           continue;
         }
-
         category = newCategory;
         console.log(`Created category: ${theme.name}`);
       } else {
@@ -121,88 +137,83 @@ serve(async (req) => {
 
       categories.push({ ...category, theme: theme.name });
 
-      // Create 5 groups per category using templates
-      const templates = groupTemplates[theme.name as keyof typeof groupTemplates] || groupTemplates['Technology'];
-      
-      for (let i = 0; i < 5; i++) {
-        const groupName = templates[i];
-        const groupDescription = `A community for ${theme.name.toLowerCase()} enthusiasts to connect, share, and learn together.`;
+      // Create 1 group per category
+      const groupName = await generateWithAI(`Generate a group name for ${theme.name}. Just the name, max 50 chars.`);
+      const groupDescription = `A community for ${theme.name.toLowerCase()} enthusiasts.`;
 
-        const { data: group, error: groupError } = await supabaseClient
-          .from('groups')
+      const { data: group, error: groupError } = await supabaseClient
+        .from('groups')
+        .insert({
+          name: groupName,
+          description: groupDescription,
+          category_id: category.id,
+          creator_id: user.id,
+          is_public: true,
+          is_approved: true,
+          type: 'topic'
+        })
+        .select()
+        .single();
+
+      if (groupError) {
+        console.error(`Error creating group:`, groupError);
+        continue;
+      }
+
+      console.log(`Created group: ${groupName}`);
+
+      // Auto-join creator to the group
+      await supabaseClient
+        .from('group_members')
+        .insert({
+          group_id: group.id,
+          user_id: user.id,
+          role: 'admin',
+          status: 'approved'
+        });
+
+      // Create 5 posts per group using AI
+      for (let j = 0; j < 5; j++) {
+        const postTitle = await generateWithAI(`Generate a post title about ${theme.name}. Max 80 chars.`);
+        const postContent = await generateWithAI(`Write a brief post about: "${postTitle}". 2-3 sentences.`);
+
+        const { data: post, error: postError } = await supabaseClient
+          .from('posts')
           .insert({
-            name: groupName,
-            description: groupDescription,
-            category_id: category.id,
-            creator_id: user.id,
-            is_public: true,
-            is_approved: true,
-            type: 'topic'
+            title: postTitle,
+            content: postContent,
+            user_id: user.id,
+            group_id: group.id
           })
           .select()
           .single();
 
-        if (groupError) {
-          console.error(`Error creating group:`, groupError);
+        if (postError) {
+          console.error(`Error creating post:`, postError);
           continue;
         }
 
-        console.log(`Created group: ${groupName}`);
+        console.log(`Created post: ${postTitle.substring(0, 50)}...`);
 
-        // Auto-join creator to the group
-        await supabaseClient
-          .from('group_members')
-          .insert({
-            group_id: group.id,
-            user_id: user.id,
-            role: 'admin',
-            status: 'approved'
-          });
+        // Create 3 comments per post using AI
+        for (let k = 0; k < 3; k++) {
+          const commentContent = await generateWithAI(`Write a comment about: "${postTitle}". Max 100 chars.`);
 
-        // Create 5 posts per group using templates
-        for (let j = 0; j < 5; j++) {
-          const template = postTemplates[j];
-          const postTitle = `${template.title} - ${groupName}`;
-          const postContent = template.content;
-
-          const { data: post, error: postError } = await supabaseClient
-            .from('posts')
+          const { error: commentError } = await supabaseClient
+            .from('comments')
             .insert({
-              title: postTitle,
-              content: postContent,
-              user_id: user.id,
-              group_id: group.id
-            })
-            .select()
-            .single();
+              content: commentContent,
+              post_id: post.id,
+              user_id: user.id
+            });
 
-          if (postError) {
-            console.error(`Error creating post:`, postError);
+          if (commentError) {
+            console.error(`Error creating comment:`, commentError);
             continue;
           }
-
-          console.log(`Created post: ${postTitle.substring(0, 50)}...`);
-
-          // Create 5 comments per post using templates
-          for (let k = 0; k < 5; k++) {
-            const commentContent = commentTemplates[k];
-
-            const { error: commentError } = await supabaseClient
-              .from('comments')
-              .insert({
-                content: commentContent,
-                post_id: post.id,
-                user_id: user.id
-              });
-
-            if (commentError) {
-              console.error(`Error creating comment:`, commentError);
-              continue;
-            }
-          }
-
-          console.log(`Created 5 comments for post`);
         }
+
+        console.log(`Created 3 comments for post`);
       }
     }
 
@@ -211,10 +222,10 @@ serve(async (req) => {
         success: true, 
         message: 'Seed data generated successfully!',
         stats: {
-          categories: categories.length,
-          groups: categories.length * 5,
-          posts: categories.length * 5 * 5,
-          comments: categories.length * 5 * 5 * 5
+          categories: 2,
+          groups: 2,
+          posts: 10,
+          comments: 30
         }
       }),
       { 
