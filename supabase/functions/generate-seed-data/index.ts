@@ -23,9 +23,9 @@ serve(async (req) => {
       }
     );
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const HF_TOKEN = Deno.env.get('HUGGING_FACE_ACCESS_TOKEN');
+    if (!HF_TOKEN) {
+      throw new Error('HUGGING_FACE_ACCESS_TOKEN not configured');
     }
 
     console.log('Starting seed data generation...');
@@ -41,28 +41,33 @@ serve(async (req) => {
 
     // Helper function to call AI
     async function generateWithAI(prompt: string): Promise<string> {
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            { role: 'system', content: 'You are a helpful assistant that generates realistic content for a social platform called COZI. Keep responses concise and relevant.' },
-            { role: 'user', content: prompt }
-          ],
-        }),
-      });
+      const response = await fetch(
+        'https://api-inference.huggingface.co/models/meta-llama/Llama-3.1-8B-Instruct',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${HF_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            inputs: prompt,
+            parameters: {
+              max_new_tokens: 200,
+              temperature: 0.7,
+              return_full_text: false,
+            },
+          }),
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`AI API error: ${response.status} - ${errorText}`);
+        console.error(`HuggingFace API error: ${response.status} - ${errorText}`);
+        throw new Error(`HuggingFace API error: ${response.status}`);
       }
 
       const data = await response.json();
-      return data.choices[0].message.content;
+      return data[0].generated_text.trim();
     }
 
     // Category themes
