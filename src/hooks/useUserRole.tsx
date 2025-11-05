@@ -20,13 +20,23 @@ export const useUserRole = () => {
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .single();
+          .order('role', { ascending: true }); // Get all roles, admin comes first
 
         if (error) {
           console.error('Error fetching user role:', error);
           setRole('user'); // Default to user role
+        } else if (data && data.length > 0) {
+          // If user has multiple roles, prioritize: admin > moderator > user
+          const roles = data.map(r => r.role);
+          if (roles.includes('admin')) {
+            setRole('admin');
+          } else if (roles.includes('moderator')) {
+            setRole('moderator');
+          } else {
+            setRole(roles[0]);
+          }
         } else {
-          setRole(data?.role || 'user');
+          setRole('user');
         }
       } catch (error) {
         console.error('Error:', error);
