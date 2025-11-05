@@ -39,37 +39,61 @@ serve(async (req) => {
       throw new Error('User not authenticated');
     }
 
-    // Helper function to call AI - using OpenAI GPT-5 Nano via Lovable AI
-    async function generateWithAI(prompt: string): Promise<string> {
-      try {
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'openai/gpt-5-nano',
-            messages: [
-              { role: 'system', content: 'You are a helpful assistant that generates concise, realistic content. Keep responses brief and natural.' },
-              { role: 'user', content: prompt }
-            ],
-            max_completion_tokens: 150,
-          }),
-        });
+    // Helper function to call AI with retry logic
+    async function generateWithAI(prompt: string, retries = 3): Promise<string> {
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash-lite',
+              messages: [
+                { role: 'system', content: 'You are a helpful assistant that generates concise, realistic content. Keep responses brief and natural.' },
+                { role: 'user', content: prompt }
+              ],
+              max_completion_tokens: 150,
+            }),
+          });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Lovable AI error: ${response.status} - ${errorText}`);
-          throw new Error(`AI API error: ${response.status}`);
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`Lovable AI error (attempt ${attempt}): ${response.status} - ${errorText}`);
+            
+            // Don't retry on rate limit or payment errors
+            if (response.status === 429 || response.status === 402) {
+              throw new Error(`AI API error: ${response.status} - ${errorText}`);
+            }
+            
+            // Retry on 5xx errors
+            if (attempt < retries && response.status >= 500) {
+              console.log(`Retrying after 2s (attempt ${attempt}/${retries})...`);
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              continue;
+            }
+            
+            throw new Error(`AI API error: ${response.status}`);
+          }
+
+          const data = await response.json();
+          return data.choices[0].message.content.trim();
+        } catch (error) {
+          console.error(`AI generation error (attempt ${attempt}):`, error);
+          
+          if (attempt < retries) {
+            console.log(`Retrying after 2s (attempt ${attempt}/${retries})...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+          
+          throw error;
         }
-
-        const data = await response.json();
-        return data.choices[0].message.content.trim();
-      } catch (error) {
-        console.error('AI generation error:', error);
-        throw error;
       }
+      
+      throw new Error('Failed to generate content after retries');
     }
 
     // Category themes
