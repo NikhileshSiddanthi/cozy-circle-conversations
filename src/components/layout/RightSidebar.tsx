@@ -57,7 +57,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
           </CardHeader>
           <CardContent className="p-0">
             <Tabs defaultValue="trending" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mx-4 mb-4">
+              <TabsList className="grid w-full grid-cols-3 mb-4 bg-background">
                 <TabsTrigger value="trending" className="text-xs">
                   <TrendingUp className="h-3 w-3 mr-1" />
                   Trending

@@ -139,12 +139,12 @@ const PostDetailPage = () => {
   return (
     <div className="min-h-screen bg-background pt-16">
       
-      <div className="container mx-auto px-4 py-20">
+      <div className="container mx-auto px-4 py-8">
         {/* Back Button */}
         <Button 
           variant="ghost" 
           onClick={() => navigate(-1)}
-          className="mb-6 flex items-center gap-2"
+          className="mb-4 flex items-center gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back

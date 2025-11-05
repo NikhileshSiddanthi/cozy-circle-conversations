@@ -23,6 +23,8 @@ import ConnectionsPage from "./pages/ConnectionsPage";
 import MessagesPage from "./pages/MessagesPage";
 import DiscoverConnectionsPage from "./pages/DiscoverConnectionsPage";
 import NotFound from "./pages/NotFound";
+import AdminSeedData from "./pages/AdminSeedData";
+import MakeAdmin from "./pages/MakeAdmin";
 
 const App = () => (
   <ToastProvider>
@@ -40,7 +42,7 @@ const App = () => (
               <>
                 <Header />
                 <ContextBar />
-                <main id="main-content" className="pt-24">
+                <main id="main-content" className="pt-[104px]">
                   <Routes>
                     <Route 
                       path="/" 
@@ -55,6 +57,22 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/seed-data" 
+            element={
+              <ProtectedRoute>
+                <AdminSeedData />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/make-admin" 
+            element={
+              <ProtectedRoute>
+                <MakeAdmin />
               </ProtectedRoute>
             } 
           />

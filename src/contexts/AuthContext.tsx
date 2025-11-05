@@ -189,8 +189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth`,
-        skipBrowserRedirect: false,
+        redirectTo: `${window.location.origin}/`,
       },
     });
 
@@ -224,10 +223,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
+      // Clear local state first to prevent stale requests
+      setSession(null);
+      setUser(null);
+      
+      // Sign out from Supabase
       await supabase.auth.signOut({ scope: 'global' });
+      
+      // Redirect after signout is complete
       window.location.href = '/auth';
     } catch (error) {
       console.error('Error signing out:', error);
+      // Still redirect even if there's an error
+      window.location.href = '/auth';
     }
   };
 

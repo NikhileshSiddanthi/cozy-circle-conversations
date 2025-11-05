@@ -1,1 +1,7 @@
 project_id = "fwbgnhpjrspddyzntbra"
+
+[functions.generate-seed-data]
+verify_jwt = true
+
+[functions.fetch-news]
+verify_jwt = false

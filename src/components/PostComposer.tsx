@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MediaUpload } from "./MediaUpload";
 import { LinkPreviewCard } from "./LinkPreviewCard";
 import { useAutoLinkPreview } from "@/hooks/useAutoLinkPreview";
+import { GroupPicker } from "./GroupPicker";
 
 interface Group {
   id: string;
@@ -511,28 +512,19 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
                          posting to {groups.find(g => g.id === selectedGroupId)?.name}
                        </span>
                      </>
-                   ) : (
-                     <>
-                       <span className="text-muted-foreground">•</span>
-                       <Select
-                         value={formData.groupId}
-                         onValueChange={(value) => 
-                           setFormData(prev => ({ ...prev, groupId: value }))
-                         }
-                       >
-                         <SelectTrigger className="w-48 h-8">
-                           <SelectValue placeholder="Select group" />
-                         </SelectTrigger>
-                         <SelectContent>
-                           {groups.map(group => (
-                             <SelectItem key={group.id} value={group.id}>
-                               {group.name}
-                             </SelectItem>
-                           ))}
-                         </SelectContent>
-                       </Select>
-                     </>
-                   )}
+                    ) : (
+                      <>
+                        <span className="text-muted-foreground">•</span>
+                        <GroupPicker
+                          groups={groups}
+                          value={formData.groupId}
+                          onValueChange={(value) => 
+                            setFormData(prev => ({ ...prev, groupId: value }))
+                          }
+                          recentGroupIds={[]}
+                        />
+                      </>
+                    )}
                  </div>
               </div>
             </div>
@@ -561,7 +553,7 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
                     setFormData(prev => ({ ...prev, content: newContent }));
                     processText(newContent);
                   }}
-                  className="border-0 bg-transparent resize-none min-h-[120px] placeholder:text-muted-foreground focus-visible:ring-0 px-0"
+                  className="border-0 bg-transparent resize-none min-h-[120px] placeholder:text-muted-foreground focus-visible:ring-0 px-4"
                   data-testid="content-textarea"
                 />
                 

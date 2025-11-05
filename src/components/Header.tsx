@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, Grid3X3, Newspaper, Settings, LogOut, User, Menu, Search, Plus, Users, MessageSquare, UserPlus, Flag } from 'lucide-react';
+import { Home, Grid3X3, Newspaper, Settings, LogOut, User, Menu, Search, Plus, Users, MessageSquare, UserPlus, Flag, HelpCircle } from 'lucide-react';
 import { useState } from 'react';
 import { VisitorCounter } from '@/components/VisitorCounter';
 import { CreatePostButton } from '@/components/CreatePostButton';
@@ -142,7 +142,7 @@ export const Header = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(item.path)}
-                className={`gap-2 ${isActive(item.path) ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`gap-2 font-medium ${isActive(item.path) ? 'text-primary' : 'text-foreground/80 hover:text-foreground'}`}
                 aria-current={isActive(item.path) ? 'page' : undefined}
               >
                 <item.icon className="h-4 w-4" />
@@ -158,11 +158,11 @@ export const Header = () => {
               <Button
                 data-tour="create-post-button"
                 onClick={handleCreateClick}
-                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                 aria-label="Create new post"
               >
                 <Plus className="h-4 w-4" />
-                Create
+                Create Post
               </Button>
               <Button
                 onClick={() => setShowSuggestGroupModal(true)}
@@ -254,7 +254,7 @@ export const Header = () => {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-56 z-50 bg-background">
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <User className="mr-2 h-4 w-4" />
                   Profile
@@ -274,6 +274,24 @@ export const Header = () => {
                 <DropdownMenuItem onClick={() => navigate('/settings')}>
                   <Settings className="mr-2 h-4 w-4" />
                   Settings
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/admin')} className="text-primary font-semibold">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Admin Dashboard
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => {
+                  if (typeof (window as any).startAppTour === 'function') {
+                    (window as any).startAppTour(0);
+                  }
+                }}>
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  App Tour
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
