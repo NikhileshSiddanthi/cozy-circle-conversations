@@ -84,8 +84,8 @@ export default function AdminSeedData() {
               AI-Powered Seed Data Generation
             </CardTitle>
             <CardDescription>
-              This will create 10 categories, 5 groups per category (50 groups), 
-              5 posts per group (250 posts), and 5 comments per post (1,250 comments) 
+              This will create 2 categories (Technology & Sports), 1 group per category, 
+              5 posts per group (10 posts total), and 3 comments per post (30 comments) 
               using AI to generate realistic content.
             </CardDescription>
           </CardHeader>
@@ -146,7 +146,7 @@ export default function AdminSeedData() {
             {isGenerating && (
               <div className="space-y-2">
                 <div className="text-sm text-muted-foreground text-center">
-                  Generating content with AI... This may take 5-10 minutes
+                  Generating content with AI... This should take 1-2 minutes
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div className="h-full bg-primary animate-pulse" style={{ width: '100%' }} />
@@ -164,19 +164,19 @@ export default function AdminSeedData() {
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
-                <span><strong>10 Categories:</strong> Technology, Sports, Entertainment, Science, Health, Business, Education, Travel, Food, and Gaming</span>
+                <span><strong>2 Categories:</strong> Technology and Sports</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
-                <span><strong>50 Groups:</strong> AI-generated group names and descriptions for each category</span>
+                <span><strong>2 Groups:</strong> AI-generated group names and descriptions</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
-                <span><strong>250 Posts:</strong> Engaging posts with AI-generated titles and content</span>
+                <span><strong>10 Posts:</strong> Engaging posts with AI-generated titles and content</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
-                <span><strong>1,250 Comments:</strong> Thoughtful AI-generated comments on each post</span>
+                <span><strong>30 Comments:</strong> Thoughtful AI-generated comments on each post</span>
               </li>
             </ul>
           </CardContent>
