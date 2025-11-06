@@ -17,7 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    const { texts, election_slug = 'jubilee-hills-2025' } = await req.json();
+    const { texts, election_slug = 'jubilee-hills-2025', sources = [], total_articles_analyzed = 0, candidates = [] } = await req.json();
 
     if (!texts || !Array.isArray(texts)) {
       return new Response(
@@ -25,6 +25,8 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log(`Analyzing ${texts.length} texts for sentiment and predictions...`);
 
     // Analyze sentiment using Hugging Face
     const sentimentResults = await Promise.all(
@@ -47,8 +49,7 @@ serve(async (req) => {
         }
 
         const result = await response.json();
-        // Result format: [[{label: 'POSITIVE', score: 0.9}]]
-        return result[0];
+        return { result: result[0], text };
       })
     );
 
@@ -90,13 +91,13 @@ serve(async (req) => {
       })
     );
 
-    // Aggregate results
+    // Aggregate sentiment results
     let positive = 0, neutral = 0, negative = 0;
     const topicCounts: Record<string, number> = {};
 
     sentimentResults.forEach((result) => {
       if (!result) return;
-      const topLabel = result.reduce((prev: any, curr: any) => 
+      const topLabel = result.result.reduce((prev: any, curr: any) => 
         curr.score > prev.score ? curr : prev
       );
       
@@ -121,6 +122,72 @@ serve(async (req) => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
+    // PREDICTION LOGIC: Analyze candidate mentions and sentiment
+    const candidateMentions: Record<string, { positive: number; negative: number; neutral: number; total: number }> = {};
+    
+    if (candidates.length > 0) {
+      candidates.forEach((candidate: any) => {
+        candidateMentions[candidate.name] = { positive: 0, negative: 0, neutral: 0, total: 0 };
+      });
+
+      sentimentResults.forEach((result) => {
+        if (!result) return;
+        const text = result.text.toLowerCase();
+        const topLabel = result.result.reduce((prev: any, curr: any) => 
+          curr.score > prev.score ? curr : prev
+        );
+
+        candidates.forEach((candidate: any) => {
+          if (text.includes(candidate.name.toLowerCase())) {
+            candidateMentions[candidate.name].total++;
+            if (topLabel.label === 'POSITIVE') candidateMentions[candidate.name].positive++;
+            else if (topLabel.label === 'NEGATIVE') candidateMentions[candidate.name].negative++;
+            else candidateMentions[candidate.name].neutral++;
+          }
+        });
+      });
+    }
+
+    // Calculate prediction scores
+    const candidateScores = Object.entries(candidateMentions).map(([name, mentions]) => {
+      const sentiment_score = mentions.total > 0 
+        ? ((mentions.positive * 2) + mentions.neutral - mentions.negative) / mentions.total
+        : 0;
+      const visibility_score = mentions.total / texts.length;
+      const combined_score = (sentiment_score * 0.6) + (visibility_score * 100 * 0.4);
+      
+      return {
+        name,
+        mentions: mentions.total,
+        positive_mentions: mentions.positive,
+        negative_mentions: mentions.negative,
+        neutral_mentions: mentions.neutral,
+        sentiment_score: Math.round(sentiment_score * 100) / 100,
+        visibility_score: Math.round(visibility_score * 1000) / 10,
+        combined_score: Math.round(combined_score * 100) / 100
+      };
+    }).sort((a, b) => b.combined_score - a.combined_score);
+
+    // Generate prediction
+    const winner = candidateScores[0];
+    const runner_up = candidateScores[1];
+    const confidence = winner && runner_up 
+      ? Math.min(95, Math.round((winner.combined_score / (winner.combined_score + runner_up.combined_score)) * 100))
+      : 50;
+
+    const prediction_data = {
+      predicted_winner: winner?.name || 'Insufficient data',
+      confidence_percentage: confidence,
+      reasoning: winner 
+        ? `Based on ${texts.length} analyzed texts from ${sources.length} sources, ${winner.name} has the highest combined score (${winner.combined_score}) with ${winner.mentions} mentions (${winner.positive_mentions} positive, ${winner.negative_mentions} negative). Key factors: sentiment favorability (${winner.sentiment_score}) and visibility (${winner.visibility_score}%).`
+        : 'Not enough data to make a prediction',
+      candidate_scores: candidateScores,
+      data_sources: sources,
+      analysis_date: new Date().toISOString()
+    };
+
+    console.log('Prediction:', prediction_data);
+
     // Store in database
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
@@ -134,14 +201,17 @@ serve(async (req) => {
         neutral,
         negative,
         topics,
-        period_start: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+        prediction_data,
+        sources,
+        total_articles_analyzed,
+        period_start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
         period_end: new Date().toISOString(),
       });
 
     if (error) {
       console.error('Database error:', error);
       return new Response(
-        JSON.stringify({ error: 'Failed to store sentiment data' }),
+        JSON.stringify({ error: 'Failed to store sentiment data', details: error }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -151,6 +221,7 @@ serve(async (req) => {
         success: true,
         sentiment: { positive, neutral, negative, total: texts.length },
         topics,
+        prediction: prediction_data,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

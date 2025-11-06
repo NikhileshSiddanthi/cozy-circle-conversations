@@ -502,8 +502,11 @@ export type Database = {
           period_end: string
           period_start: string
           positive: number
+          prediction_data: Json | null
+          sources: Json | null
           topics: Json | null
           total: number
+          total_articles_analyzed: number | null
         }
         Insert: {
           area?: string | null
@@ -515,8 +518,11 @@ export type Database = {
           period_end: string
           period_start: string
           positive?: number
+          prediction_data?: Json | null
+          sources?: Json | null
           topics?: Json | null
           total?: number
+          total_articles_analyzed?: number | null
         }
         Update: {
           area?: string | null
@@ -528,8 +534,11 @@ export type Database = {
           period_end?: string
           period_start?: string
           positive?: number
+          prediction_data?: Json | null
+          sources?: Json | null
           topics?: Json | null
           total?: number
+          total_articles_analyzed?: number | null
         }
         Relationships: []
       }

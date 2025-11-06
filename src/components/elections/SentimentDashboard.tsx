@@ -4,12 +4,32 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react';
 
+interface PredictionData {
+  predicted_winner: string;
+  confidence_percentage: number;
+  reasoning: string;
+  candidate_scores: Array<{
+    name: string;
+    mentions: number;
+    positive_mentions: number;
+    negative_mentions: number;
+    neutral_mentions: number;
+    sentiment_score: number;
+    visibility_score: number;
+    combined_score: number;
+  }>;
+  data_sources: string[];
+}
+
 interface SentimentData {
   total: number;
   positive: number;
   neutral: number;
   negative: number;
   topics: Array<{ name: string; count: number; percentage: number }>;
+  prediction_data?: PredictionData;
+  sources?: string[];
+  total_articles_analyzed?: number;
   created_at: string;
 }
 
@@ -48,7 +68,10 @@ const SentimentDashboard = () => {
       if (data) {
         setSentimentData({
           ...data,
-          topics: (data.topics as any) || []
+          topics: (data.topics as any) || [],
+          prediction_data: data.prediction_data as any,
+          sources: (data.sources as any) || [],
+          total_articles_analyzed: data.total_articles_analyzed || 0
         });
       }
     } catch (error) {
@@ -80,12 +103,83 @@ const SentimentDashboard = () => {
       <Card className="p-4 bg-accent/50 border-accent">
         <div className="flex gap-2">
           <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-foreground">
-            Community sentiment is aggregated from public data sources. This is not an official result.
-            Last updated: {new Date(sentimentData.created_at).toLocaleString()}
-          </p>
+          <div className="text-sm text-foreground space-y-1">
+            <p>
+              AI-powered sentiment analysis from {sentimentData.total_articles_analyzed || sentimentData.total} external sources 
+              {sentimentData.sources && sentimentData.sources.length > 0 && ` (${sentimentData.sources.join(', ')})`}. 
+              This is not an official election result or prediction.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Last updated: {new Date(sentimentData.created_at).toLocaleString()}
+            </p>
+          </div>
         </div>
       </Card>
+
+      {/* Prediction Card */}
+      {sentimentData.prediction_data && (
+        <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+          <div className="flex items-start gap-3 mb-4">
+            <TrendingUp className="h-6 w-6 text-primary mt-1" />
+            <div>
+              <h3 className="text-2xl font-bold text-foreground mb-1">AI Election Prediction</h3>
+              <p className="text-sm text-muted-foreground">Based on public sentiment analysis from multiple sources</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-background/50 rounded-lg p-4">
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-3xl font-bold text-primary">
+                  {sentimentData.prediction_data.predicted_winner}
+                </span>
+                <Badge variant="secondary" className="text-lg px-3 py-1">
+                  {sentimentData.prediction_data.confidence_percentage}% confidence
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {sentimentData.prediction_data.reasoning}
+              </p>
+            </div>
+
+            {/* Candidate Rankings */}
+            {sentimentData.prediction_data.candidate_scores && (
+              <div className="space-y-3">
+                <h4 className="font-semibold text-foreground">Candidate Rankings</h4>
+                {sentimentData.prediction_data.candidate_scores.map((candidate, index) => (
+                  <div key={index} className="bg-background/50 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-bold text-muted-foreground">#{index + 1}</span>
+                        <span className="font-semibold text-foreground">{candidate.name}</span>
+                      </div>
+                      <Badge variant={index === 0 ? "default" : "outline"}>
+                        Score: {candidate.combined_score}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                      <div>
+                        <span className="font-medium">Mentions:</span> {candidate.mentions}
+                      </div>
+                      <div>
+                        <span className="font-medium">Sentiment:</span> {candidate.sentiment_score}
+                      </div>
+                      <div>
+                        <span className="font-medium">Visibility:</span> {candidate.visibility_score}%
+                      </div>
+                    </div>
+                    <div className="mt-2 flex gap-2 text-xs">
+                      <span className="text-green-600">👍 {candidate.positive_mentions}</span>
+                      <span className="text-gray-600">➖ {candidate.neutral_mentions}</span>
+                      <span className="text-red-600">👎 {candidate.negative_mentions}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Sentiment Overview */}
       <Card className="p-6">
