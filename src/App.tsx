@@ -25,6 +25,8 @@ import DiscoverConnectionsPage from "./pages/DiscoverConnectionsPage";
 import NotFound from "./pages/NotFound";
 import AdminSeedData from "./pages/AdminSeedData";
 import MakeAdmin from "./pages/MakeAdmin";
+import JubileeHills from "./pages/elections/JubileeHills";
+import AdminElections from "./pages/elections/AdminElections";
 
 const App = () => (
   <ToastProvider>
@@ -153,6 +155,22 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <MessagesPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/elections/jubilee-hills" 
+            element={
+              <ProtectedRoute>
+                <JubileeHills />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/elections/jubilee-hills" 
+            element={
+              <ProtectedRoute>
+                <AdminElections />
               </ProtectedRoute>
             } 
           />

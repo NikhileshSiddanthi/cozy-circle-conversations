@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Home, Grid3X3, Newspaper, Settings, LogOut, User, Menu, Search, Plus, Users, MessageSquare, UserPlus, Flag, HelpCircle } from 'lucide-react';
+import { Home, Grid3X3, Newspaper, Settings, LogOut, User, Menu, Search, Plus, Users, MessageSquare, UserPlus, Flag, HelpCircle, Vote } from 'lucide-react';
 import { useState } from 'react';
 import { VisitorCounter } from '@/components/VisitorCounter';
 import { CreatePostButton } from '@/components/CreatePostButton';
@@ -70,6 +70,7 @@ export const Header = () => {
     { icon: Grid3X3, label: 'Groups', path: '/groups', key: 'groups' },
     { icon: Users, label: 'Connections', path: '/connections', key: 'connections' },
     { icon: Newspaper, label: 'News', path: '/news', key: 'news' },
+    { icon: Vote, label: 'Elections', path: '/elections/jubilee-hills', key: 'elections' },
   ];
 
   const isActive = (path: string) => {

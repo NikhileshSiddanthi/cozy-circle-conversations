@@ -223,21 +223,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
-      // Sign out from Supabase first
-      await supabase.auth.signOut({ scope: 'global' });
-      
-      // Clear local state - this will trigger ProtectedRoute redirect
+      // Clear local state first to ensure immediate UI update
       setSession(null);
       setUser(null);
       
-      // Clear any cached tokens
+      // Clear all auth-related storage
       localStorage.removeItem('supabase.auth.token');
+      
+      // Sign out from Supabase without any redirects
+      // Using scope: 'local' to prevent cross-tab issues
+      await supabase.auth.signOut({ scope: 'local' });
     } catch (error) {
-      console.error('Error signing out:', error);
-      // Clear state anyway to trigger redirect
-      setSession(null);
-      setUser(null);
-      localStorage.removeItem('supabase.auth.token');
+      // Silently handle errors - state is already cleared
+      console.error('Supabase signOut error (non-critical):', error);
     }
   };
 
