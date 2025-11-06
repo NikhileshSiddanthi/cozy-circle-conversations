@@ -32,7 +32,7 @@ serve(async (req) => {
     const sentimentResults = await Promise.all(
       texts.map(async (text: string) => {
         const response = await fetch(
-          'https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment',
+          'https://router.huggingface.co/hf-inference/models/cardiffnlp/twitter-roberta-base-sentiment',
           {
             method: 'POST',
             headers: {
@@ -57,7 +57,7 @@ serve(async (req) => {
     const topicResults = await Promise.all(
       texts.map(async (text: string) => {
         const response = await fetch(
-          'https://api-inference.huggingface.co/models/facebook/bart-large-mnli',
+          'https://router.huggingface.co/hf-inference/models/facebook/bart-large-mnli',
           {
             method: 'POST',
             headers: {
