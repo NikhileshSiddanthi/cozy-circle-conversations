@@ -354,6 +354,185 @@ export type Database = {
           },
         ]
       }
+      elections_booths: {
+        Row: {
+          accessibility: Json | null
+          address: string
+          booth_no: string
+          contact: string | null
+          created_at: string
+          election_slug: string
+          id: string
+          lat: number | null
+          lon: number | null
+        }
+        Insert: {
+          accessibility?: Json | null
+          address: string
+          booth_no: string
+          contact?: string | null
+          created_at?: string
+          election_slug?: string
+          id?: string
+          lat?: number | null
+          lon?: number | null
+        }
+        Update: {
+          accessibility?: Json | null
+          address?: string
+          booth_no?: string
+          contact?: string | null
+          created_at?: string
+          election_slug?: string
+          id?: string
+          lat?: number | null
+          lon?: number | null
+        }
+        Relationships: []
+      }
+      elections_candidates: {
+        Row: {
+          bio: string | null
+          created_at: string
+          election_slug: string
+          id: string
+          manifesto: Json | null
+          name: string
+          party: string
+          photo_url: string | null
+          status: string
+          symbol: string | null
+          updated_at: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          election_slug?: string
+          id?: string
+          manifesto?: Json | null
+          name: string
+          party: string
+          photo_url?: string | null
+          status?: string
+          symbol?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          election_slug?: string
+          id?: string
+          manifesto?: Json | null
+          name?: string
+          party?: string
+          photo_url?: string | null
+          status?: string
+          symbol?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      elections_poll_responses: {
+        Row: {
+          created_at: string
+          id: string
+          ip_hash: string | null
+          option_index: number
+          poll_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          option_index: number
+          poll_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_hash?: string | null
+          option_index?: number
+          poll_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elections_poll_responses_poll_id_fkey"
+            columns: ["poll_id"]
+            isOneToOne: false
+            referencedRelation: "elections_public_polls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elections_public_polls: {
+        Row: {
+          created_at: string
+          election_slug: string
+          id: string
+          is_active: boolean
+          options: Json
+          question: string
+        }
+        Insert: {
+          created_at?: string
+          election_slug?: string
+          id?: string
+          is_active?: boolean
+          options?: Json
+          question: string
+        }
+        Update: {
+          created_at?: string
+          election_slug?: string
+          id?: string
+          is_active?: boolean
+          options?: Json
+          question?: string
+        }
+        Relationships: []
+      }
+      elections_sentiment_snapshots: {
+        Row: {
+          area: string | null
+          created_at: string
+          election_slug: string
+          id: string
+          negative: number
+          neutral: number
+          period_end: string
+          period_start: string
+          positive: number
+          topics: Json | null
+          total: number
+        }
+        Insert: {
+          area?: string | null
+          created_at?: string
+          election_slug?: string
+          id?: string
+          negative?: number
+          neutral?: number
+          period_end: string
+          period_start: string
+          positive?: number
+          topics?: Json | null
+          total?: number
+        }
+        Update: {
+          area?: string | null
+          created_at?: string
+          election_slug?: string
+          id?: string
+          negative?: number
+          neutral?: number
+          period_end?: string
+          period_start?: string
+          positive?: number
+          topics?: Json | null
+          total?: number
+        }
+        Relationships: []
+      }
       group_members: {
         Row: {
           group_id: string
