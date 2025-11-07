@@ -13,6 +13,10 @@ export interface Message {
   media_type: string | null;
   is_edited: boolean;
   created_at: string;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_size?: number | null;
+  content_type?: string | null;
   sender?: {
     display_name: string;
     avatar_url: string | null;
@@ -24,6 +28,12 @@ export interface Conversation {
   is_group: boolean;
   name: string | null;
   last_message_at: string | null;
+  unread_count: number;
+  last_message?: {
+    content: string;
+    sender_id: string;
+    created_at: string;
+  };
   participants: Array<{
     user_id: string;
     display_name: string;
@@ -39,8 +49,8 @@ export const useConversations = () => {
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ['conversations', user?.id],
     queryFn: async () => {
-      console.log('🔄 Fetching conversations for user:', user?.id);
-      
+      if (!user) return [];
+
       const { data, error } = await supabase
         .from('conversation_participants')
         .select(`
@@ -53,12 +63,7 @@ export const useConversations = () => {
         `)
         .eq('user_id', user?.id);
 
-      if (error) {
-        console.error('❌ Conversations fetch error:', error);
-        throw error;
-      }
-      
-      console.log('Raw conversations data:', data);
+      if (error) throw error;
 
       const convIds = data.map((d: any) => d.conversation.id);
       
@@ -71,31 +76,50 @@ export const useConversations = () => {
         `)
         .in('conversation_id', convIds);
 
-      if (partError) {
-        console.error('❌ Participants fetch error:', partError);
-        throw partError;
-      }
-      
-      console.log('Participants data:', participantsData);
+      if (partError) throw partError;
 
-      const result = data.map((d: any) => ({
-        ...d.conversation,
-        participants: participantsData
-          .filter((p: any) => p.conversation_id === d.conversation.id)
-          .map((p: any) => ({
-            user_id: p.user_id,
-            display_name: p.profile.display_name,
-            avatar_url: p.profile.avatar_url,
-          })),
-      })).sort((a: any, b: any) => {
-        // Sort by last_message_at, most recent first
+      // Get last message and unread count for each conversation
+      const conversationsWithData = await Promise.all(
+        data.map(async (d: any) => {
+          const conv = d.conversation;
+          
+          // Get last message
+          const { data: lastMessage } = await supabase
+            .from('messages')
+            .select('content, sender_id, created_at')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          // Get unread count using RPC
+          const { data: unreadCount } = await supabase
+            .rpc('get_unread_count', {
+              p_user_id: user.id,
+              p_conversation_id: conv.id,
+            });
+
+          return {
+            ...conv,
+            participants: participantsData
+              .filter((p: any) => p.conversation_id === conv.id)
+              .map((p: any) => ({
+                user_id: p.user_id,
+                display_name: p.profile?.display_name || 'Unknown',
+                avatar_url: p.profile?.avatar_url || null,
+              })),
+            last_message: lastMessage || undefined,
+            unread_count: unreadCount || 0,
+          };
+        })
+      );
+
+      // Sort by last_message_at, most recent first
+      return conversationsWithData.sort((a: any, b: any) => {
         const aTime = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
         const bTime = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
         return bTime - aTime;
       }) as Conversation[];
-      
-      console.log('✅ Processed conversations:', result);
-      return result;
     },
     enabled: !!user,
   });

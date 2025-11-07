@@ -689,7 +689,11 @@ export type Database = {
       }
       messages: {
         Row: {
+          attachment_name: string | null
+          attachment_size: number | null
+          attachment_url: string | null
           content: string
+          content_type: string | null
           conversation_id: string
           created_at: string
           edited_at: string | null
@@ -698,9 +702,14 @@ export type Database = {
           media_type: string | null
           media_url: string | null
           sender_id: string
+          sequence_num: number
         }
         Insert: {
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_url?: string | null
           content: string
+          content_type?: string | null
           conversation_id: string
           created_at?: string
           edited_at?: string | null
@@ -709,9 +718,14 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           sender_id: string
+          sequence_num?: never
         }
         Update: {
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_url?: string | null
           content?: string
+          content_type?: string | null
           conversation_id?: string
           created_at?: string
           edited_at?: string | null
@@ -720,6 +734,7 @@ export type Database = {
           media_type?: string | null
           media_url?: string | null
           sender_id?: string
+          sequence_num?: never
         }
         Relationships: [
           {
@@ -1134,6 +1149,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          last_seen_at: string | null
           phone: string | null
           updated_at: string
           user_id: string
@@ -1145,6 +1161,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          last_seen_at?: string | null
           phone?: string | null
           updated_at?: string
           user_id: string
@@ -1156,6 +1173,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          last_seen_at?: string | null
           phone?: string | null
           updated_at?: string
           user_id?: string
@@ -1201,6 +1219,35 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      read_state: {
+        Row: {
+          conversation_id: string
+          last_read_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_id: string
+          last_read_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          last_read_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "read_state_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -1426,6 +1473,10 @@ export type Database = {
           deleted_reactions: number
         }[]
       }
+      get_unread_count: {
+        Args: { p_conversation_id: string; p_user_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           required_role: Database["public"]["Enums"]["app_role"]
@@ -1445,6 +1496,10 @@ export type Database = {
       is_group_member: {
         Args: { group_id: string; user_id: string }
         Returns: boolean
+      }
+      mark_conversation_read: {
+        Args: { p_conversation_id: string; p_user_id: string }
+        Returns: undefined
       }
       revoke_all_user_sessions: {
         Args: { _user_id: string }
