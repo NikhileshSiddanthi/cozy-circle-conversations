@@ -1,15 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { EditablePost } from '@/components/EditablePost';
 
 // Mock dependencies
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: { id: 'test-user-id' },
-  }),
-}));
-
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: {
     from: vi.fn(() => ({
@@ -47,9 +43,13 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   });
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
+    <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </QueryClientProvider>
+    </BrowserRouter>
   );
 };
 
