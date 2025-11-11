@@ -154,19 +154,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    // Enhanced error handling for better user experience
-    if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        return { error: new Error('Invalid email or password. Please try again.') };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        return { error };
       }
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Unexpected sign in error:', error);
+      return { error: error instanceof Error ? error : new Error('An unexpected error occurred') };
     }
-    
-    return { error };
   };
 
   const signInWithGoogle = async () => {
