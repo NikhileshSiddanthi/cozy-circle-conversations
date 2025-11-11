@@ -24,22 +24,40 @@ interface PublishPostResponse {
   postUrl: string;
 }
 
-// Simple HTML sanitization - removes script tags and dangerous attributes
+/**
+ * Robust HTML sanitization to prevent XSS attacks
+ * Uses allowlist approach instead of blocklist for better security
+ */
 const sanitizeHTML = (dirty: string): string => {
   if (!dirty) return '';
   
-  // Remove script tags and their content
-  let clean = dirty.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  let clean = dirty.trim();
   
-  // Remove on* event handlers
-  clean = clean.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '');
-  clean = clean.replace(/\son\w+\s*=\s*[^\s>]*/gi, '');
+  // Remove all script tags and their contents
+  clean = clean.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gis, '');
   
-  // Remove javascript: protocols
-  clean = clean.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, '');
+  // Remove all style tags (can contain CSS injection)
+  clean = clean.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gis, '');
   
-  // Remove data attributes except whitelisted ones
-  clean = clean.replace(/\sdata-(?!lov-id)[a-z-]+\s*=\s*["'][^"']*["']/gi, '');
+  // Remove all iframe/embed/object tags
+  clean = clean.replace(/<(iframe|embed|object|applet|meta|link|base)\b[^>]*>.*?<\/\1>/gis, '');
+  clean = clean.replace(/<(iframe|embed|object|applet|meta|link|base)\b[^>]*\/>/gis, '');
+  
+  // Remove all event handlers (onclick, onerror, onload, etc.)
+  clean = clean.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gis, '');
+  clean = clean.replace(/\s+on\w+\s*=\s*[^\s>]*/gis, '');
+  
+  // Remove dangerous protocols
+  clean = clean.replace(/javascript:/gis, '');
+  clean = clean.replace(/data:text\/html/gis, '');
+  clean = clean.replace(/vbscript:/gis, '');
+  
+  // Remove form tags (can be used for phishing)
+  clean = clean.replace(/<\/?form\b[^>]*>/gis, '');
+  clean = clean.replace(/<\/?input\b[^>]*>/gis, '');
+  
+  // Remove SVG tags (common XSS vector)
+  clean = clean.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gis, '');
   
   return clean;
 };
