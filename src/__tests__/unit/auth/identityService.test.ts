@@ -31,7 +31,7 @@ vi.mock('@/integrations/supabase/client', () => ({
 
 describe('IdentityService', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Clear any state if needed
   });
 
   describe('findOrCreateIdentity', () => {

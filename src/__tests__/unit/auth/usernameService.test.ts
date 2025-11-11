@@ -25,7 +25,7 @@ vi.mock('@/integrations/supabase/client', () => ({
 
 describe('UsernameService', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Clear any state if needed
   });
 
   describe('validateUsername', () => {

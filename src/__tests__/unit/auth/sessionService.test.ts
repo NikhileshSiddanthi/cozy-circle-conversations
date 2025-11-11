@@ -29,7 +29,7 @@ vi.mock('@/integrations/supabase/client', () => ({
 
 describe('SessionService', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    // Clear any state if needed
   });
 
   describe('createSession', () => {
