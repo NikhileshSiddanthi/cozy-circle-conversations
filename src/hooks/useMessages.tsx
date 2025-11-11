@@ -2,13 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Message } from './useConversations';
+import { toast } from 'sonner';
 
 export const useMessages = (conversationId: string | null) => {
   const { user } = useAuth();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [optimisticMessages, setOptimisticMessages] = useState<Map<string, Message>>(new Map());
+  const processedMessageIds = useRef(new Set<string>());
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ['messages', conversationId],
@@ -44,57 +46,89 @@ export const useMessages = (conversationId: string | null) => {
   });
 
   const sendMessage = useMutation({
-    mutationFn: async ({ content, media_url, media_type }: { 
+    mutationFn: async ({ 
+      content, 
+      attachment_url, 
+      attachment_name,
+      attachment_size,
+      content_type 
+    }: { 
       content: string; 
-      media_url?: string; 
-      media_type?: string;
+      attachment_url?: string;
+      attachment_name?: string;
+      attachment_size?: number;
+      content_type?: string;
     }) => {
-      console.log('📤 Sending message:', { conversationId, userId: user?.id, content });
-      
-      if (!conversationId) {
-        console.error('❌ No conversation selected');
-        throw new Error('No conversation selected');
-      }
-      
-      if (!user?.id) {
-        console.error('❌ No user ID');
-        throw new Error('User not authenticated');
+      if (!conversationId || !user?.id) {
+        throw new Error('No conversation selected or user not authenticated');
       }
 
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          content,
-          media_url,
-          media_type,
-        })
-        .select()
-        .single();
+      // Create optimistic message
+      const tempId = `temp-${Date.now()}`;
+      const optimisticMessage: Message = {
+        id: tempId,
+        conversation_id: conversationId,
+        sender_id: user.id,
+        content,
+        media_url: attachment_url || null,
+        media_type: content_type || null,
+        is_edited: false,
+        created_at: new Date().toISOString(),
+        sender: {
+          display_name: user.user_metadata?.display_name || 'You',
+          avatar_url: user.user_metadata?.avatar_url || null,
+        },
+      };
 
-      if (error) {
-        console.error('❌ Message send error:', error);
+      // Add to optimistic messages
+      setOptimisticMessages(prev => new Map(prev).set(tempId, optimisticMessage));
+
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: user.id,
+            content,
+            attachment_url,
+            attachment_name,
+            attachment_size,
+            content_type: content_type || 'text',
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Remove optimistic message and add real one
+        setOptimisticMessages(prev => {
+          const next = new Map(prev);
+          next.delete(tempId);
+          return next;
+        });
+
+        return data;
+      } catch (error) {
+        // Remove failed optimistic message
+        setOptimisticMessages(prev => {
+          const next = new Map(prev);
+          next.delete(tempId);
+          return next;
+        });
         throw error;
       }
-      
-      console.log('✅ Message sent successfully:', data);
-      return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['messages', conversationId] });
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
     },
     onError: (error: any) => {
-      toast({
-        title: 'Failed to send message',
+      toast.error('Failed to send message', {
         description: error.message,
-        variant: 'destructive',
       });
     },
   });
 
-  // Set up realtime subscription for new messages
+  // Set up realtime subscription for new messages with deduplication
   useEffect(() => {
     if (!conversationId) return;
 
@@ -109,8 +143,11 @@ export const useMessages = (conversationId: string | null) => {
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
-          // Don't duplicate if it's the current user's message
-          if (payload.new.sender_id === user?.id) return;
+          const messageId = payload.new.id;
+          
+          // Deduplicate: Check if we've already processed this message
+          if (processedMessageIds.current.has(messageId)) return;
+          processedMessageIds.current.add(messageId);
 
           // Fetch sender profile for new message
           const { data: profile } = await supabase
@@ -128,6 +165,8 @@ export const useMessages = (conversationId: string | null) => {
           };
 
           queryClient.setQueryData(['messages', conversationId], (old: Message[] = []) => {
+            // Check if message already exists
+            if (old.some(msg => msg.id === messageId)) return old;
             return [...old, newMessage];
           });
         }
@@ -136,26 +175,34 @@ export const useMessages = (conversationId: string | null) => {
 
     return () => {
       supabase.removeChannel(channel);
+      processedMessageIds.current.clear();
     };
-  }, [conversationId, user, queryClient]);
+  }, [conversationId, queryClient]);
 
-  // Mark messages as read
+  // Mark messages as read when viewing conversation
   useEffect(() => {
-    if (!conversationId || !user) return;
+    if (!conversationId || !user || messages.length === 0) return;
 
     const markAsRead = async () => {
-      await supabase
-        .from('conversation_participants')
-        .update({ last_read_at: new Date().toISOString() })
-        .eq('conversation_id', conversationId)
-        .eq('user_id', user.id);
+      await supabase.rpc('mark_conversation_read', {
+        p_user_id: user.id,
+        p_conversation_id: conversationId,
+      });
     };
 
-    markAsRead();
-  }, [conversationId, user, messages]);
+    // Mark as read after a short delay
+    const timeout = setTimeout(markAsRead, 500);
+    return () => clearTimeout(timeout);
+  }, [conversationId, user, messages.length]);
+
+  // Combine real messages with optimistic messages
+  const allMessages = [
+    ...messages,
+    ...Array.from(optimisticMessages.values()),
+  ].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
   return {
-    messages,
+    messages: allMessages,
     isLoading,
     sendMessage,
   };
