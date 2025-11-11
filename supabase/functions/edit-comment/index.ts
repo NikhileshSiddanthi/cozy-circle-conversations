@@ -1,6 +1,43 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+/**
+ * Robust HTML sanitization to prevent XSS attacks
+ */
+const sanitizeHTML = (dirty: string): string => {
+  if (!dirty) return '';
+  
+  let clean = dirty.trim();
+  
+  // Remove all script tags and their contents
+  clean = clean.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gis, '');
+  
+  // Remove all style tags
+  clean = clean.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gis, '');
+  
+  // Remove all iframe/embed/object tags
+  clean = clean.replace(/<(iframe|embed|object|applet|meta|link|base)\b[^>]*>.*?<\/\1>/gis, '');
+  clean = clean.replace(/<(iframe|embed|object|applet|meta|link|base)\b[^>]*\/>/gis, '');
+  
+  // Remove all event handlers
+  clean = clean.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gis, '');
+  clean = clean.replace(/\s+on\w+\s*=\s*[^\s>]*/gis, '');
+  
+  // Remove dangerous protocols
+  clean = clean.replace(/javascript:/gis, '');
+  clean = clean.replace(/data:text\/html/gis, '');
+  clean = clean.replace(/vbscript:/gis, '');
+  
+  // Remove form tags
+  clean = clean.replace(/<\/?form\b[^>]*>/gis, '');
+  clean = clean.replace(/<\/?input\b[^>]*>/gis, '');
+  
+  // Remove SVG tags
+  clean = clean.replace(/<svg\b[^<]*(?:(?!<\/svg>)<[^<]*)*<\/svg>/gis, '');
+  
+  return clean;
+};
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -137,10 +174,13 @@ serve(async (req) => {
       }
 
       // 2. Update the comment
+      // Sanitize HTML to prevent XSS
+      const sanitizedContent = sanitizeHTML(body.content);
+      
       const { data: updatedComment, error: updateError } = await supabaseClient
         .from('comments')
         .update({
-          content: body.content.trim(),
+          content: sanitizedContent,
           is_edited: true,
           edited_at: new Date().toISOString(),
           updated_at: new Date().toISOString()

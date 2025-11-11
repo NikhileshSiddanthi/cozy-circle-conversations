@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import OptimizedImage from '@/components/OptimizedImage';
+import DOMPurify from 'dompurify';
 import { 
   ExternalLink, 
   Globe, 
@@ -40,6 +41,20 @@ export const LinkPreviewCard = ({
   className = ""
 }: LinkPreviewCardProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Sanitize embed HTML to prevent XSS attacks
+  const sanitizedEmbedHtml = useMemo(() => {
+    if (!preview.embed_html) return null;
+    
+    // Configure DOMPurify to allow iframes but with strict rules
+    const config = {
+      ALLOWED_TAGS: ['iframe'],
+      ALLOWED_ATTR: ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'sandbox', 'title'],
+      ALLOWED_URI_REGEXP: /^https:\/\/(www\.)?(youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com)/i,
+    };
+    
+    return DOMPurify.sanitize(preview.embed_html, config);
+  }, [preview.embed_html]);
   const [imageError, setImageError] = useState(false);
 
   const isVideo = preview.content_type === 'video' || preview.provider === 'youtube';
@@ -211,11 +226,11 @@ export const LinkPreviewCard = ({
           </div>
 
           {/* Expanded Embed */}
-          {isExpanded && preview.embed_html && (
+          {isExpanded && sanitizedEmbedHtml && (
             <div className="w-full -mx-4">
               <div 
                 className="aspect-video rounded overflow-hidden w-full"
-                dangerouslySetInnerHTML={{ __html: preview.embed_html }}
+                dangerouslySetInnerHTML={{ __html: sanitizedEmbedHtml }}
               />
             </div>
           )}
