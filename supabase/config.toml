@@ -17,3 +17,15 @@ verify_jwt = false
 
 [functions.ingest-exit-poll]
 verify_jwt = false
+
+[functions.eci-auto-scraper]
+verify_jwt = false
+
+[functions.analyze-election-news]
+verify_jwt = false
+
+[functions.twitter-election-monitor]
+verify_jwt = false
+
+[functions.election-data-orchestrator]
+verify_jwt = false

@@ -4,6 +4,7 @@ import { LiveTicker } from '@/components/elections/LiveTicker';
 import { ConstituencySnapshot } from '@/components/elections/ConstituencySnapshot';
 import { ExitPollsPanel } from '@/components/elections/ExitPollsPanel';
 import ElectionTimeline from '@/components/elections/ElectionTimeline';
+import { AutomationControl } from '@/components/elections/AutomationControl';
 import { Badge } from '@/components/ui/badge';
 import { Radio } from 'lucide-react';
 
@@ -26,6 +27,11 @@ const LiveElectionChannel = () => {
           <p className="text-muted-foreground text-lg">
             Real-time election coverage with official ECI data, exit polls, and expert analysis
           </p>
+        </div>
+
+        {/* Automation Control */}
+        <div className="mb-6">
+          <AutomationControl />
         </div>
 
         {/* Main Content Grid */}
