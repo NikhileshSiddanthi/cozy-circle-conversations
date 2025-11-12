@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { Vote, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 
 interface Poll {
   id: string;
@@ -27,6 +28,17 @@ const PublicPoll = () => {
   useEffect(() => {
     fetchActivePoll();
   }, []);
+
+  // Real-time subscription for new poll responses
+  useRealtimeUpdates({
+    table: 'elections_poll_responses',
+    event: 'INSERT',
+    onUpdate: () => {
+      if (poll) {
+        fetchActivePoll();
+      }
+    }
+  });
 
   const fetchActivePoll = async () => {
     try {
