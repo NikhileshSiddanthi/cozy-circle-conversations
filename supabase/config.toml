@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.collect-election-sentiment]
 verify_jwt = false
+
+[functions.ingest-eci-data]
+verify_jwt = false
+
+[functions.ingest-exit-poll]
+verify_jwt = false
