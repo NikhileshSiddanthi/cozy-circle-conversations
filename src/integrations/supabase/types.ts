@@ -491,6 +491,57 @@ export type Database = {
         }
         Relationships: []
       }
+      elections_results: {
+        Row: {
+          booth_id: string | null
+          candidate_id: string | null
+          counted_at: string | null
+          created_at: string
+          election_slug: string
+          id: string
+          status: string
+          updated_at: string
+          votes: number
+        }
+        Insert: {
+          booth_id?: string | null
+          candidate_id?: string | null
+          counted_at?: string | null
+          created_at?: string
+          election_slug?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          votes?: number
+        }
+        Update: {
+          booth_id?: string | null
+          candidate_id?: string | null
+          counted_at?: string | null
+          created_at?: string
+          election_slug?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          votes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elections_results_booth_id_fkey"
+            columns: ["booth_id"]
+            isOneToOne: false
+            referencedRelation: "elections_booths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elections_results_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "elections_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       elections_sentiment_snapshots: {
         Row: {
           area: string | null
@@ -1456,7 +1507,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      elections_results_summary: {
+        Row: {
+          booths_counted: number | null
+          candidate_id: string | null
+          candidate_name: string | null
+          election_slug: string | null
+          party: string | null
+          symbol: string | null
+          total_booths: number | null
+          total_votes: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elections_results_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "elections_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_refresh_token_replay: {
