@@ -41,9 +41,12 @@ export const useCreatePost = () => {
     successMessage: 'Post published successfully!',
     errorContext: 'Failed to publish post',
     onSuccess: (data) => {
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ['posts'] });
-      queryClient.invalidateQueries({ queryKey: ['feed'] });
+      // Invalidate ALL post-related queries to refresh feeds
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          Array.isArray(query.queryKey) && 
+          (query.queryKey[0] === 'posts' || query.queryKey[0] === 'feed')
+      });
     },
   });
 };
