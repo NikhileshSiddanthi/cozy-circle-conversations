@@ -13,6 +13,7 @@ import ElectionTimeline from '@/components/elections/ElectionTimeline';
 import SentimentDashboard from '@/components/elections/SentimentDashboard';
 import PublicPoll from '@/components/elections/PublicPoll';
 import ElectionFAQ from '@/components/elections/ElectionFAQ';
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 
 const JubileeHills = () => {
   const [stats, setStats] = useState({
@@ -25,6 +26,16 @@ const JubileeHills = () => {
   useEffect(() => {
     fetchStats();
   }, []);
+
+  // Real-time subscription for sentiment updates
+  useRealtimeUpdates({
+    table: 'elections_sentiment_snapshots',
+    event: 'INSERT',
+    filter: 'election_slug=eq.jubilee-hills-2025',
+    onUpdate: () => {
+      fetchStats();
+    }
+  });
 
   const fetchStats = async () => {
     try {

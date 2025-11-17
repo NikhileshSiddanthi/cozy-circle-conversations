@@ -27,6 +27,9 @@ import AdminSeedData from "./pages/AdminSeedData";
 import MakeAdmin from "./pages/MakeAdmin";
 import JubileeHills from "./pages/elections/JubileeHills";
 import AdminElections from "./pages/elections/AdminElections";
+import AdminElectionResults from "./pages/elections/AdminElectionResults";
+import LiveElectionChannel from "./pages/elections/LiveElectionChannel";
+import AdminLiveDataInjector from "./pages/elections/AdminLiveDataInjector";
 
 const App = () => (
   <ToastProvider>
@@ -167,10 +170,34 @@ const App = () => (
             } 
           />
           <Route 
+            path="/elections/live" 
+            element={
+              <ProtectedRoute>
+                <LiveElectionChannel />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
             path="/admin/elections/jubilee-hills" 
             element={
               <ProtectedRoute>
                 <AdminElections />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/elections/live-injector" 
+            element={
+              <ProtectedRoute>
+                <AdminLiveDataInjector />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/elections/jubilee-hills/results" 
+            element={
+              <ProtectedRoute>
+                <AdminElectionResults />
               </ProtectedRoute>
             } 
           />

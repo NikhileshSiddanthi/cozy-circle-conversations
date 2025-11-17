@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { TrendingUp, TrendingDown, Minus, AlertCircle } from 'lucide-react';
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
 
 interface PredictionData {
   predicted_winner: string;
@@ -50,9 +51,17 @@ const SentimentDashboard = () => {
 
   useEffect(() => {
     fetchSentiment();
-    const interval = setInterval(fetchSentiment, 5 * 60 * 1000); // Refresh every 5 minutes
-    return () => clearInterval(interval);
   }, []);
+
+  // Real-time subscription for new sentiment snapshots
+  useRealtimeUpdates({
+    table: 'elections_sentiment_snapshots',
+    event: 'INSERT',
+    filter: 'election_slug=eq.jubilee-hills-2025',
+    onUpdate: () => {
+      fetchSentiment();
+    }
+  });
 
   const fetchSentiment = async () => {
     try {

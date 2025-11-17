@@ -218,6 +218,39 @@ export type Database = {
           },
         ]
       }
+      constituencies: {
+        Row: {
+          created_at: string | null
+          district: string | null
+          eci_code: string | null
+          geo: Json | null
+          id: string
+          name: string
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          district?: string | null
+          eci_code?: string | null
+          geo?: Json | null
+          id: string
+          name: string
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          district?: string | null
+          eci_code?: string | null
+          geo?: Json | null
+          id?: string
+          name?: string
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       conversation_participants: {
         Row: {
           conversation_id: string
@@ -350,6 +383,138 @@ export type Database = {
             columns: ["draft_id"]
             isOneToOne: false
             referencedRelation: "post_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      election_canonical: {
+        Row: {
+          canonical_data: Json
+          constituency_id: string
+          created_at: string | null
+          last_update: string
+          leading_party: string | null
+          source: string
+          status: string | null
+          total_counted: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          canonical_data: Json
+          constituency_id: string
+          created_at?: string | null
+          last_update: string
+          leading_party?: string | null
+          source: string
+          status?: string | null
+          total_counted?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          canonical_data?: Json
+          constituency_id?: string
+          created_at?: string | null
+          last_update?: string
+          leading_party?: string | null
+          source?: string
+          status?: string | null
+          total_counted?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "election_canonical_constituency_id_fkey"
+            columns: ["constituency_id"]
+            isOneToOne: true
+            referencedRelation: "constituencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      election_counts: {
+        Row: {
+          constituency_id: string | null
+          created_at: string | null
+          data: Json
+          form20_url: string | null
+          id: string
+          kind: string | null
+          round_number: number | null
+          source: string
+          updated_at: string | null
+          verified: boolean | null
+        }
+        Insert: {
+          constituency_id?: string | null
+          created_at?: string | null
+          data: Json
+          form20_url?: string | null
+          id?: string
+          kind?: string | null
+          round_number?: number | null
+          source: string
+          updated_at?: string | null
+          verified?: boolean | null
+        }
+        Update: {
+          constituency_id?: string | null
+          created_at?: string | null
+          data?: Json
+          form20_url?: string | null
+          id?: string
+          kind?: string | null
+          round_number?: number | null
+          source?: string
+          updated_at?: string | null
+          verified?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "election_counts_constituency_id_fkey"
+            columns: ["constituency_id"]
+            isOneToOne: false
+            referencedRelation: "constituencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      election_raw_events: {
+        Row: {
+          constituency_id: string | null
+          created_at: string | null
+          event_time: string
+          id: string
+          ingestion_time: string | null
+          processed: boolean | null
+          source: string
+          source_payload: Json
+        }
+        Insert: {
+          constituency_id?: string | null
+          created_at?: string | null
+          event_time: string
+          id?: string
+          ingestion_time?: string | null
+          processed?: boolean | null
+          source: string
+          source_payload: Json
+        }
+        Update: {
+          constituency_id?: string | null
+          created_at?: string | null
+          event_time?: string
+          id?: string
+          ingestion_time?: string | null
+          processed?: boolean | null
+          source?: string
+          source_payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "election_raw_events_constituency_id_fkey"
+            columns: ["constituency_id"]
+            isOneToOne: false
+            referencedRelation: "constituencies"
             referencedColumns: ["id"]
           },
         ]
@@ -491,6 +656,57 @@ export type Database = {
         }
         Relationships: []
       }
+      elections_results: {
+        Row: {
+          booth_id: string | null
+          candidate_id: string | null
+          counted_at: string | null
+          created_at: string
+          election_slug: string
+          id: string
+          status: string
+          updated_at: string
+          votes: number
+        }
+        Insert: {
+          booth_id?: string | null
+          candidate_id?: string | null
+          counted_at?: string | null
+          created_at?: string
+          election_slug?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          votes?: number
+        }
+        Update: {
+          booth_id?: string | null
+          candidate_id?: string | null
+          counted_at?: string | null
+          created_at?: string
+          election_slug?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          votes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elections_results_booth_id_fkey"
+            columns: ["booth_id"]
+            isOneToOne: false
+            referencedRelation: "elections_booths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elections_results_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "elections_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       elections_sentiment_snapshots: {
         Row: {
           area: string | null
@@ -541,6 +757,59 @@ export type Database = {
           total_articles_analyzed?: number | null
         }
         Relationships: []
+      }
+      exit_polls: {
+        Row: {
+          confidence: number | null
+          constituency_id: string | null
+          created_at: string | null
+          id: string
+          margin_of_error: number | null
+          methodology: string | null
+          predicted_winner: string | null
+          provider: string
+          published_at: string
+          raw: Json | null
+          sample_size: number | null
+          vote_share: Json | null
+        }
+        Insert: {
+          confidence?: number | null
+          constituency_id?: string | null
+          created_at?: string | null
+          id?: string
+          margin_of_error?: number | null
+          methodology?: string | null
+          predicted_winner?: string | null
+          provider: string
+          published_at: string
+          raw?: Json | null
+          sample_size?: number | null
+          vote_share?: Json | null
+        }
+        Update: {
+          confidence?: number | null
+          constituency_id?: string | null
+          created_at?: string | null
+          id?: string
+          margin_of_error?: number | null
+          methodology?: string | null
+          predicted_winner?: string | null
+          provider?: string
+          published_at?: string
+          raw?: Json | null
+          sample_size?: number | null
+          vote_share?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exit_polls_constituency_id_fkey"
+            columns: ["constituency_id"]
+            isOneToOne: false
+            referencedRelation: "constituencies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       group_members: {
         Row: {
@@ -1456,7 +1725,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      elections_results_summary: {
+        Row: {
+          booths_counted: number | null
+          candidate_id: string | null
+          candidate_name: string | null
+          election_slug: string | null
+          party: string | null
+          symbol: string | null
+          total_booths: number | null
+          total_votes: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elections_results_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "elections_candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_refresh_token_replay: {

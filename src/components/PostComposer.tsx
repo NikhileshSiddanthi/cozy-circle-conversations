@@ -131,13 +131,24 @@ export const PostComposer = ({ groups, selectedGroupId, onSuccess, startExpanded
           const existingDraft = existingDrafts[0];
           setDraftId(existingDraft.id);
           
+          // Use selectedGroupId if provided (user is on a specific group page), otherwise use draft's stored group_id
+          const effectiveGroupId = selectedGroupId || existingDraft.group_id || "";
+          
           // Restore draft data
           setFormData(prev => ({
             ...prev,
             title: existingDraft.title || "",
             content: existingDraft.content || "",
-            groupId: existingDraft.group_id || selectedGroupId || "",
+            groupId: effectiveGroupId,
           }));
+          
+          // If selectedGroupId is provided and different from draft's group_id, update the draft immediately
+          if (selectedGroupId && selectedGroupId !== existingDraft.group_id) {
+            await supabase
+              .from('post_drafts')
+              .update({ group_id: selectedGroupId })
+              .eq('id', existingDraft.id);
+          }
 
           // Load draft media
           const { data: draftMedia } = await supabase
